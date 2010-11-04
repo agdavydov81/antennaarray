@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ROOT>
+   <points>[0 0 0; -0.1 0 0; 0.1 0 0; 0 -0.1 0; 0 0.1 0; 0.1 0.1 0; -0.1 -0.1 0; 0.1 -0.1 0; -0.1 0.1 0]</points>
+   <factor>[1; 1; 1; 1; 1; 1; 1; 1; 1]</factor>
+   <delay>[0; 0; 0; 0; 0; 0; 0; 0; 0]</delay>
+   <expr>
+      <item>y=</item>
+      <item>x{1}.*abs(x{1})+</item>
+      <item>x{2}.*abs(x{3})+</item>
+      <item>x{4}.*abs(x{5})+</item>
+      <item>x{6}.*abs(x{7})+</item>
+      <item>x{8}.*abs(x{9})</item>
+   </expr>
+</ROOT>
