@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ROOT>
+   <points>[0 0 0; -0.1 0 0; 0.1 0 0; 0 -0.1 0; 0 0.1 0]</points>
+   <factor>[1; 1; 1; 1; 1]</factor>
+   <delay>[0; 0; 0; 0; 0]</delay>
+   <expr>y=x{1}+x{2}.*abs(x{3})+x{4}.*abs(x{5})</expr>
+</ROOT>
