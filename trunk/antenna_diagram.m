@@ -1,4 +1,14 @@
 function antenna_diagram()
+%ANTENNA_DIAGRAM GUI for antenna_directivity_diagram function.
+%   ANTENNA_DIAGRAM creates a figure window for interactive microphones array
+%   creation, modification and estimation.
+%
+%   See also ANTENNA_DIRECTIVITY_DIAGRAM
+
+%	Author(s): Andrei Davydau
+%	Copyright 2009-2010 For Fun Inc.
+%	Version: 1.0.1.0
+
 	fid=figure('NumberTitle','off', 'Name','Antenna Plot', 'Toolbar','figure', 'Units','normalized', 'Position',[0 0 1 1], 'ResizeFcn',@on_figure_resize);
 	data=guihandles(fid);
 	data.GUI.fid=fid;
@@ -7,34 +17,34 @@ function antenna_diagram()
 	
 	font_sz=9;
 	pan_sz=[60 21.8];
-	data.GUI.panel=uipanel('Parent',fid, 'Title','Настройка', 'Units','characters', 'Position',[0 0 pan_sz], 'FontSize',font_sz);
+	data.GUI.panel=uipanel('Parent',fid, 'Title','Settings', 'Units','characters', 'Position',[0 0 pan_sz], 'FontSize',font_sz);
 
 	ctrl_pos=[1 pan_sz(2)-3 10 1.5];
 	data.GUI.ctrl_ed_freq=uicontrol('Parent',data.GUI.panel, 'Style','edit', 'String','1000', 'Units','characters', 'Position',ctrl_pos, 'Background','w', 'FontSize',font_sz, 'HorizontalAlignment','right');
 	ctrl_pos(5)=ctrl_pos(1)+ctrl_pos(3)+1;
 	ctrl_pos(6)=pan_sz(1)-2-ctrl_pos(5);
 	ctrl_pos(7)=pan_sz(1)-2-ctrl_pos(1);
-	uicontrol('Parent',data.GUI.panel, 'Style','text', 'String','Частота анализа, Гц', 'Units','characters', 'Position',ctrl_pos([5 2 6 4]), 'FontSize',font_sz, 'HorizontalAlignment','left');
+	uicontrol('Parent',data.GUI.panel, 'Style','text', 'String','Analysis frequency, Hz', 'Units','characters', 'Position',ctrl_pos([5 2 6 4]), 'FontSize',font_sz, 'HorizontalAlignment','left');
 
 	ctrl_pos(2)=ctrl_pos(2)-ctrl_pos(4)-0.3;
 	data.GUI.ctrl_ed_src_dist=uicontrol('Parent',data.GUI.panel, 'Style','edit', 'String','100', 'Units','characters', 'Position',ctrl_pos(1:4), 'Background','w', 'FontSize',font_sz, 'HorizontalAlignment','right');
-	uicontrol('Parent',data.GUI.panel, 'Style','text', 'String','Расстояние до источника звука, м', 'Units','characters', 'Position',ctrl_pos([5 2 6 4]), 'FontSize',font_sz, 'HorizontalAlignment','left');
+	uicontrol('Parent',data.GUI.panel, 'Style','text', 'String','Distance to source, m', 'Units','characters', 'Position',ctrl_pos([5 2 6 4]), 'FontSize',font_sz, 'HorizontalAlignment','left');
 
 	ctrl_pos(2)=ctrl_pos(2)-ctrl_pos(4)-0.3;
 	data.GUI.ctrl_ed_pt_num=uicontrol('Parent',data.GUI.panel, 'Style','edit', 'String','180', 'Units','characters', 'Position',ctrl_pos(1:4), 'Background','w', 'FontSize',font_sz, 'HorizontalAlignment','right');
-	uicontrol('Parent',data.GUI.panel, 'Style','text', 'String','Число точек анализа по координате', 'Units','characters', 'Position',ctrl_pos([5 2 6 4]), 'FontSize',font_sz, 'HorizontalAlignment','left');
+	uicontrol('Parent',data.GUI.panel, 'Style','text', 'String','Analysis grid nodes number', 'Units','characters', 'Position',ctrl_pos([5 2 6 4]), 'FontSize',font_sz, 'HorizontalAlignment','left');
 
 	ctrl_pos(2)=ctrl_pos(2)-ctrl_pos(4)-0.3;
-	uicontrol('Parent',data.GUI.panel, 'Style','text', 'String','Функция антены ( y=...(x) )', 'Units','characters', 'Position',ctrl_pos([1 2 7 4]), 'FontSize',font_sz, 'HorizontalAlignment','left');
+	uicontrol('Parent',data.GUI.panel, 'Style','text', 'String','Antenna function ( y=...(x) )', 'Units','characters', 'Position',ctrl_pos([1 2 7 4]), 'FontSize',font_sz, 'HorizontalAlignment','left');
 	ctrl_pos(2)=ctrl_pos(2)-10.5-0.3;
 	data.GUI.ctrl_ed_expr=uicontrol('Parent',data.GUI.panel, 'Style','edit', 'String','y=sum([x{:}],2)', 'Units','characters', 'Position',[ctrl_pos([1 2 7]) 10.8], 'Background','w', 'FontSize',font_sz, 'HorizontalAlignment','left', 'Max',100);
 
 	ctrl_pos(4)=1.8;
 	ctrl_pos(2)=ctrl_pos(2)-ctrl_pos(4)-0.4;
 	ctrl_pos(7)=(pan_sz(1)-ctrl_pos(1)*2)/3-ctrl_pos(1);
-	data.GUI.ctrl_btn_load=uicontrol('Parent',data.GUI.panel, 'Style','pushbutton', 'String','Загрузить', 'Units','characters', 'Position',ctrl_pos([1 2 7 4]), 'Callback',@on_load);
-	data.GUI.ctrl_btn_save=uicontrol('Parent',data.GUI.panel, 'Style','pushbutton', 'String','Сохранить', 'Units','characters', 'Position',[sum(ctrl_pos([1 7 1])) ctrl_pos([2 7 4])], 'Callback',@on_save);
-	data.GUI.ctrl_btn_calc=uicontrol('Parent',data.GUI.panel, 'Style','pushbutton', 'String','Пересчитать', 'Units','characters', 'Position',[sum(ctrl_pos([1 7 1 7 1])) ctrl_pos([2 7 4])], 'Callback',@on_calc);
+	data.GUI.ctrl_btn_load=uicontrol('Parent',data.GUI.panel, 'Style','pushbutton', 'String','Load', 'Units','characters', 'Position',ctrl_pos([1 2 7 4]), 'Callback',@on_load);
+	data.GUI.ctrl_btn_save=uicontrol('Parent',data.GUI.panel, 'Style','pushbutton', 'String','Save', 'Units','characters', 'Position',[sum(ctrl_pos([1 7 1])) ctrl_pos([2 7 4])], 'Callback',@on_save);
+	data.GUI.ctrl_btn_calc=uicontrol('Parent',data.GUI.panel, 'Style','pushbutton', 'String','Analysis', 'Units','characters', 'Position',[sum(ctrl_pos([1 7 1 7 1])) ctrl_pos([2 7 4])], 'Callback',@on_calc);
 
 	set(data.GUI.panel, 'Units','pixels');
 	pan_sz_pix=get(data.GUI.panel, 'Position');
@@ -44,17 +54,17 @@ function antenna_diagram()
 		'ColumnFormat',{'numeric' 'numeric' 'numeric' 'numeric' 'numeric'}, 'ColumnEditable',ones(1,5)>0, ...
 		'ColumnName',{'X' 'Y' 'Z' 'k' 'delay'}, 'ColumnWidth',num2cell(ones(1,5)*round((pan_sz_pix(3)-60)/5)), ...
 		'Data',nan(1,5), 'FontSize',font_sz, 'RearrangeableColumns','on', ...
-		'TooltipString','Точки антенной решетки', 'CellEditCallback',@on_table_edit, 'CellSelectionCallback',@on_table_sel);
+		'TooltipString','Antenna array nodes', 'CellEditCallback',@on_table_edit, 'CellSelectionCallback',@on_table_sel);
 	
 	data.antenna_file='antenna.xml';
 
 	guidata(fid,data);
 %{
-	f=1000;					% Частота анализа
-	c=331.46;				% Скорость звука в воздухе
-	lambda=c/f;				% Длинна волны
-	k=2*pi/lambda;			% Волновое число
-	src_dst=100;			% Расстояние от источника звука до центра решетки
+	f=1000;					% Analysis frequency
+	c=331.46;				% The speed of sound (Standard conditions - 331.46 m/s; Standard laboratory conditions - 343.2 m\s)
+	lambda=c/f;				% Wavelength
+	k=2*pi/lambda;			% Wavenumber
+	src_dst=100;			% Distance to source
 
 	antenna_sz=5;
 	antenna_sectors_sum=9;
@@ -78,13 +88,8 @@ function antenna_diagram()
 % 	end
 
 %	data.antenna.points=data.antenna.points*0.1;
-	
-% 	src_pt=[0 0 src_dst];	% Прогиб антены для фокусировки на ближний источник
-% 	dist= sqrt(sum(( antenna_pt - src_pt(ones(size(antenna_pt,1),1),:) ).^2,2)); % Расстояние от точки src_pt до каждой точки antenna_pt
-% 	antenna_pt(:,3)=dist-dist(1);
-	
-%	dist0= sqrt(sum(antenna_pt.^2,2)); % Расстояние от точки [0 0 0] до каждой точки grate_pt
-	data.antenna.factor= ones(size(data.antenna.points,1),1); % sinc(dist0);
+
+	data.antenna.factor= ones(size(data.antenna.points,1),1);
 	data.antenna.delay=zeros(size(data.antenna.factor));
 	data.antenna.expr='y=sum([x{:}],2)';
 
@@ -163,7 +168,7 @@ end
 function on_load(hObject,eventdata)
 	data=get_data(hObject);
 
-	[dlg_name,dlg_path]=uigetfile({'*.xml','XML files (*.xml)'},'Выберите файл для обработки');
+	[dlg_name,dlg_path]=uigetfile({'*.xml','XML files (*.xml)'},'Select antenna description file');
 	if dlg_name==0
 		return;
 	end
@@ -183,7 +188,7 @@ end
 function on_save(hObject,eventdata)
 	data=get_data(hObject);
 
-	[dlg_name,dlg_path]=uiputfile({'*.xml','XML files (*.xml)'},'Сохранить результирующий файл как...', data.antenna_file);
+	[dlg_name,dlg_path]=uiputfile({'*.xml','XML files (*.xml)'},'Save antenna file as ...', data.antenna_file);
 	if dlg_name==0
 		return;
 	end
@@ -240,12 +245,12 @@ function data=antenna_plot(data, x, y, z, main_lobe_ind, side_lobe_part, main_lo
 		antenna_file=strrep(antenna_file, tex_sym{i}, ['\' tex_sym{i}]);
 	end
 
-	title({['Файл ' antenna_file '; ' ...
-		num2str(size(data.antenna.points,1)) ' точек; f=' ...
-		num2str(data.antenna.frequency) 'Гц; \lambda=' ...
-		num2str(data.antenna.lambda) 'м;'];
-		['Объем боковых лепестков ' num2str(side_lobe_part*100) ...
-		'%; Максимальный угол раскрытия основного лепестка ' num2str(main_lobe_angle(1)) ...
-		'\circ по уровню ' num2str(main_lobe_angle(2)) ...
-		'; Геометрический центр ' sprintf('%.2f ',data.antenna.center)]});
+	title({['File ' antenna_file '; ' ...
+		num2str(size(data.antenna.points,1)) ' nodes; f=' ...
+		num2str(data.antenna.frequency) 'Hz; \lambda=' ...
+		num2str(data.antenna.lambda) 'm;'];
+		['Side lobes part ' num2str(side_lobe_part*100) ...
+		'%; Main lobe maximum opening angle ' num2str(main_lobe_angle(1)) ...
+		'\circ at the level ' num2str(main_lobe_angle(2)) ...
+		'; Geometric center ' sprintf('%.2f ',data.antenna.center)]});
 end
