@@ -1,22 +1,37 @@
 %% Main antenna evaluation function
 function [x,y,z, antenna_center, main_lobe_ind, side_lobe_part, c_angle, c_lvl]=antenna_directivity_diagram(antenna_in)
-%{
-	antenna.frequency=1000;	% Частота анализа (Гц)
-	antenna.c=		331.46;	% Скорость распространения волны в среде (м/с)
-							% 331.46 м/с - скорость звука в воздухе
-	antenna.points=[0		0		0;
-					0.15	0		0;
-					-0.15	0		0;
-					0		0.15	0;
-					0		-0.15	0];
-	antenna.factor=	[1 1 1 1 1]';
-	antenna.delay=	[0 0 0 0 0]';
-	antenna.expr=	'y=sum([x{:}],2)';
+%ANTENNA_DIRECTIVITY_DIAGRAM Antenna array directivity diagram evaluation.
+%   [x,y,z, center, main_lobe_ind, side_lobe_part, c_angle, c_lvl] =
+%                                            antenna_directivity_diagram(antenna_in)
+%   Estimates antenna_in directivity diagram (x,y,z), finds geometric center
+%   (center), separates directivity diagram main lobe from side lobes
+%   (main lobe: x(1:main_lobe_ind,:), y(1:main_lobe_ind,:), z(1:main_lobe_ind,:)),
+%   calculates side lobes capacity to main lobe capacity ratio (side_lobe_part)
+%   and estimates main lobe maximum opening angle (c_angle) at the level (c_lvl).
+%
+%   antenna_in is the antenna description structure with next fields (and
+%   default values in fields absence case).
+%   antenna.frequency - analysis frequency in Hz (the default value is 1000 Hz);
+%   antenna.c - wave propagation speed in m/s (the default value equals
+%                                            331.46 m/s - speed of sound);
+%   antenna.points - N by 3 matrix with [X Y Z] nodes coordinates in m;
+%   antenna.factor - N by 1 vector with per node multipliers (the default is ones(N,1) );
+%   antenna.delay -  N by 1 vector with per node delays in s (the default is zeros(N,1) );
+%	antenna.expr - antenna output signal calculation string expression. Next
+%	   variables can be used in expression: x - 1xN cell with signals in
+%	   nodes; fs - sampling frequency in Hz; pt - copy of antenna.points
+%	   and y - resulting signal.
+%	   Antenna directivity diagram estimating as RMS of resulting signal (y).
+%      The default value is 'y=sum([x{:}],2)'.
+%   antenna.src_dist - distance to wave source in m (the default value is 100);
+%   antenna.src_points - analysis grid nodes number (the default value is 180);
+%   antenna.use_parfor - use parfor instead of for flag. This is suitable
+%      for interactive processing (the default value is false).
 
-	antenna.src_dist=100; % Расстояние от источника звука до геометрического центра решетки (м)
-	antenna.src_points=180; % Число точек анализа на полусфере
-	antenna.use_parfor=true; % Флаг использования внутреннего цикла parfor
-%}
+%	Author(s): Andrei Davydau
+%	Copyright 2009-2010 For Fun Inc.
+%	Version: 1.0.1.0
+
 	%% Prepare input config
 	antenna=struct('expr','y=sum([x{:}],2)', 'frequency',1000, 'c',331.46, 'src_dist',100, 'src_points',180, 'use_parfor',false);
 
