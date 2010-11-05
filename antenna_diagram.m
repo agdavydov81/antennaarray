@@ -7,7 +7,7 @@ function antenna_diagram()
 
 %	Author(s): Andrei Davydau
 %	Copyright 2009-2010 For Fun Inc.
-%	Version: 1.0.1.0
+%	Version: 1.0.1.3
 
 	fid=figure('NumberTitle','off', 'Name','Antenna Plot', 'Toolbar','figure', 'Units','normalized', 'Position',[0 0 1 1], 'ResizeFcn',@on_figure_resize);
 	data=guihandles(fid);
@@ -59,7 +59,20 @@ function antenna_diagram()
 	data.antenna_file='antenna.xml';
 
 	guidata(fid,data);
+
+	try
+		local_jm=findResource('scheduler','type','local');
+		if matlabpool('size')==0 && local_jm.ClusterSize>1 && ... 
+			strcmp(questdlg({'No matlabpool opened.' ...
+				'Matlab pool usage can significantly increase analysis performance.' ...
+				'Open local matlabpool?'},'Parallel computations','Yes','No','Yes'),'Yes')
+			matlabpool('local');
+		end
+	catch %#ok<CTCH>
+	end
+end
 %{
+function create_test_antenna()
 	f=1000;					% Analysis frequency
 	c=331.46;				% The speed of sound (Standard conditions - 331.46 m/s; Standard laboratory conditions - 343.2 m\s)
 	lambda=c/f;				% Wavelength
@@ -94,9 +107,8 @@ function antenna_diagram()
 	data.antenna.expr='y=sum([x{:}],2)';
 
 	xml_write('ant_test.xml',data.antenna);
-%}
 end
-
+%}
 function on_table_edit(hObject,eventdata)
 	obj_data=get(hObject,'Data');
 	nan_rows=all(isnan(obj_data),2);

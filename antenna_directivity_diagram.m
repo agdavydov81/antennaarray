@@ -1,4 +1,3 @@
-%% Main antenna evaluation function
 function [x,y,z, antenna_center, main_lobe_ind, side_lobe_part, c_angle, c_lvl]=antenna_directivity_diagram(antenna_in)
 %ANTENNA_DIRECTIVITY_DIAGRAM Antenna array directivity diagram evaluation.
 %   [x,y,z, center, main_lobe_ind, side_lobe_part, c_angle, c_lvl] =
@@ -26,14 +25,16 @@ function [x,y,z, antenna_center, main_lobe_ind, side_lobe_part, c_angle, c_lvl]=
 %   antenna.src_dist - distance to wave source in m (the default value is 100);
 %   antenna.src_points - analysis grid nodes number (the default value is 180);
 %   antenna.use_parfor - use parfor instead of for flag. This is suitable
-%      for interactive processing (the default value is false).
+%      for interactive processing (the default value is true).
+%
+%   See also ANTENNA_DIAGRAM
 
 %	Author(s): Andrei Davydau
 %	Copyright 2009-2010 For Fun Inc.
-%	Version: 1.0.1.0
+%	Version: 1.0.1.3
 
 	%% Prepare input config
-	antenna=struct('expr','y=sum([x{:}],2)', 'frequency',1000, 'c',331.46, 'src_dist',100, 'src_points',180, 'use_parfor',false);
+	antenna=struct('expr','y=sum([x{:}],2)', 'frequency',1000, 'c',331.46, 'src_dist',100, 'src_points',180, 'use_parfor',true);
 
 	% Merge default and input values
 	ant_in_names=fieldnames(antenna_in);
@@ -79,7 +80,7 @@ function [x,y,z, antenna_center, main_lobe_ind, side_lobe_part, c_angle, c_lvl]=
 	par_ro= zeros(size(par_xyz,1),1);
 
 	%% Calculate antenna respond
-	if antenna.use_parfor
+	if antenna.use_parfor && matlabpool('size')>1
 		parfor par_i=1:size(par_xyz,1)
 			par_ro(par_i)=antenna_est(par_xyz(par_i,:), antenna);
 		end
@@ -129,7 +130,7 @@ function [x,y,z, antenna_center, main_lobe_ind, side_lobe_part, c_angle, c_lvl]=
 			c_lvl_rho(1)=[];
 		end
 		c_lvl_rho=reshape(c_lvl_rho,[],2);
-		[mv,mi]=max(sum(c_lvl_rho,2)); %#ok<ASGLU>
+		[~,mi]=max(sum(c_lvl_rho,2));
 		c_angle=sum(atan2(c_lvl_rho(mi,:),c_lvl))*180/pi;
 	end
 end
