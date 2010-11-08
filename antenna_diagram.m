@@ -81,14 +81,14 @@ function create_test_antenna()
 	src_dst=100;			% Distance to source
 
 	antenna_sz=5;
-	antenna_sectors_sum=9;
+	antenna_sectors_num=9;
 
-	data.antenna_file=['ant_circle_' num2str(antenna_sz) '_' num2str(antenna_sectors_sum) '.xml'];
+	data.antenna_file=['ant_circle_' num2str(antenna_sz) '_' num2str(antenna_sectors_num) '.xml'];
 	data.antenna.points=[0 0 0];
 	for j=1:antenna_sz
-		for i=1:antenna_sectors_sum
-%			cur_dir=exp(2*pi*i*1i/antenna_sectors_sum);
-			cur_dir=exp(2*pi*1i*(i+(j-1)/antenna_sz)/antenna_sectors_sum);
+		for i=1:antenna_sectors_num
+%			cur_dir=exp(2*pi*i*1i/antenna_sectors_num);
+			cur_dir=exp(2*pi*1i*(i+(j-1)/antenna_sz)/antenna_sectors_num);
 			data.antenna.points(end+1,:)=[real(cur_dir) imag(cur_dir) 0]*j*lambda/2;% (j^(sqrt(2)/2));
 		end
 	end
