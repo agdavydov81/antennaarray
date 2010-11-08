@@ -98,41 +98,47 @@ function [x,y,z, antenna_center, main_lobe_ind, side_lobe_part, c_angle, c_lvl]=
 	z=z.*ro;
 
 	%% Calculate antenna characteristics
-%	[sph_theta,sph_phi,sph_r]=cart2sph(x,y,z);
-	x2y2=x.^2+y.^2;
-	sph_r=sqrt(x2y2+z.^2);
-	pol_rho=sqrt(x2y2);
+	if nargout>=5
+%		[sph_theta,sph_phi,sph_r]=cart2sph(x,y,z);
+		x2y2=x.^2+y.^2;
+		sph_r=sqrt(x2y2+z.^2);
+		pol_rho=sqrt(x2y2);
 
-	sph_r_eps=eps*10;
-	mv=max(sph_r(2:end-1,:)<sph_r(1:end-2,:)-sph_r_eps & sph_r(2:end-1,:)<=sph_r(3:end,:)-sph_r_eps,[],2);
-	[mmv,mmi]=max(mv(end:-1:1));
-	if mmv==0
-		main_lobe_ind=1;
-	else
-		main_lobe_ind=length(mv)-mmi+3;
-	end
-
-	side_capacity=find_capacity(x(1:main_lobe_ind,:), y(1:main_lobe_ind,:), z(1:main_lobe_ind,:));
-	main_capacity=find_capacity(x(main_lobe_ind:end,:), y(main_lobe_ind:end,:), z(main_lobe_ind:end,:));
-	side_lobe_part=side_capacity/(side_capacity+main_capacity);
-
-	c_lvl=0.7;
-	c_angle=180;
-
-	main_z=z(main_lobe_ind:end,:);
-	lvl_ind=(main_z(1:end-1,:)<=c_lvl & c_lvl<main_z(2:end,:));
-	if sum(lvl_ind)==ones(1,size(lvl_ind,2))
-		lvl_ind = [lvl_ind; zeros(1,size(lvl_ind,2))>1] | [zeros(1,size(lvl_ind,2))>1; lvl_ind];
-		lvl_z=reshape(main_z(lvl_ind),2,[]);
-		main_rho=pol_rho(main_lobe_ind:end,:);
-		lvl_rho=reshape(main_rho(lvl_ind),2,[]);
-		c_lvl_rho=lvl_rho(1,:)+(c_lvl-lvl_z(1,:))./diff(lvl_z).*diff(lvl_rho);
-		if mod(size(c_lvl_rho,2),2)
-			c_lvl_rho(1)=[];
+		sph_r_eps=eps*10;
+		mv=max(sph_r(2:end-1,:)<sph_r(1:end-2,:)-sph_r_eps & sph_r(2:end-1,:)<=sph_r(3:end,:)-sph_r_eps,[],2);
+		[mmv,mmi]=max(mv(end:-1:1));
+		if mmv==0
+			main_lobe_ind=1;
+		else
+			main_lobe_ind=length(mv)-mmi+3;
 		end
-		c_lvl_rho=reshape(c_lvl_rho,[],2);
-		[~,mi]=max(sum(c_lvl_rho,2));
-		c_angle=sum(atan2(c_lvl_rho(mi,:),c_lvl))*180/pi;
+
+		if nargout>=6
+			side_capacity=find_capacity(x(1:main_lobe_ind,:), y(1:main_lobe_ind,:), z(1:main_lobe_ind,:));
+			main_capacity=find_capacity(x(main_lobe_ind:end,:), y(main_lobe_ind:end,:), z(main_lobe_ind:end,:));
+			side_lobe_part=side_capacity/(side_capacity+main_capacity);
+
+			if nargout>=7
+				c_lvl=0.7;
+				c_angle=180;
+
+				main_z=z(main_lobe_ind:end,:);
+				lvl_ind=(main_z(1:end-1,:)<=c_lvl & c_lvl<main_z(2:end,:));
+				if sum(lvl_ind)==ones(1,size(lvl_ind,2))
+					lvl_ind = [lvl_ind; zeros(1,size(lvl_ind,2))>1] | [zeros(1,size(lvl_ind,2))>1; lvl_ind];
+					lvl_z=reshape(main_z(lvl_ind),2,[]);
+					main_rho=pol_rho(main_lobe_ind:end,:);
+					lvl_rho=reshape(main_rho(lvl_ind),2,[]);
+					c_lvl_rho=lvl_rho(1,:)+(c_lvl-lvl_z(1,:))./diff(lvl_z).*diff(lvl_rho);
+					if mod(size(c_lvl_rho,2),2)
+						c_lvl_rho(1)=[];
+					end
+					c_lvl_rho=reshape(c_lvl_rho,[],2);
+					[~,mi]=max(sum(c_lvl_rho,2));
+					c_angle=sum(atan2(c_lvl_rho(mi,:),c_lvl))*180/pi;
+				end
+			end
+		end
 	end
 end
 
