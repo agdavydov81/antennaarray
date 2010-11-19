@@ -1,6 +1,7 @@
 function antenna_optimization()
 	clc;
 
+	% MATLAB optimization example
 %	rf2 = @(x)rastriginsfcn(x/10); % objective
 %	x0 = [20,30]; % start point away from the minimum
 %	problem = createOptimProblem('fmincon', 'objective',rf2, 'x0',x0);%, 'options',optimset('UseParallel','always'));
