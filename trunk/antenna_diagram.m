@@ -8,7 +8,9 @@ function antenna_diagram()
 %	Author: Andrei Davydau
 %   E-mail: andrew.aka.manik@gmail.com
 %	Copyright 2009-2010 For Fun Inc.
-%	Version: 1.0.1.3
+%	Version: 1.0.1.4
+
+	addpath([fileparts(mfilename('fullpath')) filesep 'xml_io_tools'],'-end');
 
 	fid=figure('NumberTitle','off', 'Name','Antenna Plot', 'Toolbar','figure', 'Units','normalized', 'Position',[0 0 1 1], 'ResizeFcn',@on_figure_resize);
 	data=guihandles(fid);
