@@ -1,5 +1,7 @@
 function antenna_optimization()
 	clc;
+	
+	addpath([fileparts(mfilename('fullpath')) filesep 'xml_io_tools'],'-end');
 
 	% MATLAB optimization example
 %	rf2 = @(x)rastriginsfcn(x/10); % objective
