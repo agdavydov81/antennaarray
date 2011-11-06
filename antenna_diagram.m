@@ -8,7 +8,7 @@ function antenna_diagram()
 %	Author: Andrei Davydau
 %   E-mail: andrew.aka.manik@gmail.com
 %	Copyright 2009-2010 For Fun Inc.
-%	Version: 1.0.1.4
+%	Version: 1.0.1.5
 
 	addpath([fileparts(mfilename('fullpath')) filesep 'xml_io_tools'],'-end');
 
@@ -17,7 +17,7 @@ function antenna_diagram()
 	data.GUI.fid=fid;
 
 	data.GUI.axes=axes();
-	
+
 	font_sz=9;
 	pan_sz=[60 21.8];
 	data.GUI.panel=uipanel('Parent',fid, 'Title','Settings', 'Units','characters', 'Position',[0 0 pan_sz], 'FontSize',font_sz);
@@ -61,7 +61,11 @@ function antenna_diagram()
 	
 	data.antenna_file='antenna.xml';
 
+	pause(1);
+
 	guidata(fid,data);
+
+	on_figure_resize(fid);
 
 	try
 		local_jm=findResource('scheduler','type','local');
@@ -150,6 +154,10 @@ end
 
 function on_figure_resize(hObject,eventdata) %#ok<*INUSD>
 	data=guidata(hObject);
+	
+	if isempty(data)
+		return;
+	end
 
 	set(data.GUI.fid,	'Units','characters');
 	set(data.GUI.panel,	'Units','characters');
