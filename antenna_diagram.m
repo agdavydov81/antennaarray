@@ -68,12 +68,15 @@ function antenna_diagram()
 	on_figure_resize(fid);
 
 	try
-		local_jm=findResource('scheduler','type','local');
-		if matlabpool('size')==0 && local_jm.ClusterSize>1 && ... 
-			strcmp(questdlg({'No matlabpool opened.' ...
-				'Matlab pool usage can significantly increase analysis performance.' ...
-				'Open local matlabpool?'},'Parallel computations','Yes','No','Yes'),'Yes')
-			matlabpool('local');
+		if matlabpool('size')==0
+			local_jm=findResource('scheduler','type','local');
+			if local_jm.ClusterSize>1 && ... 
+				strcmp(questdlg({'No matlabpool opened.' ...
+					'Matlab pool usage can significantly increase analysis performance.' ...
+					'Open local matlabpool?'},'Parallel computations','Yes','No','Yes'),'Yes')
+				matlabpool('local');
+			end
+			pause(0.2);
 		end
 	catch %#ok<CTCH>
 	end
