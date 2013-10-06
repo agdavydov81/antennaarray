@@ -116,14 +116,14 @@ else
 	axis(handles.video_image, handles.video.axis);
 end
 
-handles.video.timer = timer('StartDelay',2, 'TimerFcn',@ir_setup_video_timer_func, ...
-							'Period',1/50, 'ExecutionMode','fixedRate', 'UserData',handles.figure1);
+set(handles.figure1,'UserData',struct()); % the handles.video.fps new storage
+handles.video.timer = timer('TimerFcn',@ir_setup_video_timer_func, 'Period',1/50, ...
+							'ExecutionMode','fixedRate', 'UserData',handles.figure1);
 
-handles.video.fps = struct();
 guidata(hObject, handles);
 
-set(zoom,'ActionPostCallback',@ir_setup_video_zoom_pan_image);
-set(pan ,'ActionPostCallback',@ir_setup_video_zoom_pan_image);
+set(zoom, 'ActionPreCallback',@ir_setup_video_pre_zoom_pan, 'ActionPostCallback',@ir_setup_video_post_zoom_pan);
+set(pan , 'ActionPreCallback',@ir_setup_video_pre_zoom_pan, 'ActionPostCallback',@ir_setup_video_post_zoom_pan);
 
 start(handles.video.timer);
 
@@ -136,36 +136,37 @@ fig_handle = get(timer_handle, 'UserData');
 handles = guidata(fig_handle);
 
 try
-	frame_cur = getsnapshot(handles.video.vidobj);
-	imshow(frame_cur, 'Parent',handles.video_image);
-	axis(handles.video_image, handles.video.axis);
-	
-	if isfield(handles.video.fps,'ticID')
-		toc_t = toc(handles.video.fps.ticID);
-		if toc_t>handles.video.fps.tic_pos
-			handles.video.fps.counter = handles.video.fps.counter+1;
-			if toc_t>handles.video.fps.tok_pos
-				handles.video.fps.frames_queue(end+1) = handles.video.fps.counter;
-				handles.video.fps.tic_queue(end+1) = handles.video.fps.tic_pos;
+	handles_video_fps = get(handles.figure1,'UserData');
 
-				handles.video.fps.counter = 0;
-				handles.video.fps.tic_pos = toc_t;
+	if isfield(handles_video_fps,'ticID')
+		frame_cur = getsnapshot(handles.video.vidobj);
+		imshow(frame_cur, 'Parent',handles.video_image);
+		axis(handles.video_image, handles.video.axis);
+		disp('ir_setup_video_timer_func up');
 
-				handles.video.fps.tok_pos = fix(toc_t)+1;
+		toc_t = toc(handles_video_fps.ticID);
+		if toc_t>handles_video_fps.tic_pos
+			handles_video_fps.counter = handles_video_fps.counter+1;
+			if toc_t>handles_video_fps.tok_pos
+				handles_video_fps.frames_queue(end+1) = handles_video_fps.counter;
+				handles_video_fps.tic_queue(end+1) = handles_video_fps.tic_pos;
 
-				if length(handles.video.fps.tic_queue)>handles.video.fps.queue_length
-					handles.video.fps.tic_queue(1:end-handles.video.fps.queue_length) = [];
-					handles.video.fps.frames_queue(1:end-handles.video.fps.queue_length) = [];
+				handles_video_fps.counter = 0;
+				handles_video_fps.tic_pos = toc_t;
+
+				handles_video_fps.tok_pos = fix(toc_t)+1;
+
+				if length(handles_video_fps.tic_queue)>handles_video_fps.queue_length
+					handles_video_fps.tic_queue(1:end-handles_video_fps.queue_length) = [];
+					handles_video_fps.frames_queue(1:end-handles_video_fps.queue_length) = [];
 				end
-				set(handles.video_fps,'String',sprintf('%.1f fps',sum(handles.video.fps.frames_queue)/(toc_t-handles.video.fps.tic_queue(1))));
+				set(handles.video_fps,'String',sprintf('%.1f fps',sum(handles_video_fps.frames_queue)/(toc_t-handles_video_fps.tic_queue(1))));
 			end
 		end
 	else
-		handles.video.fps = struct('ticID',tic(), 'tic_pos',2, 'tok_pos',3, 'counter',0, 'queue_length',5, 'tic_queue',[], 'frames_queue',[]);
-		set(handles.video_fps, 'String','');
+		handles_video_fps = struct('ticID',tic(), 'tic_pos',2, 'tok_pos',3, 'counter',0, 'queue_length',5, 'tic_queue',[], 'frames_queue',[]);
 	end
-
-	guidata(fig_handle, handles);
+	set(handles.figure1,'UserData',handles_video_fps);
 
 	drawnow();
 catch ME
@@ -230,10 +231,17 @@ varargout{1} = cfg;
 delete(handles.figure1);
 
 
-function ir_setup_video_zoom_pan_image(hObject, eventdata)
+function ir_setup_video_pre_zoom_pan(hObject, eventdata)
+handles = guidata(hObject);
+stop(handles.video.timer);
+disp('ir_setup_video_pre_zoom_pan');
+
+
+function ir_setup_video_post_zoom_pan(hObject, eventdata)
 handles = guidata(hObject);
 handles.video.axis = axis(handles.video_image);
 guidata(hObject, handles);
+start(handles.video.timer);
 
 
 % --- Executes on selection change in video_camera.
@@ -270,9 +278,9 @@ frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
 imshow(frame_cur, 'Parent',handles.video_image);
 handles.video.axis = axis(handles.video_image);
-
-handles.video.fps = struct();
 guidata(hObject, handles);
+
+set(handles.figure1,'UserData',struct());
 
 start(handles.video.timer);
 
@@ -319,9 +327,9 @@ frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
 imshow(frame_cur, 'Parent',handles.video_image);
 handles.video.axis = axis(handles.video_image);
-
-handles.video.fps = struct();
 guidata(hObject, handles);
+
+set(handles.figure1,'UserData',struct());
 
 start(handles.video.timer);
 
@@ -337,7 +345,6 @@ function video_mode_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function detector_quantiles_Callback(hObject, eventdata, handles)
@@ -390,9 +397,7 @@ function setup_ok_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_ok (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if ishandle(handles.video.timer)
-	stop(handles.video.timer);
-end
+stop(handles.video.timer);
 handles.press_ok = true;
 guidata(hObject, handles);
 uiresume(handles.figure1);
@@ -403,9 +408,7 @@ function setup_cancel_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_cancel (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if ishandle(handles.video.timer)
-	stop(handles.video.timer);
-end
+stop(handles.video.timer);
 handles.press_ok = false;
 guidata(hObject, handles);
 uiresume(handles.figure1);
