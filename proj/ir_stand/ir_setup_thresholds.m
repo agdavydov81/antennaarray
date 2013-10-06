@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 06-Oct-2013 20:20:06
+% Last Modified by GUIDE v2.5 06-Oct-2013 23:18:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -70,6 +70,7 @@ else
 	cfg = varargin{1};
 end
 if not(isfield(cfg,'thresholds'));					cfg.thresholds = struct();				end
+if not(isfield(cfg.thresholds,'start_delay'));		cfg.thresholds.start_delay = 10;		end
 if not(isfield(cfg.thresholds,'start_time'));		cfg.thresholds.start_time = 5;			end
 if not(isfield(cfg.thresholds,'fir_freq'));			cfg.thresholds.fir_freq = 3;			end
 if not(isfield(cfg.thresholds,'fir_order'));		cfg.thresholds.fir_order = 4;			end
@@ -81,6 +82,7 @@ if not(isfield(cfg.thresholds,'detector_part'));	cfg.thresholds.detector_part = 
 
 handles.config = cfg;
 
+set(handles.start_delay,	'String', num2str(cfg.thresholds.start_delay));
 set(handles.start_time,		'String', num2str(cfg.thresholds.start_time));
 set(handles.fir_freq,		'String', num2str(cfg.thresholds.fir_freq));
 set(handles.fir_order,		'String', num2str(cfg.thresholds.fir_order));
@@ -106,6 +108,7 @@ function varargout = ir_setup_thresholds_OutputFcn(hObject, eventdata, handles)
 
 cfg = handles.config;
 if handles.press_ok
+	cfg.thresholds.start_delay = 		str2double(get(handles.start_delay,'String'));
 	cfg.thresholds.start_time = 		str2double(get(handles.start_time,'String'));
 	cfg.thresholds.fir_freq =			str2double(get(handles.fir_freq,'String'));
 	cfg.thresholds.fir_order =			str2double(get(handles.fir_order,'String'));
@@ -334,7 +337,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function median_size_Callback(hObject, eventdata, handles)
 % hObject    handle to median_size (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -347,6 +349,27 @@ function median_size_Callback(hObject, eventdata, handles)
 % --- Executes during object creation, after setting all properties.
 function median_size_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to median_size (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+function start_delay_Callback(hObject, eventdata, handles)
+% hObject    handle to start_delay (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of start_delay as text
+%        str2double(get(hObject,'String')) returns contents of start_delay as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function start_delay_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to start_delay (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
