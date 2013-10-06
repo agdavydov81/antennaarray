@@ -70,11 +70,15 @@ pause(0.1);
 frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
 imshow(frame_cur, 'Parent',handles.video_image);
+handles.video.axis = axis(handles.video_image);
 
 handles.video.timer = timer('StartDelay',2, 'TimerFcn',@ir_setup_video_timer_func, 'Period',1/50, 'ExecutionMode','fixedRate', 'UserData',handles.figure1);
 
 % Update handles structure
 guidata(hObject, handles);
+
+set(zoom,'ActionPostCallback',@ir_setup_video_zoom_pan_image);
+set(pan ,'ActionPostCallback',@ir_setup_video_zoom_pan_image);
 
 start(handles.video.timer);
 
@@ -88,6 +92,7 @@ handles = guidata(fig_handle);
 
 frame_cur = getsnapshot(handles.video.vidobj);
 imshow(frame_cur, 'Parent',handles.video_image);
+axis(handles.video.axis);
 drawnow();
 
 
@@ -137,6 +142,12 @@ varargout{1} = [];
 
 % The figure can be deleted now
 delete(handles.figure1);
+
+
+function ir_setup_video_zoom_pan_image(hObject, eventdata)
+handles = guidata(hObject);
+handles.video.axis = axis(handles.video_image);
+guidata(hObject, handles);
 
 
 % --- Executes on selection change in video_camera.
