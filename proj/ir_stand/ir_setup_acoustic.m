@@ -55,9 +55,6 @@ function ir_setup_acoustic_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for ir_setup_acoustic
 handles.output = hObject;
 
-% Update handles structure
-guidata(hObject, handles);
-
 % Position to center of screen
 old_units = get(hObject,'Units');
 scr_sz = get(0,'ScreenSize');
@@ -83,6 +80,11 @@ switch cfg.generator.harm.scan_type
 end
 get_harm_chkbtn_Callback([], [], handles);
 
+handles.config = cfg;
+
+% Update handles structure
+guidata(hObject, handles);
+
 % UIWAIT makes ir_setup_acoustic wait for user response (see UIRESUME)
 uiwait(handles.figure1);
 
@@ -94,16 +96,20 @@ function varargout = ir_setup_acoustic_OutputFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-cfg.generator.sls.enable =  get(handles.get_sls_chkbtn, 'Value');
-cfg.generator.harm.enable = get(handles.get_harm_chkbtn, 'Value');
-cfg.generator.harm.freq_start =  str2double(get(handles.harm_freq_start_ed,  'String'));
-cfg.generator.harm.freq_finish = str2double(get(handles.harm_freq_finish_ed, 'String'));
-cfg.generator.harm.scan_time =   str2double(get(handles.harm_scan_time_ed,   'String'));
-cfg.generator.harm.amplitude =   str2double(get(handles.harm_amplitude_ed,   'String'));
-if get(handles.harm_scan_log, 'Value')
-	cfg.generator.harm.scan_type = 'log';
+if handles.press_ok
+	cfg.generator.sls.enable =  get(handles.get_sls_chkbtn, 'Value');
+	cfg.generator.harm.enable = get(handles.get_harm_chkbtn, 'Value');
+	cfg.generator.harm.freq_start =  str2double(get(handles.harm_freq_start_ed,  'String'));
+	cfg.generator.harm.freq_finish = str2double(get(handles.harm_freq_finish_ed, 'String'));
+	cfg.generator.harm.scan_time =   str2double(get(handles.harm_scan_time_ed,   'String'));
+	cfg.generator.harm.amplitude =   str2double(get(handles.harm_amplitude_ed,   'String'));
+	if get(handles.harm_scan_log, 'Value')
+		cfg.generator.harm.scan_type = 'log';
+	else
+		cfg.generator.harm.scan_type = 'lin';
+	end
 else
-	cfg.generator.harm.scan_type = 'lin';
+	cfg = handles.config;
 end
 
 varargout{1} = cfg;
@@ -321,8 +327,7 @@ if any(is_key_esc_ret)
 	handles.press_ok = is_key_esc_ret(2);
 	guidata(hObject, handles);
 	uiresume(handles.figure1);
-end    
-
+end
 
 
 function harm_amplitude_ed_Callback(hObject, eventdata, handles)

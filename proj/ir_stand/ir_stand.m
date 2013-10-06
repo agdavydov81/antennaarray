@@ -128,6 +128,8 @@ function setup_irvideo_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_irvideo_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+handles.config = ir_setup_video(handles.config);
+guidata(hObject, handles);
 
 
 % --- Executes on button press in setup_report_btn.
@@ -176,19 +178,19 @@ function work_start_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Fork SLS process
-if handles.config.generator.sls.enable
-	sls_dir = [fileparts(mfilename('fullpath')) filesep 'sls' filesep];
-	dos_str = ['"' sls_dir 'hstart.exe" /NOCONSOLE /D="' sls_dir '" "Lobanov_mark.exe Db_Bor1/ 0 0"'];
-	dos(dos_str);
-end
-
 % Generages signal
 if handles.config.generator.harm.enable
 	play.fs = 44100;
 	play.buff_sz = 0.5*play.fs;
 	play.buff_num = 10;
 	play.buffs = [];
+	
+	harm_cfg = handles.config.generator.harm;
+	harm_freq = [harm_cfg.freq_start harm_cfg.freq_finish];
+	if any(harm_freq<1 | harm_freq > play.fs*0.45)
+		errordlg(['„астоты синтеза сигнала выход€т за допустимый диапазон [1,' num2str(round(play.fs*0.45)) '] √ц.'], [mfilename ' error'], 'modal');
+		return;
+	end
 
 	%Test if current initialisation is ok
 	if playrec('isInitialised')
@@ -228,6 +230,13 @@ if handles.config.generator.harm.enable
 	handles.play = play;
 	guidata(handles.figure1, handles);
 	start(handles.play.timer.handle);
+end
+
+% Fork SLS process
+if handles.config.generator.sls.enable
+	sls_dir = [fileparts(mfilename('fullpath')) filesep 'sls' filesep];
+	dos_str = ['"' sls_dir 'hstart.exe" /NOCONSOLE /D="' sls_dir '" "Lobanov_mark.exe Db_Bor1/ 0 0"'];
+	dos(dos_str);
 end
 
 set(handles.work_start_btn, 'Enable','off');
