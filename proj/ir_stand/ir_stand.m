@@ -84,7 +84,8 @@ catch ME
 								'freq_start',100, ...
 								'freq_finish',8000, ...
 								'scan_time',10, ...
-								'scan_type','log');
+								'scan_type','log', ...
+								'amplitude', 0.95);
 	handles.config = cfg;
 end
 guidata(hObject, handles);
@@ -202,44 +203,59 @@ if handles.config.generator.harm.enable
 		pause(0.1);
 	end
 
-	harm_cfg = handles.config.generator.harm;
-	time_pos = 0;
-	f_mod_last = 0;
-	
-	while playrec('isInitialised')
-		% Generate sound
-		cur_t = time_pos+(0:play.buff_sz-1)'/play.fs;
-		time_pos = time_pos+play.buff_sz/play.fs;
-
-		f_mod = acos(cos(cur_t*pi/harm_cfg.scan_time))/pi;
-
-		switch harm_cfg.scan_type
-			case 'lin'
-				f_mod = (harm_cfg.freq_finish-harm_cfg.freq_start)*f_mod+harm_cfg.freq_start;
-			case 'log'
-				f_mod = harm_cfg.freq_start*(harm_cfg.freq_finish/harm_cfg.freq_start).^(f_mod);
-			otherwise
-				error('ir_stand:harm_gen',['Unsupported frequency modulation type "' harm_cfg.scan_type '".']);
-		end
-
-		f_mod = cumsum(f_mod)/play.fs + f_mod_last;
-		f_mod = rem(f_mod,1);
-		f_mod_last = f_mod(end);
-
-		cur_x = 0.95*cos(2*pi*f_mod);
-
-		% Play generated sound
-		play.buffs = [play.buffs playrec('play', cur_x, 1)];
-
-		while length(play.buffs) > play.buff_num
-			while playrec('isInitialised') && not(playrec('isFinished', play.buffs(1)))
-				pause(0.1);
-			end
-
-			play.buffs(1) = [];
-		end
-	end
+	play.timer = struct('pos',0, ...
+						'f_mod_last',0, ...
+						'handle', timer('TimerFcn',@player_timer_func, 'StopFcn',@player_timer_stop, 'Period',play.buff_sz/play.fs, 'ExecutionMode','fixedRate', 'UserData',handles.figure1));
+	handles.play = play;
+	guidata(handles.figure1, handles);
+	start(handles.play.timer.handle);
 end
+
+
+function player_timer_func(timer_handle, eventdata)
+if not(playrec('isInitialised'))
+	stop(timer_handle);
+	return;
+end
+
+fig_handle = get(timer_handle, 'UserData');
+handles = guidata(fig_handle);
+
+while ~isempty(handles.play.buffs) && playrec('isFinished', handles.play.buffs(1))
+	handles.play.buffs(1) = [];
+end
+
+harm_cfg = handles.config.generator.harm;
+while numel(handles.play.buffs) < handles.play.buff_num
+	cur_t = handles.play.timer.pos+(0:handles.play.buff_sz-1)'/handles.play.fs;
+	handles.play.timer.pos = handles.play.timer.pos+handles.play.buff_sz/handles.play.fs;
+
+	f_mod = acos(cos(cur_t*pi/harm_cfg.scan_time))/pi;
+
+	switch harm_cfg.scan_type
+		case 'lin'
+			f_mod = (harm_cfg.freq_finish-harm_cfg.freq_start)*f_mod+harm_cfg.freq_start;
+		case 'log'
+			f_mod = harm_cfg.freq_start*(harm_cfg.freq_finish/harm_cfg.freq_start).^(f_mod);
+		otherwise
+			error('ir_stand:harm_gen',['Unsupported frequency modulation type "' harm_cfg.scan_type '".']);
+	end
+
+	f_mod = cumsum(f_mod)/handles.play.fs + handles.play.timer.f_mod_last;
+	f_mod = rem(f_mod,1);
+	handles.play.timer.f_mod_last = f_mod(end);
+
+	cur_x = harm_cfg.amplitude*cos(2*pi*f_mod);
+
+	% Play generated sound
+	handles.play.buffs = [handles.play.buffs playrec('play', cur_x, 1)];
+end
+
+guidata(fig_handle, handles);
+
+
+function player_timer_stop(timer_handle, eventdata)
+delete(timer_handle);
 
 
 % --- Executes when user attempts to close figure1.

@@ -22,7 +22,7 @@ function varargout = ir_setup_acoustic(varargin)
 
 % Edit the above text to modify the response to help ir_setup_acoustic
 
-% Last Modified by GUIDE v2.5 25-Sep-2013 15:04:43
+% Last Modified by GUIDE v2.5 27-Sep-2013 17:47:59
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -73,6 +73,7 @@ set(handles.get_harm_chkbtn, 'Value',cfg.generator.harm.enable);
 set(handles.harm_freq_start_ed,  'String',num2str(cfg.generator.harm.freq_start));
 set(handles.harm_freq_finish_ed, 'String',num2str(cfg.generator.harm.freq_finish));
 set(handles.harm_scan_time_ed,   'String',num2str(cfg.generator.harm.scan_time));
+set(handles.harm_amplitude_ed,   'String',num2str(cfg.generator.harm.amplitude));
 switch cfg.generator.harm.scan_type
 	case 'lin'
 		set(handles.harm_scan_lin, 'Value',1);
@@ -93,11 +94,12 @@ function varargout = ir_setup_acoustic_OutputFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-cfg.generator.sls.enable = get(handles.get_sls_chkbtn, 'Value');
+cfg.generator.sls.enable =  get(handles.get_sls_chkbtn, 'Value');
 cfg.generator.harm.enable = get(handles.get_harm_chkbtn, 'Value');
-cfg.generator.harm.freq_start = str2double(get(handles.harm_freq_start_ed,  'String'));
+cfg.generator.harm.freq_start =  str2double(get(handles.harm_freq_start_ed,  'String'));
 cfg.generator.harm.freq_finish = str2double(get(handles.harm_freq_finish_ed, 'String'));
-cfg.generator.harm.scan_time = str2double(get(handles.harm_scan_time_ed,   'String'));
+cfg.generator.harm.scan_time =   str2double(get(handles.harm_scan_time_ed,   'String'));
+cfg.generator.harm.amplitude =   str2double(get(handles.harm_amplitude_ed,   'String'));
 if get(handles.harm_scan_log, 'Value')
 	cfg.generator.harm.scan_type = 'log';
 else
@@ -172,6 +174,7 @@ set(handles.harm_freq_finish_ed, 'Enable',is_enable);
 set(handles.harm_scan_time_ed,   'Enable',is_enable);
 set(handles.harm_scan_lin,		 'Enable',is_enable);
 set(handles.harm_scan_log,		 'Enable',is_enable);
+set(handles.harm_amplitude_ed,	 'Enable',is_enable);
 
 
 function harm_freq_start_ed_Callback(hObject, eventdata, handles)
@@ -319,3 +322,26 @@ if any(is_key_esc_ret)
 	guidata(hObject, handles);
 	uiresume(handles.figure1);
 end    
+
+
+
+function harm_amplitude_ed_Callback(hObject, eventdata, handles)
+% hObject    handle to harm_amplitude_ed (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of harm_amplitude_ed as text
+%        str2double(get(hObject,'String')) returns contents of harm_amplitude_ed as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function harm_amplitude_ed_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to harm_amplitude_ed (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
