@@ -71,11 +71,24 @@ frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
 imshow(frame_cur, 'Parent',handles.video_image);
 
+handles.video.timer = timer('StartDelay',2, 'TimerFcn',@ir_setup_video_timer_func, 'Period',1/50, 'ExecutionMode','fixedRate', 'UserData',handles.figure1);
+
 % Update handles structure
 guidata(hObject, handles);
-	
+
+start(handles.video.timer);
+
 % UIWAIT makes ir_setup_video wait for user response (see UIRESUME)
 uiwait(handles.figure1);
+
+
+function ir_setup_video_timer_func(timer_handle, eventdata)
+fig_handle = get(timer_handle, 'UserData');
+handles = guidata(fig_handle);
+
+frame_cur = getsnapshot(handles.video.vidobj);
+imshow(frame_cur, 'Parent',handles.video_image);
+drawnow();
 
 
 function resize_for_image(handles, img_sz)
@@ -117,6 +130,7 @@ function varargout = ir_setup_video_OutputFcn(hObject, eventdata, handles)
 
 stop(handles.video.vidobj);
 delete(handles.video.vidobj);
+delete(handles.video.timer);
 
 % Get default command line output from handles structure
 varargout{1} = [];
@@ -222,6 +236,7 @@ function setup_ok_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_ok (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+stop(handles.video.timer);
 handles.press_ok = true;
 guidata(hObject, handles);
 uiresume(handles.figure1);
@@ -232,6 +247,7 @@ function setup_cancel_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_cancel (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+stop(handles.video.timer);
 handles.press_ok = false;
 guidata(hObject, handles);
 uiresume(handles.figure1);
@@ -247,6 +263,7 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 % Hint: delete(hObject) closes the figure
 if isequal(get(hObject, 'waitstatus'), 'waiting')
     % The GUI is still in UIWAIT, us UIRESUME
+	stop(handles.video.timer);
 	handles.press_ok = false;
 	guidata(hObject, handles);
     uiresume(hObject);
@@ -268,6 +285,7 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
 % Check for "enter" or "escape"
 is_key_esc_ret = strcmp(get(hObject,'CurrentKey'),{'escape' 'return'});
 if any(is_key_esc_ret)
+	stop(handles.video.timer);
 	handles.press_ok = is_key_esc_ret(2);
 	guidata(hObject, handles);
 	uiresume(handles.figure1);
