@@ -74,24 +74,24 @@ set(hObject,'Units',old_units);
 
 % Load configuration
 [cur_path, cur_name]= fileparts(mfilename('fullpath'));
-handles.config_file = fullfile(cur_path, [cur_name '_config.mat']);
+handles.config_file = fullfile(cur_path, [cur_name '_config.xml']);
+addpath([fileparts(mfilename('fullpath')) filesep 'xml_io_tools']);
 try
-	cache = load(handles.config_file);
-	handles.config = cache.config;
+	handles.config = xml_read(handles.config_file);
 catch ME
-	cfg.generator.sls = struct('enable',true);
-	cfg.generator.harm = struct('enable',false, ...
-								'freq_start',100, ...
-								'freq_finish',8000, ...
-								'scan_time',10, ...
-								'scan_type','log', ...
-								'amplitude', 0.95);
-	handles.config = cfg;
+	handles.config = struct();
 end
 
-set(handles.work_stop_btn,     'Enable','off');
-set(handles.work_abort_btn,    'Enable','off');
-set(handles.work_continue_btn, 'Enable','off');
+set(handles.work_stop_btn,		'Enable','off');
+set(handles.work_abort_btn,		'Enable','off');
+set(handles.work_continue_btn,	'Enable','off');
+
+if isfield(handles.config,'generator') && isfield(handles.config,'video')
+	ready_st = 'on';
+else
+	ready_st = 'off';
+end
+set(handles.work_start_btn,		'Enable',ready_st);
 
 guidata(hObject, handles);
 
@@ -121,6 +121,12 @@ function setup_acoustics_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 handles.config = ir_setup_acoustic(handles.config);
 guidata(hObject, handles);
+if isfield(handles.config,'generator') && isfield(handles.config,'video')
+	ready_st = 'on';
+else
+	ready_st = 'off';
+end
+set(handles.work_start_btn,		'Enable',ready_st);
 
 
 % --- Executes on button press in setup_irvideo_btn.
@@ -130,6 +136,12 @@ function setup_irvideo_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 handles.config = ir_setup_video(handles.config);
 guidata(hObject, handles);
+if isfield(handles.config,'generator') && isfield(handles.config,'video')
+	ready_st = 'on';
+else
+	ready_st = 'off';
+end
+set(handles.work_start_btn,		'Enable',ready_st);
 
 
 % --- Executes on button press in setup_report_btn.
@@ -296,8 +308,7 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-config = handles.config;
-save(handles.config_file, 'config');
+xml_write(handles.config_file, handles.config, 'ir_stand');
 
 % Hint: delete(hObject) closes the figure
 delete(hObject);

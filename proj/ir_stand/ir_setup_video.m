@@ -55,24 +55,69 @@ function ir_setup_video_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for ir_setup_video
 handles.output = hObject;
 
+if isempty(varargin)
+	cfg = struct();
+else
+	cfg = varargin{1};
+end
+if not(isfield(cfg,'video'));							cfg.video = struct();						end
+if not(isfield(cfg.video,'detector'));					cfg.video.detector = struct();				end
+if not(isfield(cfg.video.detector,'quantiles'));		cfg.video.detector.quantiles = [0.05 0.95];	end
+if not(isfield(cfg.video.detector,'estimation_time'));	cfg.video.detector.estimation_time = 5;		end
+if not(isfield(cfg.video,'device'));					cfg.video.device = struct();				end
+if not(isfield(cfg.video.device,'name'));				cfg.video.device.name = '';					end
+if not(isfield(cfg.video.device,'mode'));				cfg.video.device.mode = '';					end
+if not(isfield(cfg.video.device,'axis'));				cfg.video.device.axis = [];					end
 
-video_devs = imaqhwinfo('winvideo');
-set(handles.video_camera, 'String',{video_devs.DeviceInfo.DeviceName});
-set(handles.video_mode,   'String',video_devs.DeviceInfo(1).SupportedFormats, ...
-						  'Value', find(strcmp(video_devs.DeviceInfo(1).DefaultFormat,video_devs.DeviceInfo(1).SupportedFormats),1));
-					  
-handles.video.cam_info=imaqhwinfo('winvideo',video_devs.DeviceIDs{1});
-handles.video.vidobj = videoinput('winvideo',video_devs.DeviceIDs{1},video_devs.DeviceInfo(1).DefaultFormat);
+handles.config = cfg;
+
+set(handles.detector_quantiles,			'String',sprintf('%0.2f ',cfg.video.detector.quantiles));
+set(handles.detector_estimation_time,	'String',num2str(cfg.video.detector.estimation_time));
+
+handles.video.devices = imaqhwinfo('winvideo');
+set(handles.video_camera, 'String',{handles.video.devices.DeviceInfo.DeviceName});
+handles.video.cur_device = 1;
+if not(isempty(cfg.video.device.name))
+	cur_cam = find(strcmp(cfg.video.device.name, {handles.video.devices.DeviceInfo.DeviceName}),1);
+	if isempty(cur_cam)
+		cfg.video.device.mode = '';
+		cfg.video.device.axis = [];
+	else
+		handles.video.cur_device = cur_cam;
+	end
+end
+set(handles.video_camera, 'Value',handles.video.cur_device);
+
+video_modes = handles.video.devices.DeviceInfo(handles.video.cur_device).SupportedFormats;
+set(handles.video_mode, 'String',video_modes);
+handles.video.mode =		handles.video.devices.DeviceInfo(handles.video.cur_device).DefaultFormat;
+if not(isempty(cfg.video.device.mode))
+	cur_mode = find(strcmp(cfg.video.device.mode, video_modes),1);
+	if isempty(cur_mode)
+		cfg.video.device.axis = [];
+	else
+		handles.video.mode = video_modes{cur_mode};
+	end
+end
+set(handles.video_mode, 'Value',find(strcmp(handles.video.mode,video_modes),1));
+
+handles.video.cam_info =	imaqhwinfo('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device});
+handles.video.vidobj =		videoinput('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
 set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
-pause(0.1);
 frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
 imshow(frame_cur, 'Parent',handles.video_image);
-handles.video.axis = axis(handles.video_image);
+if isempty(cfg.video.device.axis)
+	handles.video.axis = axis(handles.video_image);
+else
+	handles.video.axis = cfg.video.device.axis;
+	axis(handles.video_image, handles.video.axis);
+end
 
-handles.video.timer = timer('StartDelay',2, 'TimerFcn',@ir_setup_video_timer_func, 'Period',1/50, 'ExecutionMode','fixedRate', 'UserData',handles.figure1);
+handles.video.timer = timer('StartDelay',2, 'TimerFcn',@ir_setup_video_timer_func, ...
+							'Period',1/50, 'ExecutionMode','fixedRate', 'UserData',handles.figure1);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -90,10 +135,13 @@ function ir_setup_video_timer_func(timer_handle, eventdata)
 fig_handle = get(timer_handle, 'UserData');
 handles = guidata(fig_handle);
 
-frame_cur = getsnapshot(handles.video.vidobj);
-imshow(frame_cur, 'Parent',handles.video_image);
-axis(handles.video.axis);
-drawnow();
+try
+	frame_cur = getsnapshot(handles.video.vidobj);
+	imshow(frame_cur, 'Parent',handles.video_image);
+	axis(handles.video_image, handles.video.axis);
+	drawnow();
+catch ME
+end
 
 
 function resize_for_image(handles, img_sz)
@@ -101,7 +149,7 @@ Y = img_sz(1);
 X = img_sz(2);
 scr_sz = get(0,'ScreenSize');
 
-if scr_sz(3)<X*0.8 || scr_sz(4)<Y*0.8
+if 0.8*scr_sz(3)<X || 0.8*scr_sz(4)<Y
 	max_div = max([X/scr_sz(3)  Y/scr_sz(4)])/0.8;
 	X = round(X/max_div);
 	Y = round(Y/max_div);
@@ -137,8 +185,16 @@ stop(handles.video.vidobj);
 delete(handles.video.vidobj);
 delete(handles.video.timer);
 
-% Get default command line output from handles structure
-varargout{1} = [];
+cfg = handles.config;
+if handles.press_ok
+	cfg.video.detector.quantiles =			str2num(get(handles.detector_quantiles,'String'));
+	cfg.video.detector.estimation_time =	str2double(get(handles.detector_estimation_time,'String'));
+	cfg.video.device.name =					handles.video.cam_info.DeviceName;
+	cfg.video.device.mode =					handles.video.mode;
+	cfg.video.device.axis =					handles.video.axis;
+end
+
+varargout{1} = cfg;
 
 % The figure can be deleted now
 delete(handles.figure1);
@@ -158,6 +214,30 @@ function video_camera_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns video_camera contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from video_camera
+if handles.video.cur_device==get(hObject,'Value')
+	return
+end
+
+stop(handles.video.timer);
+
+stop(handles.video.vidobj);
+delete(handles.video.vidobj);
+
+handles.video.cur_device=get(hObject,'Value');
+handles.video.cam_info=imaqhwinfo('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device});
+handles.video.vidobj = videoinput('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device}, ...
+											 handles.video.devices.DeviceInfo(handles.video.cur_device).DefaultFormat);
+set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
+triggerconfig(handles.video.vidobj, 'manual');
+start(handles.video.vidobj);
+frame_cur = getsnapshot(handles.video.vidobj);
+resize_for_image(handles, size(frame_cur));
+imshow(frame_cur, 'Parent',handles.video_image);
+handles.video.axis = axis(handles.video_image);
+
+guidata(hObject, handles);
+
+start(handles.video.timer);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -181,6 +261,31 @@ function video_mode_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns video_mode contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from video_mode
+cur_mode = get(hObject,'String');
+cur_mode = cur_mode{get(hObject,'Value')};
+if strcmp(handles.video.mode, cur_mode)
+	return
+end
+
+stop(handles.video.timer);
+
+stop(handles.video.vidobj);
+delete(handles.video.vidobj);
+
+handles.video.cam_info=	imaqhwinfo('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device});
+handles.video.mode =	cur_mode;
+handles.video.vidobj =	videoinput('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
+set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
+triggerconfig(handles.video.vidobj, 'manual');
+start(handles.video.vidobj);
+frame_cur = getsnapshot(handles.video.vidobj);
+resize_for_image(handles, size(frame_cur));
+imshow(frame_cur, 'Parent',handles.video_image);
+handles.video.axis = axis(handles.video_image);
+
+guidata(hObject, handles);
+
+start(handles.video.timer);
 
 
 % --- Executes during object creation, after setting all properties.

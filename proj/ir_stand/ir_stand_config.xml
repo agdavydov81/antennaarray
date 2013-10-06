@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ir_stand>
+   <generator>
+      <sls>
+         <enable>1</enable>
+      </sls>
+      <harm>
+         <enable>1</enable>
+         <freq_start>100</freq_start>
+         <freq_finish>8000</freq_finish>
+         <scan_time>10</scan_time>
+         <scan_type>log</scan_type>
+         <amplitude>0.95</amplitude>
+      </harm>
+   </generator>
+   <video>
+      <detector>
+         <quantiles>[0.05 0.95]</quantiles>
+         <estimation_time>5</estimation_time>
+      </detector>
+      <device>
+         <name>USB Video Device</name>
+         <mode>RGB24_640x480</mode>
+         <axis>[0.5 160.5 360.5 480.5]</axis>
+      </device>
+   </video>
+</ir_stand>

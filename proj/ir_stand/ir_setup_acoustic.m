@@ -64,9 +64,26 @@ set(hObject,'Position',[(scr_sz(3)-cur_pos(3))/2, (scr_sz(4)-cur_pos(4))/2, cur_
 set(hObject,'Units',old_units);
 
 % Fill configuration fields
-cfg = varargin{1};
-set(handles.get_sls_chkbtn, 'Value',cfg.generator.sls.enable);
-set(handles.get_harm_chkbtn, 'Value',cfg.generator.harm.enable);
+if isempty(varargin)
+	cfg = struct();
+else
+	cfg = varargin{1};
+end
+if not(isfield(cfg,'generator'));					cfg.generator = struct();				end
+if not(isfield(cfg.generator,'sls'));				cfg.generator.sls = struct();			end
+if not(isfield(cfg.generator.sls,'enable'));		cfg.generator.sls.enable = true;		end
+if not(isfield(cfg.generator,'harm'));				cfg.generator.harm = struct();			end
+if not(isfield(cfg.generator.harm,'enable'));		cfg.generator.harm.enable = false;		end
+if not(isfield(cfg.generator.harm,'freq_start'));	cfg.generator.harm.freq_start = 100;	end
+if not(isfield(cfg.generator.harm,'freq_finish'));	cfg.generator.harm.freq_finish = 8000;	end
+if not(isfield(cfg.generator.harm,'scan_time'));	cfg.generator.harm.scan_time = 10;		end
+if not(isfield(cfg.generator.harm,'scan_type'));	cfg.generator.harm.scan_type = 'log';	end
+if not(isfield(cfg.generator.harm,'amplitude'));	cfg.generator.harm.amplitude = 0.95;	end
+
+handles.config = cfg;
+
+set(handles.get_sls_chkbtn,		 'Value',cfg.generator.sls.enable);
+set(handles.get_harm_chkbtn,	 'Value',cfg.generator.harm.enable);
 set(handles.harm_freq_start_ed,  'String',num2str(cfg.generator.harm.freq_start));
 set(handles.harm_freq_finish_ed, 'String',num2str(cfg.generator.harm.freq_finish));
 set(handles.harm_scan_time_ed,   'String',num2str(cfg.generator.harm.scan_time));
@@ -79,8 +96,6 @@ switch cfg.generator.harm.scan_type
 	otherwise
 end
 get_harm_chkbtn_Callback([], [], handles);
-
-handles.config = cfg;
 
 % Update handles structure
 guidata(hObject, handles);
@@ -96,6 +111,7 @@ function varargout = ir_setup_acoustic_OutputFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+cfg = handles.config;
 if handles.press_ok
 	cfg.generator.sls.enable =  get(handles.get_sls_chkbtn, 'Value');
 	cfg.generator.harm.enable = get(handles.get_harm_chkbtn, 'Value');
@@ -108,8 +124,6 @@ if handles.press_ok
 	else
 		cfg.generator.harm.scan_type = 'lin';
 	end
-else
-	cfg = handles.config;
 end
 
 varargout{1} = cfg;
