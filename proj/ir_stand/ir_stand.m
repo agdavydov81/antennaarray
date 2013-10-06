@@ -88,6 +88,11 @@ catch ME
 								'amplitude', 0.95);
 	handles.config = cfg;
 end
+
+set(handles.work_stop_btn,     'Enable','off');
+set(handles.work_abort_btn,    'Enable','off');
+set(handles.work_continue_btn, 'Enable','off');
+
 guidata(hObject, handles);
 
 
@@ -151,7 +156,18 @@ function work_abort_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to work_abort_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-playrec('reset');
+
+if handles.config.generator.sls.enable
+	dos('taskkill /F /IM Lobanov_mark.exe 1>nul 2>&1');
+end
+
+if handles.config.generator.harm.enable
+	playrec('reset');
+end
+
+set(handles.work_start_btn, 'Enable','on');
+set(handles.work_abort_btn, 'Enable','off');
+set(handles.setup_acoustics_btn, 'Enable','on');
 
 
 % --- Executes on button press in work_start_btn.
@@ -162,6 +178,9 @@ function work_start_btn_Callback(hObject, eventdata, handles)
 
 % Fork SLS process
 if handles.config.generator.sls.enable
+	sls_dir = [fileparts(mfilename('fullpath')) filesep 'sls' filesep];
+	dos_str = ['"' sls_dir 'hstart.exe" /NOCONSOLE /D="' sls_dir '" "Lobanov_mark.exe Db_Bor1/ 0 0"'];
+	dos(dos_str);
 end
 
 % Generages signal
@@ -210,6 +229,10 @@ if handles.config.generator.harm.enable
 	guidata(handles.figure1, handles);
 	start(handles.play.timer.handle);
 end
+
+set(handles.work_start_btn, 'Enable','off');
+set(handles.work_abort_btn, 'Enable','on');
+set(handles.setup_acoustics_btn, 'Enable','off');
 
 
 function player_timer_func(timer_handle, eventdata)
