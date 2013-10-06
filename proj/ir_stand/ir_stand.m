@@ -210,6 +210,7 @@ if handles.config.acoustic_generator.harm.enable
 	play.buff_sz = 0.5*play.fs;
 	play.buff_num = 10;
 	play.buffs = [];
+	play.config = handles.config;
 	
 	harm_cfg = handles.config.acoustic_generator.harm;
 	harm_freq = [harm_cfg.freq_start harm_cfg.freq_finish];
@@ -252,7 +253,9 @@ if handles.config.acoustic_generator.harm.enable
 
 	play.timer = struct('pos',0, ...
 						'f_mod_last',0, ...
-						'handle', timer('TimerFcn',@player_timer_func, 'StopFcn',@player_timer_stop, 'Period',play.buff_sz/play.fs, 'ExecutionMode','fixedRate', 'UserData',handles.figure1));
+						'handle', timer('TimerFcn',@player_timer_func, 'StopFcn',@player_timer_stop, ...
+										'Period',play.buff_sz/play.fs, 'ExecutionMode','fixedRate'));
+	set(play.timer.handle, 'UserData',play);
 	handles.play = play;
 	guidata(handles.figure1, handles);
 	start(handles.play.timer.handle);
@@ -263,6 +266,11 @@ if handles.config.acoustic_generator.sls.enable
 	sls_dir = [fileparts(mfilename('fullpath')) filesep 'sls' filesep];
 	dos_str = ['"' sls_dir 'hstart.exe" /NOCONSOLE /D="' sls_dir '" "Lobanov_mark.exe Db_Bor1/ 0 0"'];
 	dos(dos_str);
+	
+	handles.sls_watchdog = timer('TimerFcn',@watchdog_timer_func, 'StopFcn',@player_timer_stop, ...
+								 'StartDelay',1, 'Period',1, 'ExecutionMode','fixedRate', 'UserData',handles);
+	guidata(handles.figure1, handles);
+	start(handles.sls_watchdog);
 end
 
 set(handles.work_start_btn, 'Enable','off');
@@ -274,45 +282,67 @@ set(handles.setup_btn, 'Enable','off');
 
 
 function player_timer_func(timer_handle, eventdata)
-if not(playrec('isInitialised'))
-	stop(timer_handle);
-	return;
-end
-
-fig_handle = get(timer_handle, 'UserData');
-handles = guidata(fig_handle);
-
-while ~isempty(handles.play.buffs) && playrec('isFinished', handles.play.buffs(1))
-	handles.play.buffs(1) = [];
-end
-
-harm_cfg = handles.config.acoustic_generator.harm;
-while numel(handles.play.buffs) < handles.play.buff_num
-	cur_t = handles.play.timer.pos+(0:handles.play.buff_sz-1)'/handles.play.fs;
-	handles.play.timer.pos = handles.play.timer.pos+handles.play.buff_sz/handles.play.fs;
-
-	f_mod = acos(cos(cur_t*pi/harm_cfg.scan_time))/pi;
-
-	switch harm_cfg.scan_type
-		case 'lin'
-			f_mod = (harm_cfg.freq_finish-harm_cfg.freq_start)*f_mod+harm_cfg.freq_start;
-		case 'log'
-			f_mod = harm_cfg.freq_start*(harm_cfg.freq_finish/harm_cfg.freq_start).^(f_mod);
-		otherwise
-			error('ir_stand:harm_gen',['Unsupported frequency modulation type "' harm_cfg.scan_type '".']);
+try
+	if not(playrec('isInitialised'))
+		stop(timer_handle);
+		return;
 	end
 
-	f_mod = cumsum(f_mod)/handles.play.fs + handles.play.timer.f_mod_last;
-	f_mod = rem(f_mod,1);
-	handles.play.timer.f_mod_last = f_mod(end);
+	handles_play = get(timer_handle, 'UserData');
 
-	cur_x = harm_cfg.amplitude*cos(2*pi*f_mod);
+	while ~isempty(handles_play.buffs) && playrec('isFinished', handles_play.buffs(1))
+		handles_play.buffs(1) = [];
+	end
 
-	% Play generated sound
-	handles.play.buffs = [handles.play.buffs playrec('play', cur_x, 1)];
+	harm_cfg = handles_play.config.acoustic_generator.harm;
+	while numel(handles_play.buffs) < handles_play.buff_num
+		cur_t = handles_play.timer.pos+(0:handles_play.buff_sz-1)'/handles_play.fs;
+		handles_play.timer.pos = handles_play.timer.pos+handles_play.buff_sz/handles_play.fs;
+
+		f_mod = acos(cos(cur_t*pi/harm_cfg.scan_time))/pi;
+
+		switch harm_cfg.scan_type
+			case 'lin'
+				f_mod = (harm_cfg.freq_finish-harm_cfg.freq_start)*f_mod+harm_cfg.freq_start;
+			case 'log'
+				f_mod = harm_cfg.freq_start*(harm_cfg.freq_finish/harm_cfg.freq_start).^(f_mod);
+			otherwise
+				error('ir_stand:harm_gen',['Unsupported frequency modulation type "' harm_cfg.scan_type '".']);
+		end
+
+		f_mod = cumsum(f_mod)/handles_play.fs + handles_play.timer.f_mod_last;
+		f_mod = rem(f_mod,1);
+		handles_play.timer.f_mod_last = f_mod(end);
+
+		cur_x = harm_cfg.amplitude*cos(2*pi*f_mod);
+
+		% Play generated sound
+		handles_play.buffs = [handles_play.buffs playrec('play', cur_x, 1)];
+	end
+
+	set(timer_handle, 'UserData',handles_play);
+catch ME
+	% disp(ME);
 end
 
-guidata(fig_handle, handles);
+
+function watchdog_timer_func(timer_handle, eventdata)
+try
+	handles = get(timer_handle, 'UserData');
+	if strcmp(get(handles.work_abort_btn,'Enable'),'off')
+		stop(timer_handle);
+		return;
+	end
+
+	[~, dos_result] = dos('tasklist /FI "IMAGENAME eq Lobanov_mark.exe"');
+	if isempty(strfind(dos_result, 'Lobanov_mark.exe'))
+		sls_dir = [fileparts(mfilename('fullpath')) filesep 'sls' filesep];
+		dos_str = ['"' sls_dir 'hstart.exe" /NOCONSOLE /D="' sls_dir '" "Lobanov_mark.exe Db_Bor1/ 0 0"'];
+		dos(dos_str);
+	end
+catch ME
+	% disp(ME);
+end
 
 
 function player_timer_stop(timer_handle, eventdata)
@@ -326,6 +356,10 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 xml_write(handles.config_file, handles.config, 'ir_stand');
+
+if strcmp(get(handles.work_abort_btn,'Enable'),'on')
+	work_abort_btn_Callback(hObject, eventdata, handles)
+end
 
 % Hint: delete(hObject) closes the figure
 delete(hObject);
