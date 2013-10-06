@@ -157,6 +157,9 @@ function setup_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+handles.config = ir_setup_thresholds(handles.config);
+guidata(hObject, handles);
+check_config(handles);
 
 
 % --- Executes on button press in work_continue_btn.
@@ -189,7 +192,10 @@ end
 
 set(handles.work_start_btn, 'Enable','on');
 set(handles.work_abort_btn, 'Enable','off');
+set(handles.setup_emi_btn, 'Enable','on');
+set(handles.setup_irvideo_btn, 'Enable','on');
 set(handles.setup_acoustics_btn, 'Enable','on');
+set(handles.setup_btn, 'Enable','on');
 
 
 % --- Executes on button press in work_start_btn.
@@ -261,7 +267,10 @@ end
 
 set(handles.work_start_btn, 'Enable','off');
 set(handles.work_abort_btn, 'Enable','on');
+set(handles.setup_emi_btn, 'Enable','off');
+set(handles.setup_irvideo_btn, 'Enable','off');
 set(handles.setup_acoustics_btn, 'Enable','off');
+set(handles.setup_btn, 'Enable','off');
 
 
 function player_timer_func(timer_handle, eventdata)

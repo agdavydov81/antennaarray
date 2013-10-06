@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 06-Oct-2013 19:38:42
+% Last Modified by GUIDE v2.5 06-Oct-2013 20:20:06
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -69,33 +69,32 @@ if isempty(varargin)
 else
 	cfg = varargin{1};
 end
-if not(isfield(cfg,'detector'));					cfg.detector = struct();				end
-if not(isfield(cfg.detector,'start_time'));			cfg.detector.start_time = 5;			end
-if not(isfield(cfg.detector,'fir_freq'));			cfg.detector.fir_freq = 3;				end
-if not(isfield(cfg.detector,'fir_order'));			cfg.detector.fir_order = 4;				end
-if not(isfield(cfg.detector,'stat_lo'));			cfg.detector.stat_lo = 0.05;			end
-if not(isfield(cfg.detector,'stat_hi'));			cfg.detector.stat_hi = 0.95;			end
-if not(isfield(cfg.detector,'median_size'));		cfg.detector.median_size = 3;			end
-if not(isfield(cfg.detector,'detector_points'));	cfg.detector.detector_points = 10;		end
-if not(isfield(cfg.detector,'detector_part'));		cfg.detector.detector_part = 0.01;		end
+if not(isfield(cfg,'thresholds'));					cfg.thresholds = struct();				end
+if not(isfield(cfg.thresholds,'start_time'));		cfg.thresholds.start_time = 5;			end
+if not(isfield(cfg.thresholds,'fir_freq'));			cfg.thresholds.fir_freq = 3;			end
+if not(isfield(cfg.thresholds,'fir_order'));		cfg.thresholds.fir_order = 4;			end
+if not(isfield(cfg.thresholds,'stat_lo'));			cfg.thresholds.stat_lo = 0.05;			end
+if not(isfield(cfg.thresholds,'stat_hi'));			cfg.thresholds.stat_hi = 0.95;			end
+if not(isfield(cfg.thresholds,'median_size'));		cfg.thresholds.median_size = 3;			end
+if not(isfield(cfg.thresholds,'detector_points'));	cfg.thresholds.detector_points = 10;	end
+if not(isfield(cfg.thresholds,'detector_part'));	cfg.thresholds.detector_part = 0.01;	end
 
 handles.config = cfg;
 
-set(handles.start_time,		'String', num2str(cfg.detector.start_time));
-set(handles.fir_freq,		'String', num2str(cfg.detector.fir_freq));
-set(handles.fir_order,		'String', num2str(cfg.detector.fir_order));
-set(handles.stat_lo,		'String', num2str(cfg.detector.stat_lo));
-set(handles.stat_hi,		'String', num2str(cfg.detector.stat_hi));
-set(handles.median_size,	'String', num2str(cfg.detector.median_size));
-set(handles.detector_points,'String', num2str(cfg.detector.detector_points));
-set(handles.detector_part,	'String', num2str(cfg.detector.detector_part));
-
+set(handles.start_time,		'String', num2str(cfg.thresholds.start_time));
+set(handles.fir_freq,		'String', num2str(cfg.thresholds.fir_freq));
+set(handles.fir_order,		'String', num2str(cfg.thresholds.fir_order));
+set(handles.stat_lo,		'String', num2str(cfg.thresholds.stat_lo));
+set(handles.stat_hi,		'String', num2str(cfg.thresholds.stat_hi));
+set(handles.median_size,	'String', num2str(cfg.thresholds.median_size));
+set(handles.detector_points,'String', num2str(cfg.thresholds.detector_points));
+set(handles.detector_part,	'String', num2str(cfg.thresholds.detector_part));
 
 % Update handles structure
 guidata(hObject, handles);
 
 % UIWAIT makes ir_setup_thresholds wait for user response (see UIRESUME)
-% uiwait(handles.figure1);
+uiwait(handles.figure1);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -105,8 +104,22 @@ function varargout = ir_setup_thresholds_OutputFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Get default command line output from handles structure
-varargout{1} = handles.output;
+cfg = handles.config;
+if handles.press_ok
+	cfg.thresholds.start_time = 		str2double(get(handles.start_time,'String'));
+	cfg.thresholds.fir_freq =			str2double(get(handles.fir_freq,'String'));
+	cfg.thresholds.fir_order =			str2double(get(handles.fir_order,'String'));
+	cfg.thresholds.stat_lo =			str2double(get(handles.stat_lo,'String'));
+	cfg.thresholds.stat_hi =			str2double(get(handles.stat_hi,'String'));
+	cfg.thresholds.median_size =		str2double(get(handles.median_size,	'String'));
+	cfg.thresholds.detector_points =	str2double(get(handles.detector_points,'String'));
+	cfg.thresholds.detector_part =		str2double(get(handles.detector_part,'String'));
+end
+
+varargout{1} = cfg;
+
+% The figure can be deleted now
+delete(handles.figure1);
 
 
 % --- Executes on button press in ok_btn.
@@ -114,6 +127,9 @@ function ok_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to ok_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+handles.press_ok = true;
+guidata(hObject, handles);
+uiresume(handles.figure1);
 
 
 % --- Executes on button press in cancel_btn.
@@ -121,7 +137,45 @@ function cancel_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to cancel_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+handles.press_ok = false;
+guidata(hObject, handles);
+uiresume(handles.figure1);
 
+
+% --- Executes when user attempts to close figure1.
+function figure1_CloseRequestFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: delete(hObject) closes the figure
+if isequal(get(hObject, 'waitstatus'), 'waiting')
+    % The GUI is still in UIWAIT, us UIRESUME
+	handles.press_ok = false;
+	guidata(hObject, handles);
+    uiresume(hObject);
+else
+    % The GUI is no longer waiting, just close it
+    delete(hObject);
+end
+
+
+% --- Executes on key press with focus on figure1 and none of its controls.
+function figure1_KeyPressFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  structure with the following fields (see FIGURE)
+%	Key: name of the key that was pressed, in lower case
+%	Character: character interpretation of the key(s) that was pressed
+%	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
+% handles    structure with handles and user data (see GUIDATA)
+
+% Check for "enter" or "escape"
+is_key_esc_ret = strcmp(get(hObject,'CurrentKey'),{'escape' 'return'});
+if any(is_key_esc_ret)
+	handles.press_ok = is_key_esc_ret(2);
+	guidata(hObject, handles);
+	uiresume(handles.figure1);
+end
 
 
 function fir_freq_Callback(hObject, eventdata, handles)
@@ -146,7 +200,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function fir_order_Callback(hObject, eventdata, handles)
 % hObject    handle to fir_order (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -167,7 +220,6 @@ function fir_order_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function stat_lo_Callback(hObject, eventdata, handles)
@@ -192,7 +244,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function stat_hi_Callback(hObject, eventdata, handles)
 % hObject    handle to stat_hi (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -213,7 +264,6 @@ function stat_hi_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function start_time_Callback(hObject, eventdata, handles)
