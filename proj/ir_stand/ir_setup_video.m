@@ -139,7 +139,6 @@ try
 	frame_cur = getsnapshot(handles.video.vidobj);
 	imshow(frame_cur, 'Parent',handles.video_image);
 	axis(handles.video_image, handles.video.axis);
-	disp(axis(handles.video_image)); % @@ debug
 	drawnow();
 catch ME
 %	disp(ME);

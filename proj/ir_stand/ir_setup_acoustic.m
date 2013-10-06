@@ -71,9 +71,9 @@ else
 end
 if not(isfield(cfg,'generator'));					cfg.generator = struct();				end
 if not(isfield(cfg.generator,'sls'));				cfg.generator.sls = struct();			end
-if not(isfield(cfg.generator.sls,'enable'));		cfg.generator.sls.enable = true;		end
+if not(isfield(cfg.generator.sls,'enable'));		cfg.generator.sls.enable = 1;			end
 if not(isfield(cfg.generator,'harm'));				cfg.generator.harm = struct();			end
-if not(isfield(cfg.generator.harm,'enable'));		cfg.generator.harm.enable = false;		end
+if not(isfield(cfg.generator.harm,'enable'));		cfg.generator.harm.enable = 0;			end
 if not(isfield(cfg.generator.harm,'freq_start'));	cfg.generator.harm.freq_start = 100;	end
 if not(isfield(cfg.generator.harm,'freq_finish'));	cfg.generator.harm.freq_finish = 8000;	end
 if not(isfield(cfg.generator.harm,'scan_time'));	cfg.generator.harm.scan_time = 10;		end

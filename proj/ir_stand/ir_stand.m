@@ -86,13 +86,6 @@ set(handles.work_stop_btn,		'Enable','off');
 set(handles.work_abort_btn,		'Enable','off');
 set(handles.work_continue_btn,	'Enable','off');
 
-if isfield(handles.config,'generator') && isfield(handles.config,'video')
-	ready_st = 'on';
-else
-	ready_st = 'off';
-end
-set(handles.work_start_btn,		'Enable',ready_st);
-
 guidata(hObject, handles);
 
 
@@ -105,6 +98,13 @@ function varargout = ir_stand_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.output;
+
+if isfield(handles.config,'generator') && isfield(handles.config,'video')
+	set(handles.work_start_btn,		'Enable','on');
+else
+	set(handles.work_start_btn,		'Enable','off');
+	msgbox('Настройте геренатор акустического воздействия и тепловизор для начала работы.', [mfilename ' help'], 'help', 'modal');
+end
 
 
 % --- Executes on button press in setup_emi_btn.
@@ -122,11 +122,11 @@ function setup_acoustics_btn_Callback(hObject, eventdata, handles)
 handles.config = ir_setup_acoustic(handles.config);
 guidata(hObject, handles);
 if isfield(handles.config,'generator') && isfield(handles.config,'video')
-	ready_st = 'on';
+	set(handles.work_start_btn,		'Enable','on');
 else
-	ready_st = 'off';
+	set(handles.work_start_btn,		'Enable','off');
+	msgbox('Настройте геренатор акустического воздействия и тепловизор для начала работы.', [mfilename ' help'], 'help', 'modal');
 end
-set(handles.work_start_btn,		'Enable',ready_st);
 
 
 % --- Executes on button press in setup_irvideo_btn.
@@ -137,11 +137,11 @@ function setup_irvideo_btn_Callback(hObject, eventdata, handles)
 handles.config = ir_setup_video(handles.config);
 guidata(hObject, handles);
 if isfield(handles.config,'generator') && isfield(handles.config,'video')
-	ready_st = 'on';
+	set(handles.work_start_btn,		'Enable','on');
 else
-	ready_st = 'off';
+	set(handles.work_start_btn,		'Enable','off');
+	msgbox('Настройте геренатор акустического воздействия и тепловизор для начала работы.', [mfilename ' help'], 'help', 'modal');
 end
-set(handles.work_start_btn,		'Enable',ready_st);
 
 
 % --- Executes on button press in setup_report_btn.
