@@ -162,6 +162,7 @@ try
 		end
 	else
 		handles.video.fps = struct('ticID',tic(), 'tic_pos',2, 'tok_pos',3, 'counter',0, 'queue_length',5, 'tic_queue',[], 'frames_queue',[]);
+		set(handles.video_fps, 'String','');
 	end
 
 	guidata(fig_handle, handles);
@@ -389,7 +390,9 @@ function setup_ok_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_ok (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-stop(handles.video.timer);
+if ishandle(handles.video.timer)
+	stop(handles.video.timer);
+end
 handles.press_ok = true;
 guidata(hObject, handles);
 uiresume(handles.figure1);
@@ -400,7 +403,9 @@ function setup_cancel_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_cancel (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-stop(handles.video.timer);
+if ishandle(handles.video.timer)
+	stop(handles.video.timer);
+end
 handles.press_ok = false;
 guidata(hObject, handles);
 uiresume(handles.figure1);
