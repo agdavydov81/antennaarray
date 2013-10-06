@@ -186,9 +186,9 @@ set(handles.figure1, 'Units','pixels', 'Position',[(scr_sz(3)-(X+20))/2 (scr_sz(
 
 set(handles.video_image,		'Units','pixels',	'Position',[10  10 X Y]); %
 set(handles.video_camera,		'Units','pixels',	'Position',[10  Y+50 200 22]);
-set(handles.video_camera_text,	'Units','pixels',	'Position',[220 Y+53 90 16]);
+set(handles.video_camera_text,	'Units','pixels',	'Position',[215 Y+53 90 16]);
 set(handles.video_mode,			'Units','pixels',	'Position',[10  Y+20 200 22]);
-set(handles.video_mode_text,	'Units','pixels',	'Position',[220 Y+23 90 16]);
+set(handles.video_mode_text,	'Units','pixels',	'Position',[215 Y+23 90 16]);
 set(handles.video_fps,			'Units','pixels',	'Position',[10+X-90 Y+23 90 16]);
 
 set(handles.setup_ok,			'Units','pixels',	'Position',[10+X-70-8-70 Y+50 70 22]);
