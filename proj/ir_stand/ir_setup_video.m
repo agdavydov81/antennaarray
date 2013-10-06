@@ -113,8 +113,8 @@ if isempty(cfg.video.device.axis)
 	handles.video.axis = axis(handles.video_image);
 else
 	handles.video.axis = cfg.video.device.axis;
-	axis(handles.video_image, handles.video.axis);
 end
+%	axis(handles.video_image, handles.video.axis);
 
 handles.video.timer = timer('StartDelay',2, 'TimerFcn',@ir_setup_video_timer_func, ...
 							'Period',1/50, 'ExecutionMode','fixedRate', 'UserData',handles.figure1);
@@ -139,8 +139,10 @@ try
 	frame_cur = getsnapshot(handles.video.vidobj);
 	imshow(frame_cur, 'Parent',handles.video_image);
 	axis(handles.video_image, handles.video.axis);
+	disp(axis(handles.video_image)); % @@ debug
 	drawnow();
 catch ME
+%	disp(ME);
 end
 
 
