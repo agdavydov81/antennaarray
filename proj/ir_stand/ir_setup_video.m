@@ -113,13 +113,13 @@ if isempty(cfg.video.device.axis)
 	handles.video.axis = axis(handles.video_image);
 else
 	handles.video.axis = cfg.video.device.axis;
+	axis(handles.video_image, handles.video.axis);
 end
-%	axis(handles.video_image, handles.video.axis);
 
 handles.video.timer = timer('StartDelay',2, 'TimerFcn',@ir_setup_video_timer_func, ...
 							'Period',1/50, 'ExecutionMode','fixedRate', 'UserData',handles.figure1);
 
-% Update handles structure
+handles.video.fps = struct();
 guidata(hObject, handles);
 
 set(zoom,'ActionPostCallback',@ir_setup_video_zoom_pan_image);
@@ -139,6 +139,33 @@ try
 	frame_cur = getsnapshot(handles.video.vidobj);
 	imshow(frame_cur, 'Parent',handles.video_image);
 	axis(handles.video_image, handles.video.axis);
+	
+	if isfield(handles.video.fps,'ticID')
+		toc_t = toc(handles.video.fps.ticID);
+		if toc_t>handles.video.fps.tic_pos
+			handles.video.fps.counter = handles.video.fps.counter+1;
+			if toc_t>handles.video.fps.tok_pos
+				handles.video.fps.frames_queue(end+1) = handles.video.fps.counter;
+				handles.video.fps.tic_queue(end+1) = handles.video.fps.tic_pos;
+
+				handles.video.fps.counter = 0;
+				handles.video.fps.tic_pos = toc_t;
+
+				handles.video.fps.tok_pos = fix(toc_t)+1;
+
+				if length(handles.video.fps.tic_queue)>handles.video.fps.queue_length
+					handles.video.fps.tic_queue(1:end-handles.video.fps.queue_length) = [];
+					handles.video.fps.frames_queue(1:end-handles.video.fps.queue_length) = [];
+				end
+				set(handles.video_fps,'String',sprintf('%.1f fps',sum(handles.video.fps.frames_queue)/(toc_t-handles.video.fps.tic_queue(1))));
+			end
+		end
+	else
+		handles.video.fps = struct('ticID',tic(), 'tic_pos',2, 'tok_pos',3, 'counter',0, 'queue_length',5, 'tic_queue',[], 'frames_queue',[]);
+	end
+
+	guidata(fig_handle, handles);
+
 	drawnow();
 catch ME
 %	disp(ME);
@@ -169,6 +196,7 @@ set(handles.video_camera,		'Units','pixels',	'Position',[15  Y+54 200 22]);
 set(handles.video_camera_text,	'Units','pixels',	'Position',[220 Y+57 90 16]);
 set(handles.video_mode,			'Units','pixels',	'Position',[15  Y+24 200 22]);
 set(handles.video_mode_text,	'Units','pixels',	'Position',[220 Y+27 90 16]);
+set(handles.video_fps,			'Units','pixels',	'Position',[15+X-90 Y+27 90 16]);
 
 set(handles.detector_uipanel,	'Units','pixels',	'Position',[6 Y+110 X+30 84]);
 set(handles.setup_ok,			'Units','pixels',	'Position',[X-55 38 69 23]);
@@ -226,8 +254,14 @@ delete(handles.video.vidobj);
 
 handles.video.cur_device=get(hObject,'Value');
 handles.video.cam_info=imaqhwinfo('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device});
-handles.video.vidobj = videoinput('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device}, ...
-											 handles.video.devices.DeviceInfo(handles.video.cur_device).DefaultFormat);
+
+video_modes = handles.video.devices.DeviceInfo(handles.video.cur_device).SupportedFormats;
+set(handles.video_mode, 'String',video_modes);
+handles.video.mode = handles.video.devices.DeviceInfo(handles.video.cur_device).DefaultFormat;
+set(handles.video_mode, 'Value',find(strcmp(handles.video.mode,video_modes),1));
+
+handles.video.vidobj =		videoinput('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
+
 set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
@@ -236,6 +270,7 @@ resize_for_image(handles, size(frame_cur));
 imshow(frame_cur, 'Parent',handles.video_image);
 handles.video.axis = axis(handles.video_image);
 
+handles.video.fps = struct();
 guidata(hObject, handles);
 
 start(handles.video.timer);
@@ -273,9 +308,9 @@ stop(handles.video.timer);
 stop(handles.video.vidobj);
 delete(handles.video.vidobj);
 
-handles.video.cam_info=	imaqhwinfo('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device});
-handles.video.mode =	cur_mode;
-handles.video.vidobj =	videoinput('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
+handles.video.mode = cur_mode;
+handles.video.vidobj =		videoinput('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
+
 set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
@@ -284,6 +319,7 @@ resize_for_image(handles, size(frame_cur));
 imshow(frame_cur, 'Parent',handles.video_image);
 handles.video.axis = axis(handles.video_image);
 
+handles.video.fps = struct();
 guidata(hObject, handles);
 
 start(handles.video.timer);
