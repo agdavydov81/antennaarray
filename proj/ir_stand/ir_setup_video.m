@@ -60,12 +60,12 @@ if isempty(varargin)
 else
 	cfg = varargin{1};
 end
+handles.config = cfg;
+
 if not(isfield(cfg,'video_device'));					cfg.video_device = struct();				end
 if not(isfield(cfg.video_device,'name'));				cfg.video_device.name = '';					end
 if not(isfield(cfg.video_device,'mode'));				cfg.video_device.mode = '';					end
 if not(isfield(cfg.video_device,'axis'));				cfg.video_device.axis = [];					end
-
-handles.config = cfg;
 
 handles.video.devices = imaqhwinfo('winvideo');
 set(handles.video_camera, 'String',{handles.video.devices.DeviceInfo.DeviceName});

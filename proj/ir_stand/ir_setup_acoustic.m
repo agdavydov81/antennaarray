@@ -69,6 +69,8 @@ if isempty(varargin)
 else
 	cfg = varargin{1};
 end
+handles.config = cfg;
+
 if not(isfield(cfg,'acoustic_generator'));					cfg.acoustic_generator = struct();				end
 if not(isfield(cfg.acoustic_generator,'sls'));				cfg.acoustic_generator.sls = struct();			end
 if not(isfield(cfg.acoustic_generator.sls,'enable'));		cfg.acoustic_generator.sls.enable = 1;			end
@@ -79,8 +81,6 @@ if not(isfield(cfg.acoustic_generator.harm,'freq_finish'));	cfg.acoustic_generat
 if not(isfield(cfg.acoustic_generator.harm,'scan_time'));	cfg.acoustic_generator.harm.scan_time = 10;		end
 if not(isfield(cfg.acoustic_generator.harm,'scan_type'));	cfg.acoustic_generator.harm.scan_type = 'log';	end
 if not(isfield(cfg.acoustic_generator.harm,'amplitude'));	cfg.acoustic_generator.harm.amplitude = 0.95;	end
-
-handles.config = cfg;
 
 set(handles.get_sls_chkbtn,		 'Value',cfg.acoustic_generator.sls.enable);
 set(handles.get_harm_chkbtn,	 'Value',cfg.acoustic_generator.harm.enable);

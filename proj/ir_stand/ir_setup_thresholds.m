@@ -69,6 +69,8 @@ if isempty(varargin)
 else
 	cfg = varargin{1};
 end
+handles.config = cfg;
+
 if not(isfield(cfg,'thresholds'));					cfg.thresholds = struct();				end
 if not(isfield(cfg.thresholds,'start_delay'));		cfg.thresholds.start_delay = 10;		end
 if not(isfield(cfg.thresholds,'start_time'));		cfg.thresholds.start_time = 5;			end
@@ -79,8 +81,6 @@ if not(isfield(cfg.thresholds,'stat_hi'));			cfg.thresholds.stat_hi = 0.95;			en
 if not(isfield(cfg.thresholds,'median_size'));		cfg.thresholds.median_size = 3;			end
 if not(isfield(cfg.thresholds,'detector_points'));	cfg.thresholds.detector_points = 10;	end
 if not(isfield(cfg.thresholds,'detector_part'));	cfg.thresholds.detector_part = 0.01;	end
-
-handles.config = cfg;
 
 set(handles.start_delay,	'String', num2str(cfg.thresholds.start_delay));
 set(handles.start_time,		'String', num2str(cfg.thresholds.start_time));
