@@ -142,7 +142,6 @@ try
 		frame_cur = getsnapshot(handles.video.vidobj);
 		imshow(frame_cur, 'Parent',handles.video_image);
 		axis(handles.video_image, handles.video.axis);
-		disp('ir_setup_video_timer_func up');
 
 		toc_t = toc(handles_video_fps.ticID);
 		if toc_t>handles_video_fps.tic_pos
@@ -234,7 +233,6 @@ delete(handles.figure1);
 function ir_setup_video_pre_zoom_pan(hObject, eventdata)
 handles = guidata(hObject);
 stop(handles.video.timer);
-disp('ir_setup_video_pre_zoom_pan');
 
 
 function ir_setup_video_post_zoom_pan(hObject, eventdata)
