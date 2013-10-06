@@ -22,7 +22,7 @@ function varargout = ir_stand(varargin)
 
 % Edit the above text to modify the response to help ir_stand
 
-% Last Modified by GUIDE v2.5 25-Sep-2013 15:21:20
+% Last Modified by GUIDE v2.5 06-Oct-2013 16:18:51
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -99,11 +99,29 @@ function varargout = ir_stand_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-if isfield(handles.config,'generator') && isfield(handles.config,'video')
-	set(handles.work_start_btn,		'Enable','on');
+check_config(handles);
+
+function check_config(handles)
+cfg = handles.config;
+is_ok = true;
+
+if is_ok && not(isfield(cfg,'acoustic_generator'))
+	msgbox('Ќастройте геренатор акустического воздействи€ дл€ начала работы.', [mfilename ' help'], 'help', 'modal');
+	is_ok = false;
+end
+if is_ok && not(isfield(cfg,'video_device'))
+	msgbox('Ќастройте тепловизор дл€ начала работы.', [mfilename ' help'], 'help', 'modal');
+	is_ok = false;
+end
+if is_ok && not(isfield(cfg,'thresholds'))
+	msgbox('Ќастройте пороги программы дл€ начала работы.', [mfilename ' help'], 'help', 'modal');
+	is_ok = false;
+end
+
+if is_ok
+	set(handles.work_start_btn, 'Enable','on');
 else
-	set(handles.work_start_btn,		'Enable','off');
-	msgbox('Ќастройте геренатор акустического воздействи€ и тепловизор дл€ начала работы.', [mfilename ' help'], 'help', 'modal');
+	set(handles.work_start_btn, 'Enable','off');
 end
 
 
@@ -121,12 +139,7 @@ function setup_acoustics_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 handles.config = ir_setup_acoustic(handles.config);
 guidata(hObject, handles);
-if isfield(handles.config,'generator') && isfield(handles.config,'video')
-	set(handles.work_start_btn,		'Enable','on');
-else
-	set(handles.work_start_btn,		'Enable','off');
-	msgbox('Ќастройте геренатор акустического воздействи€ и тепловизор дл€ начала работы.', [mfilename ' help'], 'help', 'modal');
-end
+check_config(handles);
 
 
 % --- Executes on button press in setup_irvideo_btn.
@@ -136,17 +149,12 @@ function setup_irvideo_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 handles.config = ir_setup_video(handles.config);
 guidata(hObject, handles);
-if isfield(handles.config,'generator') && isfield(handles.config,'video')
-	set(handles.work_start_btn,		'Enable','on');
-else
-	set(handles.work_start_btn,		'Enable','off');
-	msgbox('Ќастройте геренатор акустического воздействи€ и тепловизор дл€ начала работы.', [mfilename ' help'], 'help', 'modal');
-end
+check_config(handles);
 
 
-% --- Executes on button press in setup_report_btn.
-function setup_report_btn_Callback(hObject, eventdata, handles)
-% hObject    handle to setup_report_btn (see GCBO)
+% --- Executes on button press in setup_btn.
+function setup_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to setup_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
@@ -171,11 +179,11 @@ function work_abort_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-if handles.config.generator.sls.enable
+if handles.config.acoustic_generator.sls.enable
 	dos('taskkill /F /IM Lobanov_mark.exe 1>nul 2>&1');
 end
 
-if handles.config.generator.harm.enable
+if handles.config.acoustic_generator.harm.enable
 	playrec('reset');
 end
 
@@ -191,13 +199,13 @@ function work_start_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Generages signal
-if handles.config.generator.harm.enable
+if handles.config.acoustic_generator.harm.enable
 	play.fs = 44100;
 	play.buff_sz = 0.5*play.fs;
 	play.buff_num = 10;
 	play.buffs = [];
 	
-	harm_cfg = handles.config.generator.harm;
+	harm_cfg = handles.config.acoustic_generator.harm;
 	harm_freq = [harm_cfg.freq_start harm_cfg.freq_finish];
 	if any(harm_freq<1 | harm_freq > play.fs*0.45)
 		errordlg(['„астоты синтеза сигнала выход€т за допустимый диапазон [1,' num2str(round(play.fs*0.45)) '] √ц.'], [mfilename ' error'], 'modal');
@@ -245,7 +253,7 @@ if handles.config.generator.harm.enable
 end
 
 % Fork SLS process
-if handles.config.generator.sls.enable
+if handles.config.acoustic_generator.sls.enable
 	sls_dir = [fileparts(mfilename('fullpath')) filesep 'sls' filesep];
 	dos_str = ['"' sls_dir 'hstart.exe" /NOCONSOLE /D="' sls_dir '" "Lobanov_mark.exe Db_Bor1/ 0 0"'];
 	dos(dos_str);
@@ -269,7 +277,7 @@ while ~isempty(handles.play.buffs) && playrec('isFinished', handles.play.buffs(1
 	handles.play.buffs(1) = [];
 end
 
-harm_cfg = handles.config.generator.harm;
+harm_cfg = handles.config.acoustic_generator.harm;
 while numel(handles.play.buffs) < handles.play.buff_num
 	cur_t = handles.play.timer.pos+(0:handles.play.buff_sz-1)'/handles.play.fs;
 	handles.play.timer.pos = handles.play.timer.pos+handles.play.buff_sz/handles.play.fs;

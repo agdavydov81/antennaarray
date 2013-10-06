@@ -60,28 +60,21 @@ if isempty(varargin)
 else
 	cfg = varargin{1};
 end
-if not(isfield(cfg,'video'));							cfg.video = struct();						end
-if not(isfield(cfg.video,'detector'));					cfg.video.detector = struct();				end
-if not(isfield(cfg.video.detector,'quantiles'));		cfg.video.detector.quantiles = [0.05 0.95];	end
-if not(isfield(cfg.video.detector,'estimation_time'));	cfg.video.detector.estimation_time = 5;		end
-if not(isfield(cfg.video,'device'));					cfg.video.device = struct();				end
-if not(isfield(cfg.video.device,'name'));				cfg.video.device.name = '';					end
-if not(isfield(cfg.video.device,'mode'));				cfg.video.device.mode = '';					end
-if not(isfield(cfg.video.device,'axis'));				cfg.video.device.axis = [];					end
+if not(isfield(cfg,'video_device'));					cfg.video_device = struct();				end
+if not(isfield(cfg.video_device,'name'));				cfg.video_device.name = '';					end
+if not(isfield(cfg.video_device,'mode'));				cfg.video_device.mode = '';					end
+if not(isfield(cfg.video_device,'axis'));				cfg.video_device.axis = [];					end
 
 handles.config = cfg;
-
-set(handles.detector_quantiles,			'String',sprintf('%0.2f ',cfg.video.detector.quantiles));
-set(handles.detector_estimation_time,	'String',num2str(cfg.video.detector.estimation_time));
 
 handles.video.devices = imaqhwinfo('winvideo');
 set(handles.video_camera, 'String',{handles.video.devices.DeviceInfo.DeviceName});
 handles.video.cur_device = 1;
-if not(isempty(cfg.video.device.name))
-	cur_cam = find(strcmp(cfg.video.device.name, {handles.video.devices.DeviceInfo.DeviceName}),1);
+if not(isempty(cfg.video_device.name))
+	cur_cam = find(strcmp(cfg.video_device.name, {handles.video.devices.DeviceInfo.DeviceName}),1);
 	if isempty(cur_cam)
-		cfg.video.device.mode = '';
-		cfg.video.device.axis = [];
+		cfg.video_device.mode = '';
+		cfg.video_device.axis = [];
 	else
 		handles.video.cur_device = cur_cam;
 	end
@@ -91,10 +84,10 @@ set(handles.video_camera, 'Value',handles.video.cur_device);
 video_modes = handles.video.devices.DeviceInfo(handles.video.cur_device).SupportedFormats;
 set(handles.video_mode, 'String',video_modes);
 handles.video.mode =		handles.video.devices.DeviceInfo(handles.video.cur_device).DefaultFormat;
-if not(isempty(cfg.video.device.mode))
-	cur_mode = find(strcmp(cfg.video.device.mode, video_modes),1);
+if not(isempty(cfg.video_device.mode))
+	cur_mode = find(strcmp(cfg.video_device.mode, video_modes),1);
 	if isempty(cur_mode)
-		cfg.video.device.axis = [];
+		cfg.video_device.axis = [];
 	else
 		handles.video.mode = video_modes{cur_mode};
 	end
@@ -109,10 +102,10 @@ start(handles.video.vidobj);
 frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
 imshow(frame_cur, 'Parent',handles.video_image);
-if isempty(cfg.video.device.axis)
+if isempty(cfg.video_device.axis)
 	handles.video.axis = axis(handles.video_image);
 else
-	handles.video.axis = cfg.video.device.axis;
+	handles.video.axis = cfg.video_device.axis;
 	axis(handles.video_image, handles.video.axis);
 end
 
@@ -122,8 +115,8 @@ handles.video.timer = timer('TimerFcn',@ir_setup_video_timer_func, 'Period',1/50
 
 guidata(hObject, handles);
 
-set(zoom, 'ActionPreCallback',@ir_setup_video_pre_zoom_pan, 'ActionPostCallback',@ir_setup_video_post_zoom_pan);
-set(pan , 'ActionPreCallback',@ir_setup_video_pre_zoom_pan, 'ActionPostCallback',@ir_setup_video_post_zoom_pan);
+set(zoom, 'ActionPostCallback',@ir_setup_video_post_zoom_pan);
+set(pan , 'ActionPostCallback',@ir_setup_video_post_zoom_pan);
 
 start(handles.video.timer);
 
@@ -189,19 +182,17 @@ if X<480
 	Y = round(Y*mul_k);
 end
 
-set(handles.figure1, 'Units','pixels', 'Position',[(scr_sz(3)-(X+40))/2 (scr_sz(4)-(Y+210))/2 X+40 Y+195]);
+set(handles.figure1, 'Units','pixels', 'Position',[(scr_sz(3)-(X+20))/2 (scr_sz(4)-(Y+90))/2 X+20 Y+82]);
 
-set(handles.video_uipanel,		'Units','pixels',	'Position',[6 7 X+30 Y+100]);
-set(handles.video_image,		'Units','pixels',	'Position',[15  16 X Y]);
-set(handles.video_camera,		'Units','pixels',	'Position',[15  Y+54 200 22]);
-set(handles.video_camera_text,	'Units','pixels',	'Position',[220 Y+57 90 16]);
-set(handles.video_mode,			'Units','pixels',	'Position',[15  Y+24 200 22]);
-set(handles.video_mode_text,	'Units','pixels',	'Position',[220 Y+27 90 16]);
-set(handles.video_fps,			'Units','pixels',	'Position',[15+X-90 Y+27 90 16]);
+set(handles.video_image,		'Units','pixels',	'Position',[10  10 X Y]); %
+set(handles.video_camera,		'Units','pixels',	'Position',[10  Y+50 200 22]);
+set(handles.video_camera_text,	'Units','pixels',	'Position',[220 Y+53 90 16]);
+set(handles.video_mode,			'Units','pixels',	'Position',[10  Y+20 200 22]);
+set(handles.video_mode_text,	'Units','pixels',	'Position',[220 Y+23 90 16]);
+set(handles.video_fps,			'Units','pixels',	'Position',[10+X-90 Y+23 90 16]);
 
-set(handles.detector_uipanel,	'Units','pixels',	'Position',[6 Y+110 X+30 84]);
-set(handles.setup_ok,			'Units','pixels',	'Position',[X-55 38 69 23]);
-set(handles.setup_cancel,		'Units','pixels',	'Position',[X-55 10 69 23]);
+set(handles.setup_ok,			'Units','pixels',	'Position',[10+X-70-8-70 Y+50 70 22]);
+set(handles.setup_cancel,		'Units','pixels',	'Position',[10+X-70      Y+50 70 22]);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -217,11 +208,9 @@ delete(handles.video.timer);
 
 cfg = handles.config;
 if handles.press_ok
-	cfg.video.detector.quantiles =			str2num(get(handles.detector_quantiles,'String'));
-	cfg.video.detector.estimation_time =	str2double(get(handles.detector_estimation_time,'String'));
-	cfg.video.device.name =					handles.video.cam_info.DeviceName;
-	cfg.video.device.mode =					handles.video.mode;
-	cfg.video.device.axis =					handles.video.axis;
+	cfg.video_device.name =					handles.video.cam_info.DeviceName;
+	cfg.video_device.mode =					handles.video.mode;
+	cfg.video_device.axis =					handles.video.axis;
 end
 
 varargout{1} = cfg;
@@ -230,16 +219,10 @@ varargout{1} = cfg;
 delete(handles.figure1);
 
 
-function ir_setup_video_pre_zoom_pan(hObject, eventdata)
-handles = guidata(hObject);
-stop(handles.video.timer);
-
-
 function ir_setup_video_post_zoom_pan(hObject, eventdata)
 handles = guidata(hObject);
 handles.video.axis = axis(handles.video_image);
 guidata(hObject, handles);
-start(handles.video.timer);
 
 
 % --- Executes on selection change in video_camera.
@@ -267,7 +250,7 @@ set(handles.video_mode, 'String',video_modes);
 handles.video.mode = handles.video.devices.DeviceInfo(handles.video.cur_device).DefaultFormat;
 set(handles.video_mode, 'Value',find(strcmp(handles.video.mode,video_modes),1));
 
-handles.video.vidobj =		videoinput('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
+handles.video.vidobj = videoinput('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
 
 set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
@@ -365,7 +348,6 @@ function detector_quantiles_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function detector_estimation_time_Callback(hObject, eventdata, handles)

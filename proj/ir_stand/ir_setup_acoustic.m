@@ -69,26 +69,26 @@ if isempty(varargin)
 else
 	cfg = varargin{1};
 end
-if not(isfield(cfg,'generator'));					cfg.generator = struct();				end
-if not(isfield(cfg.generator,'sls'));				cfg.generator.sls = struct();			end
-if not(isfield(cfg.generator.sls,'enable'));		cfg.generator.sls.enable = 1;			end
-if not(isfield(cfg.generator,'harm'));				cfg.generator.harm = struct();			end
-if not(isfield(cfg.generator.harm,'enable'));		cfg.generator.harm.enable = 0;			end
-if not(isfield(cfg.generator.harm,'freq_start'));	cfg.generator.harm.freq_start = 100;	end
-if not(isfield(cfg.generator.harm,'freq_finish'));	cfg.generator.harm.freq_finish = 8000;	end
-if not(isfield(cfg.generator.harm,'scan_time'));	cfg.generator.harm.scan_time = 10;		end
-if not(isfield(cfg.generator.harm,'scan_type'));	cfg.generator.harm.scan_type = 'log';	end
-if not(isfield(cfg.generator.harm,'amplitude'));	cfg.generator.harm.amplitude = 0.95;	end
+if not(isfield(cfg,'acoustic_generator'));					cfg.acoustic_generator = struct();				end
+if not(isfield(cfg.acoustic_generator,'sls'));				cfg.acoustic_generator.sls = struct();			end
+if not(isfield(cfg.acoustic_generator.sls,'enable'));		cfg.acoustic_generator.sls.enable = 1;			end
+if not(isfield(cfg.acoustic_generator,'harm'));				cfg.acoustic_generator.harm = struct();			end
+if not(isfield(cfg.acoustic_generator.harm,'enable'));		cfg.acoustic_generator.harm.enable = 0;			end
+if not(isfield(cfg.acoustic_generator.harm,'freq_start'));	cfg.acoustic_generator.harm.freq_start = 100;	end
+if not(isfield(cfg.acoustic_generator.harm,'freq_finish'));	cfg.acoustic_generator.harm.freq_finish = 8000;	end
+if not(isfield(cfg.acoustic_generator.harm,'scan_time'));	cfg.acoustic_generator.harm.scan_time = 10;		end
+if not(isfield(cfg.acoustic_generator.harm,'scan_type'));	cfg.acoustic_generator.harm.scan_type = 'log';	end
+if not(isfield(cfg.acoustic_generator.harm,'amplitude'));	cfg.acoustic_generator.harm.amplitude = 0.95;	end
 
 handles.config = cfg;
 
-set(handles.get_sls_chkbtn,		 'Value',cfg.generator.sls.enable);
-set(handles.get_harm_chkbtn,	 'Value',cfg.generator.harm.enable);
-set(handles.harm_freq_start_ed,  'String',num2str(cfg.generator.harm.freq_start));
-set(handles.harm_freq_finish_ed, 'String',num2str(cfg.generator.harm.freq_finish));
-set(handles.harm_scan_time_ed,   'String',num2str(cfg.generator.harm.scan_time));
-set(handles.harm_amplitude_ed,   'String',num2str(cfg.generator.harm.amplitude));
-switch cfg.generator.harm.scan_type
+set(handles.get_sls_chkbtn,		 'Value',cfg.acoustic_generator.sls.enable);
+set(handles.get_harm_chkbtn,	 'Value',cfg.acoustic_generator.harm.enable);
+set(handles.harm_freq_start_ed,  'String',num2str(cfg.acoustic_generator.harm.freq_start));
+set(handles.harm_freq_finish_ed, 'String',num2str(cfg.acoustic_generator.harm.freq_finish));
+set(handles.harm_scan_time_ed,   'String',num2str(cfg.acoustic_generator.harm.scan_time));
+set(handles.harm_amplitude_ed,   'String',num2str(cfg.acoustic_generator.harm.amplitude));
+switch cfg.acoustic_generator.harm.scan_type
 	case 'lin'
 		set(handles.harm_scan_lin, 'Value',1);
 	case 'log'
@@ -113,16 +113,16 @@ function varargout = ir_setup_acoustic_OutputFcn(hObject, eventdata, handles)
 
 cfg = handles.config;
 if handles.press_ok
-	cfg.generator.sls.enable =  get(handles.get_sls_chkbtn, 'Value');
-	cfg.generator.harm.enable = get(handles.get_harm_chkbtn, 'Value');
-	cfg.generator.harm.freq_start =  str2double(get(handles.harm_freq_start_ed,  'String'));
-	cfg.generator.harm.freq_finish = str2double(get(handles.harm_freq_finish_ed, 'String'));
-	cfg.generator.harm.scan_time =   str2double(get(handles.harm_scan_time_ed,   'String'));
-	cfg.generator.harm.amplitude =   str2double(get(handles.harm_amplitude_ed,   'String'));
+	cfg.acoustic_generator.sls.enable =  get(handles.get_sls_chkbtn, 'Value');
+	cfg.acoustic_generator.harm.enable = get(handles.get_harm_chkbtn, 'Value');
+	cfg.acoustic_generator.harm.freq_start =  str2double(get(handles.harm_freq_start_ed,  'String'));
+	cfg.acoustic_generator.harm.freq_finish = str2double(get(handles.harm_freq_finish_ed, 'String'));
+	cfg.acoustic_generator.harm.scan_time =   str2double(get(handles.harm_scan_time_ed,   'String'));
+	cfg.acoustic_generator.harm.amplitude =   str2double(get(handles.harm_amplitude_ed,   'String'));
 	if get(handles.harm_scan_log, 'Value')
-		cfg.generator.harm.scan_type = 'log';
+		cfg.acoustic_generator.harm.scan_type = 'log';
 	else
-		cfg.generator.harm.scan_type = 'lin';
+		cfg.acoustic_generator.harm.scan_type = 'lin';
 	end
 end
 
