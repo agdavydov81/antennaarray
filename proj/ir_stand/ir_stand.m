@@ -82,9 +82,11 @@ catch ME
 	handles.config = struct();
 end
 
-set(handles.work_stop_btn,		'Enable','off');
-set(handles.work_abort_btn,		'Enable','off');
-set(handles.work_continue_btn,	'Enable','off');
+imshow(ones(10,10,3), 'Parent',handles.work_img_orig);
+imshow(ones(10,10,3), 'Parent',handles.work_img_bw);
+set(handles.work_graph_pix_num, 'XTickLabel',{});
+
+set(handles.work_abort_btn, 'Enable','off');
 
 guidata(hObject, handles);
 
@@ -162,20 +164,6 @@ guidata(hObject, handles);
 check_config(handles);
 
 
-% --- Executes on button press in work_continue_btn.
-function work_continue_btn_Callback(hObject, eventdata, handles)
-% hObject    handle to work_continue_btn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-% --- Executes on button press in work_stop_btn.
-function work_stop_btn_Callback(hObject, eventdata, handles)
-% hObject    handle to work_stop_btn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
 % --- Executes on button press in work_abort_btn.
 function work_abort_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to work_abort_btn (see GCBO)
@@ -199,12 +187,21 @@ if handles.config.acoustic_generator.harm.enable
 	end
 end
 
-try
-	stop(handles.video.timer);
-	stop(handles.video.vidobj);
-	delete(handles.video.vidobj);
-catch ME
-	% disp(ME);
+if isfield(handles,'video')
+	try
+		if isvalid(handles.video.vidobj)
+			stop(handles.video.vidobj);
+			delete(handles.video.vidobj);
+		end
+		if isvalid(handles.video.timer)
+			stop(handles.video.timer);
+		end
+		if handles.video.report.fh~=-1
+			fclose(handles.video.report.fh);
+		end
+	catch ME
+		% disp(ME);
+	end
 end
 
 
@@ -267,7 +264,6 @@ if handles.config.acoustic_generator.harm.enable
 										'Period',play.buff_sz/play.fs, 'ExecutionMode','fixedRate'));
 	set(play.timer.handle, 'UserData',play);
 	handles.play = play;
-	guidata(handles.figure1, handles);
 	start(handles.play.timer.handle);
 end
 
@@ -282,7 +278,6 @@ set(handles.setup_btn, 'Enable','off');
 if handles.config.acoustic_generator.sls.enable
 	handles.sls_watchdog = timer('TimerFcn',@watchdog_timer_func, 'StopFcn',@player_timer_stop, ...
 								 'Period',1, 'ExecutionMode','fixedRate', 'UserData',handles);
-	guidata(handles.figure1, handles);
 	start(handles.sls_watchdog);
 end
 
@@ -297,12 +292,23 @@ handles.video.config = handles.config;
 handles.video.tic_id = tic();
 handles.video.start_frames = {};
 handles.video.start_times = [];
-handles.video.timer = timer('TimerFcn',@video_timer_func, 'Period',1/50, ...
+handles.video.report.graphs = zeros(0,3);
+handles.video.report.fh=-1;
+if not(isempty(handles.video.config.thresholds.report_path))
+	handles.video.report.fh = fopen(fullfile(handles.video.config.thresholds.report_path, sprintf('report.txt')), 'wt');
+end
+handles.video.report.img_cnt = 0;
+handles.video.report.img_toc = 0;
+
+handles.video.timer = timer('TimerFcn',@video_timer_func, 'Period',1/50, ...  % 1/50
 							'ExecutionMode','fixedRate');
-set(handles.video.timer, 'UserData',handles.video);
-start(handles.video.timer);
+handles_video = handles.video;
+handles_video.handles = handles;
+set(handles.video.timer, 'UserData',handles_video);
 
 guidata(handles.figure1, handles);
+
+start(handles.video.timer);
 
 
 function player_timer_func(timer_handle, eventdata)
@@ -375,32 +381,38 @@ try
 	frame_cur = getsnapshot(handles_video.vidobj);
 	ax = fix(handles_video.config.video_device.axis);
 	frame_cur = frame_cur(ax(3)+1:ax(4), ax(1)+1:ax(2), :);
+	imshow(frame_cur, 'Parent',handles_video.handles.work_img_orig);
 	frame_cur = rgb2temp(frame_cur);
 
 	toc_t = toc(handles_video.tic_id);
+	time_s = fix(toc_t);
+	time_h = fix(time_s/3600);  time_s = time_s-time_h*3600;
+	time_m = fix(time_s/60);    time_s = time_s-time_m*60;
+	set(handles_video.handles.work_timer, 'String',sprintf('%02d:%02d:%02d',time_h,time_m,time_s));
+
 	if toc_t>handles_video.config.thresholds.start_delay
 		if toc_t>handles_video.config.thresholds.start_delay+handles_video.config.thresholds.start_time
-			if not(isfield(handles_video,'filt'))
+			if isfield(handles_video,'start_frames')
 				% Remove mean
 				frames_stat = cell2mat(handles_video.start_frames);
+
 				handles_video.filt.hp = struct('b',[1 -1], 'a',[1 -0.999], 'z',-mean(frames_stat));
 				frames_stat = filter(handles_video.filt.hp.b, handles_video.filt.hp.a, frames_stat, handles_video.filt.hp.z, 1);
 
 				% remove figh frequecny noise
+				% @@ buggy code
+%{
 				med_fps = 1./median(diff(handles_video.start_times));
-				if handles_video.config.thresholds.fir_freq/(med_fps/2)<0.9 && handles_video.config.thresholds.fir_order>0
+				if handles_video.config.thresholds.fir_freq>0 && handles_video.config.thresholds.fir_freq/(med_fps/2)<0.9 && handles_video.config.thresholds.fir_order>0
 					handles_video.filt.lp.b = fir1(round(handles_video.config.thresholds.fir_order*med_fps), handles_video.config.thresholds.fir_freq/(med_fps/2));
 					[frames_stat, handles_video.filt.lp.z] = filter(handles_video.filt.lp.b, 1, frames_stat, [], 1);
 				end
-
+%}
 				% statistics estimation
 				if handles_video.config.thresholds.stat_lo>0
 					handles_video.stat.lo = quantile(frames_stat, handles_video.config.thresholds.stat_lo, 1);
 				end
 				handles_video.stat.hi = quantile(frames_stat, handles_video.config.thresholds.stat_hi, 1);
-
-				% create report stubs
-				handles_video.report = zeros(0,3);
 
 				% Cleanup
 				handles_video = rmfield(handles_video,{'start_frames' 'start_times'});
@@ -409,12 +421,14 @@ try
 
 			% Main processing
 			frame_sz = size(frame_cur);
-			[frame_cur, handles_video.filt.hp.z] = filter(handles_video.filt.hp.b, handles_video.filt.hp.a, transpose(frame_cur(:)), handles_video.filt.hp.z, 1);
+			frame_cur = transpose(frame_cur(:));
+
+			[frame_cur, handles_video.filt.hp.z] = filter(handles_video.filt.hp.b, handles_video.filt.hp.a, frame_cur, handles_video.filt.hp.z, 1);
 
 			if isfield(handles_video.filt,'lp')
 				[frame_cur, handles_video.filt.lp.z] = filter(handles_video.filt.lp.b, 1, frame_cur, [], 1);
 			end
-			
+
 			is_signaling = false(size(frame_cur));
 			if isfield(handles_video.stat,'lo')
 				is_signaling = is_signaling | (frame_cur<handles_video.stat.lo);
@@ -427,15 +441,32 @@ try
 				is_signaling = transpose(is_signaling(:));
 			end
 
-			handles_video.report(end+1,:) = [toc_t sum(is_signaling) mean(is_signaling)];
-			disp(handles_video.report(end,:));
+			imshow(double(repmat(reshape(is_signaling, frame_sz),[1 1 3])), 'Parent',handles_video.handles.work_img_bw);
+
+			handles_video.report.graphs(end+1,:) = [toc_t sum(is_signaling) mean(is_signaling)];
+			if handles_video.config.thresholds.report_graph_time>0
+				handles_video.report.graphs(handles_video.report.graphs(:,1)<toc_t-handles_video.config.thresholds.report_graph_time,:) = [];
+			end
+			plot(handles_video.handles.work_graph_pix_num,  handles_video.report.graphs(:,1), handles_video.report.graphs(:,2));
+			plot(handles_video.handles.work_graph_pix_part, handles_video.report.graphs(:,1), handles_video.report.graphs(:,3));
+
+			if handles_video.report.fh~=-1
+				cur_res = handles_video.report.graphs(end,:);
+				fprintf(handles_video.report.fh, '%f\t%d\t%e\n', cur_res(1), cur_res(2), cur_res(3));
+			end
+			if not(isempty(handles_video.config.thresholds.report_path)) && handles_video.config.thresholds.report_img_interval>=0 && handles_video.report.img_toc<toc_t
+				handles_video.report.img_toc = toc_t + handles_video.config.thresholds.report_img_interval;
+				handles_video.report.img_cnt = handles_video.report.img_cnt+1;
+%				imwrite(reshape(frame_cur, frame_sz), fullfile(handles_video.config.thresholds.report_path, sprintf('img_%06d.jpg')), 'jpg', 'Quality',85);
+			end
 		else
 			handles_video.start_frames{end+1,1} = transpose(frame_cur(:));
 			handles_video.start_times(end+1,1) = toc_t;
 		end
 		set(timer_handle, 'UserData',handles_video);
 	end
-		
+	
+	drawnow();
 catch ME
 	disp(ME);
 end

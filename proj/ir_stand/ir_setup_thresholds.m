@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 06-Oct-2013 23:18:01
+% Last Modified by GUIDE v2.5 07-Oct-2013 19:34:54
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -71,26 +71,32 @@ else
 end
 handles.config = cfg;
 
-if not(isfield(cfg,'thresholds'));					cfg.thresholds = struct();				end
-if not(isfield(cfg.thresholds,'start_delay'));		cfg.thresholds.start_delay = 10;		end
-if not(isfield(cfg.thresholds,'start_time'));		cfg.thresholds.start_time = 5;			end
-if not(isfield(cfg.thresholds,'fir_freq'));			cfg.thresholds.fir_freq = 3;			end
-if not(isfield(cfg.thresholds,'fir_order'));		cfg.thresholds.fir_order = 4;			end
-if not(isfield(cfg.thresholds,'stat_lo'));			cfg.thresholds.stat_lo = 0.05;			end
-if not(isfield(cfg.thresholds,'stat_hi'));			cfg.thresholds.stat_hi = 0.95;			end
-if not(isfield(cfg.thresholds,'median_size'));		cfg.thresholds.median_size = 3;			end
-if not(isfield(cfg.thresholds,'detector_points'));	cfg.thresholds.detector_points = 10;	end
-if not(isfield(cfg.thresholds,'detector_part'));	cfg.thresholds.detector_part = 0.01;	end
+if not(isfield(cfg,'thresholds'));						cfg.thresholds = struct();					end
+if not(isfield(cfg.thresholds,'start_delay'));			cfg.thresholds.start_delay = 10;			end
+if not(isfield(cfg.thresholds,'start_time'));			cfg.thresholds.start_time = 5;				end
+if not(isfield(cfg.thresholds,'fir_freq'));				cfg.thresholds.fir_freq = 0;				end
+if not(isfield(cfg.thresholds,'fir_order'));			cfg.thresholds.fir_order = 0;				end
+if not(isfield(cfg.thresholds,'stat_lo'));				cfg.thresholds.stat_lo = 0.005;				end
+if not(isfield(cfg.thresholds,'stat_hi'));				cfg.thresholds.stat_hi = 0.995;				end
+if not(isfield(cfg.thresholds,'median_size'));			cfg.thresholds.median_size = 3;				end
+if not(isfield(cfg.thresholds,'detector_points'));		cfg.thresholds.detector_points = 10;		end
+if not(isfield(cfg.thresholds,'detector_part'));		cfg.thresholds.detector_part = 0.01;		end
+if not(isfield(cfg.thresholds,'report_path'));			cfg.thresholds.report_path = '';			end
+if not(isfield(cfg.thresholds,'report_img_interval'));	cfg.thresholds.report_img_interval = 60;	end
+if not(isfield(cfg.thresholds,'report_graph_time'));	cfg.thresholds.report_graph_time = 600;		end
 
-set(handles.start_delay,	'String', num2str(cfg.thresholds.start_delay));
-set(handles.start_time,		'String', num2str(cfg.thresholds.start_time));
-set(handles.fir_freq,		'String', num2str(cfg.thresholds.fir_freq));
-set(handles.fir_order,		'String', num2str(cfg.thresholds.fir_order));
-set(handles.stat_lo,		'String', num2str(cfg.thresholds.stat_lo));
-set(handles.stat_hi,		'String', num2str(cfg.thresholds.stat_hi));
-set(handles.median_size,	'String', num2str(cfg.thresholds.median_size));
-set(handles.detector_points,'String', num2str(cfg.thresholds.detector_points));
-set(handles.detector_part,	'String', num2str(cfg.thresholds.detector_part));
+set(handles.start_delay,		'String', num2str(cfg.thresholds.start_delay));
+set(handles.start_time,			'String', num2str(cfg.thresholds.start_time));
+set(handles.fir_freq,			'String', num2str(cfg.thresholds.fir_freq));
+set(handles.fir_order,			'String', num2str(cfg.thresholds.fir_order));
+set(handles.stat_lo,			'String', num2str(cfg.thresholds.stat_lo));
+set(handles.stat_hi,			'String', num2str(cfg.thresholds.stat_hi));
+set(handles.median_size,		'String', num2str(cfg.thresholds.median_size));
+set(handles.detector_points,	'String', num2str(cfg.thresholds.detector_points));
+set(handles.detector_part,		'String', num2str(cfg.thresholds.detector_part));
+set(handles.report_path,		'String', cfg.thresholds.report_path);
+set(handles.report_img_interval,'String', num2str(cfg.thresholds.report_img_interval));
+set(handles.report_graph_time,	'String', num2str(cfg.thresholds.report_graph_time));
 
 % Update handles structure
 guidata(hObject, handles);
@@ -117,6 +123,9 @@ if handles.press_ok
 	cfg.thresholds.median_size =		str2double(get(handles.median_size,	'String'));
 	cfg.thresholds.detector_points =	str2double(get(handles.detector_points,'String'));
 	cfg.thresholds.detector_part =		str2double(get(handles.detector_part,'String'));
+	cfg.thresholds.report_path =		get(handles.report_path, 'String');
+	cfg.thresholds.report_img_interval=	str2double(get(handles.report_img_interval,'String'));
+	cfg.thresholds.report_graph_time =	str2double(get(handles.report_graph_time,'String'));
 end
 
 varargout{1} = cfg;
@@ -370,6 +379,87 @@ function start_delay_Callback(hObject, eventdata, handles)
 % --- Executes during object creation, after setting all properties.
 function start_delay_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to start_delay (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function report_path_Callback(hObject, eventdata, handles)
+% hObject    handle to report_path (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of report_path as text
+%        str2double(get(hObject,'String')) returns contents of report_path as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function report_path_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to report_path (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in report_path_sel.
+function report_path_sel_Callback(hObject, eventdata, handles)
+% hObject    handle to report_path_sel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+root = get(handles.report_path, 'String');
+root = uigetdir(root ,'¬ыберите каталог дл€ сохранени€ протокола');
+if not(root)
+	return;
+end
+set(handles.report_path, 'String', root);
+
+
+function report_img_interval_Callback(hObject, eventdata, handles)
+% hObject    handle to report_img_interval (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of report_img_interval as text
+%        str2double(get(hObject,'String')) returns contents of report_img_interval as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function report_img_interval_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to report_img_interval (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function report_graph_time_Callback(hObject, eventdata, handles)
+% hObject    handle to report_graph_time (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of report_graph_time as text
+%        str2double(get(hObject,'String')) returns contents of report_graph_time as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function report_graph_time_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to report_graph_time (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 

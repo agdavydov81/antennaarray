@@ -111,7 +111,7 @@ end
 
 set(handles.figure1,'UserData',struct()); % the handles.video.fps new storage
 handles.video.timer = timer('TimerFcn',@ir_setup_video_timer_func, 'Period',1/50, ...
-							'ExecutionMode','fixedRate', 'UserData',handles.figure1);
+							'StartDelay',2, 'ExecutionMode','fixedRate', 'UserData',handles.figure1);
 
 guidata(hObject, handles);
 
