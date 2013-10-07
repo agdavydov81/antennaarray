@@ -182,20 +182,30 @@ function work_abort_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-if handles.config.acoustic_generator.sls.enable
-	dos('taskkill /F /IM Lobanov_mark.exe 1>nul 2>&1');
-end
-
-if handles.config.acoustic_generator.harm.enable
-	playrec('reset');
-end
-
 set(handles.work_start_btn, 'Enable','on');
 set(handles.work_abort_btn, 'Enable','off');
 set(handles.setup_emi_btn, 'Enable','on');
 set(handles.setup_irvideo_btn, 'Enable','on');
 set(handles.setup_acoustics_btn, 'Enable','on');
 set(handles.setup_btn, 'Enable','on');
+
+dos('taskkill /F /IM Lobanov_mark.exe 1>nul 2>&1');
+
+if handles.config.acoustic_generator.harm.enable
+	try
+		playrec('reset');
+	catch ME
+		% disp(ME);
+	end
+end
+
+try
+	stop(handles.video.timer);
+	stop(handles.video.vidobj);
+	delete(handles.video.vidobj);
+catch ME
+	% disp(ME);
+end
 
 
 % --- Executes on button press in work_start_btn.
@@ -261,24 +271,38 @@ if handles.config.acoustic_generator.harm.enable
 	start(handles.play.timer.handle);
 end
 
-% Fork SLS process
-if handles.config.acoustic_generator.sls.enable
-	sls_dir = [fileparts(mfilename('fullpath')) filesep 'sls' filesep];
-	dos_str = ['"' sls_dir 'hstart.exe" /NOCONSOLE /D="' sls_dir '" "Lobanov_mark.exe Db_Bor1/ 0 0"'];
-	dos(dos_str);
-	
-	handles.sls_watchdog = timer('TimerFcn',@watchdog_timer_func, 'StopFcn',@player_timer_stop, ...
-								 'StartDelay',1, 'Period',1, 'ExecutionMode','fixedRate', 'UserData',handles);
-	guidata(handles.figure1, handles);
-	start(handles.sls_watchdog);
-end
-
 set(handles.work_start_btn, 'Enable','off');
 set(handles.work_abort_btn, 'Enable','on');
 set(handles.setup_emi_btn, 'Enable','off');
 set(handles.setup_irvideo_btn, 'Enable','off');
 set(handles.setup_acoustics_btn, 'Enable','off');
 set(handles.setup_btn, 'Enable','off');
+
+% Fork SLS process
+if handles.config.acoustic_generator.sls.enable
+	handles.sls_watchdog = timer('TimerFcn',@watchdog_timer_func, 'StopFcn',@player_timer_stop, ...
+								 'Period',1, 'ExecutionMode','fixedRate', 'UserData',handles);
+	guidata(handles.figure1, handles);
+	start(handles.sls_watchdog);
+end
+
+% Start video recorder
+video_devices = imaqhwinfo('winvideo');
+cur_cam = find(strcmp(handles.config.video_device.name, {video_devices.DeviceInfo.DeviceName}),1);
+handles.video.vidobj = videoinput('winvideo',video_devices.DeviceIDs{cur_cam}, handles.config.video_device.mode);
+set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
+triggerconfig(handles.video.vidobj, 'manual');
+start(handles.video.vidobj);
+handles.video.config = handles.config;
+handles.video.tic_id = tic();
+handles.video.start_frames = {};
+handles.video.start_times = [];
+handles.video.timer = timer('TimerFcn',@video_timer_func, 'Period',1/50, ...
+							'ExecutionMode','fixedRate');
+set(handles.video.timer, 'UserData',handles.video);
+start(handles.video.timer);
+
+guidata(handles.figure1, handles);
 
 
 function player_timer_func(timer_handle, eventdata)
@@ -345,6 +369,88 @@ catch ME
 end
 
 
+function video_timer_func(timer_handle, eventdata)
+try
+	handles_video = get(timer_handle,'UserData');
+	frame_cur = getsnapshot(handles_video.vidobj);
+	ax = fix(handles_video.config.video_device.axis);
+	frame_cur = frame_cur(ax(3)+1:ax(4), ax(1)+1:ax(2), :);
+	frame_cur = rgb2temp(frame_cur);
+
+	toc_t = toc(handles_video.tic_id);
+	if toc_t>handles_video.config.thresholds.start_delay
+		if toc_t>handles_video.config.thresholds.start_delay+handles_video.config.thresholds.start_time
+			if not(isfield(handles_video,'filt'))
+				% Remove mean
+				frames_stat = cell2mat(handles_video.start_frames);
+				handles_video.filt.hp = struct('b',[1 -1], 'a',[1 -0.999], 'z',-mean(frames_stat));
+				frames_stat = filter(handles_video.filt.hp.b, handles_video.filt.hp.a, frames_stat, handles_video.filt.hp.z, 1);
+
+				% remove figh frequecny noise
+				med_fps = 1./median(diff(handles_video.start_times));
+				if handles_video.config.thresholds.fir_freq/(med_fps/2)<0.9 && handles_video.config.thresholds.fir_order>0
+					handles_video.filt.lp.b = fir1(round(handles_video.config.thresholds.fir_order*med_fps), handles_video.config.thresholds.fir_freq/(med_fps/2));
+					[frames_stat, handles_video.filt.lp.z] = filter(handles_video.filt.lp.b, 1, frames_stat, [], 1);
+				end
+
+				% statistics estimation
+				if handles_video.config.thresholds.stat_lo>0
+					handles_video.stat.lo = quantile(frames_stat, handles_video.config.thresholds.stat_lo, 1);
+				end
+				handles_video.stat.hi = quantile(frames_stat, handles_video.config.thresholds.stat_hi, 1);
+
+				% create report stubs
+				handles_video.report = zeros(0,3);
+
+				% Cleanup
+				handles_video = rmfield(handles_video,{'start_frames' 'start_times'});
+				clear('frames_stat');
+			end
+
+			% Main processing
+			frame_sz = size(frame_cur);
+			[frame_cur, handles_video.filt.hp.z] = filter(handles_video.filt.hp.b, handles_video.filt.hp.a, transpose(frame_cur(:)), handles_video.filt.hp.z, 1);
+
+			if isfield(handles_video.filt,'lp')
+				[frame_cur, handles_video.filt.lp.z] = filter(handles_video.filt.lp.b, 1, frame_cur, [], 1);
+			end
+			
+			is_signaling = false(size(frame_cur));
+			if isfield(handles_video.stat,'lo')
+				is_signaling = is_signaling | (frame_cur<handles_video.stat.lo);
+			end
+			is_signaling = is_signaling | (frame_cur>handles_video.stat.hi);
+
+			if handles_video.config.thresholds.median_size>0
+				is_signaling = reshape(is_signaling, frame_sz);
+				is_signaling = medfilt2(is_signaling, handles_video.config.thresholds.median_size+[0 0]);
+				is_signaling = transpose(is_signaling(:));
+			end
+
+			handles_video.report(end+1,:) = [toc_t sum(is_signaling) mean(is_signaling)];
+			disp(handles_video.report(end,:));
+		else
+			handles_video.start_frames{end+1,1} = transpose(frame_cur(:));
+			handles_video.start_times(end+1,1) = toc_t;
+		end
+		set(timer_handle, 'UserData',handles_video);
+	end
+		
+catch ME
+	disp(ME);
+end
+
+
+function temp = rgb2temp(pic_rgb)
+pic_rgb  = single(pic_rgb);
+
+yuv_luma = 0.299*pic_rgb(:,:,1) + 0.587*pic_rgb(:,:,2) + 0.114*pic_rgb(:,:,3);
+
+temp = 0.005319*yuv_luma -0.1609;
+
+temp = min(1,max(0,temp));
+
+
 function player_timer_stop(timer_handle, eventdata)
 delete(timer_handle);
 
@@ -357,9 +463,7 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 
 xml_write(handles.config_file, handles.config, 'ir_stand');
 
-if strcmp(get(handles.work_abort_btn,'Enable'),'on')
-	work_abort_btn_Callback(hObject, eventdata, handles)
-end
+work_abort_btn_Callback(hObject, eventdata, handles)
 
 % Hint: delete(hObject) closes the figure
 delete(hObject);
