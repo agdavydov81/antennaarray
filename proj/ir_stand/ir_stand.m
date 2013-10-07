@@ -378,11 +378,11 @@ end
 function video_timer_func(timer_handle, eventdata)
 try
 	handles_video = get(timer_handle,'UserData');
-	frame_cur = getsnapshot(handles_video.vidobj);
+	frame_cur_rgb = getsnapshot(handles_video.vidobj);
 	ax = fix(handles_video.config.video_device.axis);
-	frame_cur = frame_cur(ax(3)+1:ax(4), ax(1)+1:ax(2), :);
-	imshow(frame_cur, 'Parent',handles_video.handles.work_img_orig);
-	frame_cur = rgb2temp(frame_cur);
+	frame_cur_rgb = frame_cur_rgb(ax(3)+1:ax(4), ax(1)+1:ax(2), :);
+	imshow(frame_cur_rgb, 'Parent',handles_video.handles.work_img_orig);
+	frame_cur = rgb2temp(frame_cur_rgb);
 
 	toc_t = toc(handles_video.tic_id);
 	time_s = fix(toc_t);
@@ -420,12 +420,6 @@ try
 			end
 
 			% Main processing
-			if not(isempty(handles_video.config.thresholds.report_path)) && handles_video.config.thresholds.report_img_interval>=0 && handles_video.report.img_toc<toc_t
-				handles_video.report.img_toc = toc_t + handles_video.config.thresholds.report_img_interval;
-				handles_video.report.img_cnt = handles_video.report.img_cnt+1;
-				imwrite(frame_cur, fullfile(handles_video.config.thresholds.report_path, sprintf('img_%06d.jpg',handles_video.report.img_cnt)), 'jpg', 'Quality',85);
-			end
-
 			frame_sz = size(frame_cur);
 			frame_cur = transpose(frame_cur(:));
 
@@ -459,6 +453,11 @@ try
 			if handles_video.report.fh~=-1
 				cur_res = handles_video.report.graphs(end,:);
 				fprintf(handles_video.report.fh, '%f\t%d\t%e\n', cur_res(1), cur_res(2), cur_res(3));
+			end
+			if not(isempty(handles_video.config.thresholds.report_path)) && handles_video.config.thresholds.report_img_interval>=0 && handles_video.report.img_toc<toc_t
+				handles_video.report.img_toc = toc_t + handles_video.config.thresholds.report_img_interval;
+				handles_video.report.img_cnt = handles_video.report.img_cnt+1;
+				imwrite(frame_cur_rgb, fullfile(handles_video.config.thresholds.report_path, sprintf('img_%06d.jpg',handles_video.report.img_cnt)), 'jpg', 'Quality',85);
 			end
 		else
 			handles_video.start_frames{end+1,1} = transpose(frame_cur(:));

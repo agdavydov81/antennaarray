@@ -74,8 +74,6 @@ handles.config = cfg;
 if not(isfield(cfg,'thresholds'));						cfg.thresholds = struct();					end
 if not(isfield(cfg.thresholds,'start_delay'));			cfg.thresholds.start_delay = 10;			end
 if not(isfield(cfg.thresholds,'start_time'));			cfg.thresholds.start_time = 5;				end
-if not(isfield(cfg.thresholds,'fir_freq'));				cfg.thresholds.fir_freq = 0;				end
-if not(isfield(cfg.thresholds,'fir_order'));			cfg.thresholds.fir_order = 0;				end
 if not(isfield(cfg.thresholds,'stat_lo'));				cfg.thresholds.stat_lo = 0.005;				end
 if not(isfield(cfg.thresholds,'stat_hi'));				cfg.thresholds.stat_hi = 0.995;				end
 if not(isfield(cfg.thresholds,'median_size'));			cfg.thresholds.median_size = 3;				end
@@ -87,8 +85,6 @@ if not(isfield(cfg.thresholds,'report_graph_time'));	cfg.thresholds.report_graph
 
 set(handles.start_delay,		'String', num2str(cfg.thresholds.start_delay));
 set(handles.start_time,			'String', num2str(cfg.thresholds.start_time));
-set(handles.fir_freq,			'String', num2str(cfg.thresholds.fir_freq));
-set(handles.fir_order,			'String', num2str(cfg.thresholds.fir_order));
 set(handles.stat_lo,			'String', num2str(cfg.thresholds.stat_lo));
 set(handles.stat_hi,			'String', num2str(cfg.thresholds.stat_hi));
 set(handles.median_size,		'String', num2str(cfg.thresholds.median_size));
@@ -116,8 +112,6 @@ cfg = handles.config;
 if handles.press_ok
 	cfg.thresholds.start_delay = 		str2double(get(handles.start_delay,'String'));
 	cfg.thresholds.start_time = 		str2double(get(handles.start_time,'String'));
-	cfg.thresholds.fir_freq =			str2double(get(handles.fir_freq,'String'));
-	cfg.thresholds.fir_order =			str2double(get(handles.fir_order,'String'));
 	cfg.thresholds.stat_lo =			str2double(get(handles.stat_lo,'String'));
 	cfg.thresholds.stat_hi =			str2double(get(handles.stat_hi,'String'));
 	cfg.thresholds.median_size =		str2double(get(handles.median_size,	'String'));
@@ -187,50 +181,6 @@ if any(is_key_esc_ret)
 	handles.press_ok = is_key_esc_ret(2);
 	guidata(hObject, handles);
 	uiresume(handles.figure1);
-end
-
-
-function fir_freq_Callback(hObject, eventdata, handles)
-% hObject    handle to fir_freq (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of fir_freq as text
-%        str2double(get(hObject,'String')) returns contents of fir_freq as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function fir_freq_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to fir_freq (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-function fir_order_Callback(hObject, eventdata, handles)
-% hObject    handle to fir_order (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of fir_order as text
-%        str2double(get(hObject,'String')) returns contents of fir_order as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function fir_order_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to fir_order (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
 end
 
 
