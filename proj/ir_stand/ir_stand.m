@@ -420,6 +420,12 @@ try
 			end
 
 			% Main processing
+			if not(isempty(handles_video.config.thresholds.report_path)) && handles_video.config.thresholds.report_img_interval>=0 && handles_video.report.img_toc<toc_t
+				handles_video.report.img_toc = toc_t + handles_video.config.thresholds.report_img_interval;
+				handles_video.report.img_cnt = handles_video.report.img_cnt+1;
+				imwrite(frame_cur, fullfile(handles_video.config.thresholds.report_path, sprintf('img_%06d.jpg',handles_video.report.img_cnt)), 'jpg', 'Quality',85);
+			end
+
 			frame_sz = size(frame_cur);
 			frame_cur = transpose(frame_cur(:));
 
@@ -453,11 +459,6 @@ try
 			if handles_video.report.fh~=-1
 				cur_res = handles_video.report.graphs(end,:);
 				fprintf(handles_video.report.fh, '%f\t%d\t%e\n', cur_res(1), cur_res(2), cur_res(3));
-			end
-			if not(isempty(handles_video.config.thresholds.report_path)) && handles_video.config.thresholds.report_img_interval>=0 && handles_video.report.img_toc<toc_t
-				handles_video.report.img_toc = toc_t + handles_video.config.thresholds.report_img_interval;
-				handles_video.report.img_cnt = handles_video.report.img_cnt+1;
-%				imwrite(reshape(frame_cur, frame_sz), fullfile(handles_video.config.thresholds.report_path, sprintf('img_%06d.jpg')), 'jpg', 'Quality',85);
 			end
 		else
 			handles_video.start_frames{end+1,1} = transpose(frame_cur(:));
