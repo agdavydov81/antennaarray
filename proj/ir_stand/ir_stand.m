@@ -396,18 +396,10 @@ try
 				% Remove mean
 				frames_stat = cell2mat(handles_video.start_frames);
 
+				% remove very slow changes in scene
 				handles_video.filt.hp = struct('b',[1 -1], 'a',[1 -0.999], 'z',-mean(frames_stat));
 				frames_stat = filter(handles_video.filt.hp.b, handles_video.filt.hp.a, frames_stat, handles_video.filt.hp.z, 1);
 
-				% remove figh frequecny noise
-				% @@ buggy code
-%{
-				med_fps = 1./median(diff(handles_video.start_times));
-				if handles_video.config.thresholds.fir_freq>0 && handles_video.config.thresholds.fir_freq/(med_fps/2)<0.9 && handles_video.config.thresholds.fir_order>0
-					handles_video.filt.lp.b = fir1(round(handles_video.config.thresholds.fir_order*med_fps), handles_video.config.thresholds.fir_freq/(med_fps/2));
-					[frames_stat, handles_video.filt.lp.z] = filter(handles_video.filt.lp.b, 1, frames_stat, [], 1);
-				end
-%}
 				% statistics estimation
 				if handles_video.config.thresholds.stat_lo>0
 					handles_video.stat.lo = quantile(frames_stat, handles_video.config.thresholds.stat_lo, 1);
@@ -424,10 +416,6 @@ try
 			frame_cur = transpose(frame_cur(:));
 
 			[frame_cur, handles_video.filt.hp.z] = filter(handles_video.filt.hp.b, handles_video.filt.hp.a, frame_cur, handles_video.filt.hp.z, 1);
-
-			if isfield(handles_video.filt,'lp')
-				[frame_cur, handles_video.filt.lp.z] = filter(handles_video.filt.lp.b, 1, frame_cur, [], 1);
-			end
 
 			is_signaling = false(size(frame_cur));
 			if isfield(handles_video.stat,'lo')
