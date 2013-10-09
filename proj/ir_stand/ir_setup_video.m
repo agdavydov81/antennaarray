@@ -22,7 +22,7 @@ function varargout = ir_setup_video(varargin)
 
 % Edit the above text to modify the response to help ir_setup_video
 
-% Last Modified by GUIDE v2.5 29-Sep-2013 01:55:40
+% Last Modified by GUIDE v2.5 09-Oct-2013 21:25:37
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -101,7 +101,8 @@ triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
 frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
-imshow(frame_cur, 'Parent',handles.video_image);
+image(frame_cur, 'Parent',handles.video_image);
+set(handles.video_image, 'XTick',[], 'YTick',[]);
 if isempty(cfg.video_device.axis)
 	handles.video.axis = axis(handles.video_image);
 else
@@ -133,7 +134,8 @@ try
 
 	if isfield(handles_video_fps,'ticID')
 		frame_cur = getsnapshot(handles.video.vidobj);
-		imshow(frame_cur, 'Parent',handles.video_image);
+		image(frame_cur, 'Parent',handles.video_image);
+		set(handles.video_image, 'XTick',[], 'YTick',[]);
 		axis(handles.video_image, handles.video.axis);
 
 		toc_t = toc(handles_video_fps.ticID);
@@ -157,6 +159,7 @@ try
 		end
 	else
 		handles_video_fps = struct('ticID',tic(), 'tic_pos',2, 'tok_pos',3, 'counter',0, 'queue_length',5, 'tic_queue',[], 'frames_queue',[]);
+		set(handles.video_fps,'String','');
 	end
 	set(handles.figure1,'UserData',handles_video_fps);
 
@@ -186,10 +189,13 @@ set(handles.figure1, 'Units','pixels', 'Position',[(scr_sz(3)-(X+20))/2 (scr_sz(
 
 set(handles.video_image,		'Units','pixels',	'Position',[10  10 X Y]); %
 set(handles.video_camera,		'Units','pixels',	'Position',[10  Y+50 200 22]);
-set(handles.video_camera_text,	'Units','pixels',	'Position',[215 Y+53 90 16]);
+set(handles.video_camera_text,	'Units','pixels',	'Position',[215 Y+53 60 16]);
 set(handles.video_mode,			'Units','pixels',	'Position',[10  Y+20 200 22]);
-set(handles.video_mode_text,	'Units','pixels',	'Position',[215 Y+23 90 16]);
-set(handles.video_fps,			'Units','pixels',	'Position',[10+X-90 Y+23 90 16]);
+set(handles.video_mode_text,	'Units','pixels',	'Position',[215 Y+23 60 16]);
+
+set(handles.zoomout,			'Units','pixels',	'Position',[10+X-22 Y+20 22 22]);
+set(handles.zoomin,				'Units','pixels',	'Position',[10+X-52 Y+20 22 22]);
+set(handles.video_fps,			'Units','pixels',	'Position',[10+X-120 Y+23 60 16]);
 
 set(handles.setup_ok,			'Units','pixels',	'Position',[10+X-70-8-70 Y+50 70 22]);
 set(handles.setup_cancel,		'Units','pixels',	'Position',[10+X-70      Y+50 70 22]);
@@ -257,12 +263,12 @@ triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
 frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
-imshow(frame_cur, 'Parent',handles.video_image);
+image(frame_cur, 'Parent',handles.video_image);
+set(handles.video_image, 'XTick',[], 'YTick',[]);
 handles.video.axis = axis(handles.video_image);
 guidata(hObject, handles);
 
 set(handles.figure1,'UserData',struct());
-
 start(handles.video.timer);
 
 
@@ -306,12 +312,12 @@ triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
 frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
-imshow(frame_cur, 'Parent',handles.video_image);
+image(frame_cur, 'Parent',handles.video_image);
+set(handles.video_image, 'XTick',[], 'YTick',[]);
 handles.video.axis = axis(handles.video_image);
 guidata(hObject, handles);
 
 set(handles.figure1,'UserData',struct());
-
 start(handles.video.timer);
 
 
@@ -430,4 +436,36 @@ if any(is_key_esc_ret)
 	handles.press_ok = is_key_esc_ret(2);
 	guidata(hObject, handles);
 	uiresume(handles.figure1);
-end    
+end
+
+
+% --- Executes on button press in zoomin.
+function zoomin_Callback(hObject, eventdata, handles)
+% hObject    handle to zoomin (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if get(handles.zoomin,'Value')
+	stop(handles.video.timer);
+	set(handles.zoomout,'Value',0);
+	set(zoom, 'Direction','in', 'Enable','on');
+else
+	set(zoom, 'Enable','off');
+	set(handles.figure1,'UserData',struct());
+	start(handles.video.timer);
+end
+
+
+% --- Executes on button press in zoomout.
+function zoomout_Callback(hObject, eventdata, handles)
+% hObject    handle to zoomout (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if get(handles.zoomout,'Value')
+	stop(handles.video.timer);
+	set(handles.zoomin,'Value',0);
+	set(zoom, 'Direction','out', 'Enable','on');
+else
+	set(zoom, 'Enable','off');
+	set(handles.figure1,'UserData',struct());
+	start(handles.video.timer);
+end

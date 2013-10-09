@@ -456,7 +456,7 @@ try
 	
 	drawnow();
 catch ME
-	disp(ME);
+	% disp(ME);
 end
 
 
