@@ -68,6 +68,9 @@ if not(isfield(cfg.video_device,'mode'));				cfg.video_device.mode = '';					end
 if not(isfield(cfg.video_device,'axis'));				cfg.video_device.axis = [];					end
 
 handles.video.devices = imaqhwinfo('winvideo');
+if isempty(handles.video.devices.DeviceInfo)
+	return
+end
 set(handles.video_camera, 'String',{handles.video.devices.DeviceInfo.DeviceName});
 handles.video.cur_device = 1;
 if not(isempty(cfg.video_device.name))
@@ -207,19 +210,22 @@ function varargout = ir_setup_video_OutputFcn(hObject, eventdata, handles)
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+varargout{1} = [];
 
-stop(handles.video.vidobj);
-delete(handles.video.vidobj);
-delete(handles.video.timer);
+if isfield(handles,'output')
+	stop(handles.video.vidobj);
+	delete(handles.video.vidobj);
+	delete(handles.video.timer);
 
-cfg = handles.config;
-if handles.press_ok
-	cfg.video_device.name =	handles.video.cam_info.DeviceName;
-	cfg.video_device.mode =	handles.video.mode;
-	cfg.video_device.axis =	axis(handles.video_image);
+	cfg = handles.config;
+	if handles.press_ok
+		cfg.video_device.name =	handles.video.cam_info.DeviceName;
+		cfg.video_device.mode =	handles.video.mode;
+		cfg.video_device.axis =	axis(handles.video_image);
+	end
+
+	varargout{1} = cfg;
 end
-
-varargout{1} = cfg;
 
 % The figure can be deleted now
 delete(handles.figure1);

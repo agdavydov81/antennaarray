@@ -149,7 +149,13 @@ function setup_irvideo_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_irvideo_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.config = ir_setup_video(handles.config);
+ret_cfg = ir_setup_video(handles.config);
+if isempty(ret_cfg)
+	errordlg('Не обнаружено подходящих видео устройств.', [mfilename ' help'], 'modal');
+	return
+end
+
+handles.config = ret_cfg;
 guidata(hObject, handles);
 check_config(handles);
 
@@ -210,6 +216,14 @@ function work_start_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to work_start_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+% Find video recorder
+video_devices = imaqhwinfo('winvideo');
+cur_cam = find(strcmp(handles.config.video_device.name, {video_devices.DeviceInfo.DeviceName}),1);
+if isempty(cur_cam)
+	errordlg(['Не обнаружено видео устройство "' handles.config.video_device.name '".'], [mfilename ' help'], 'modal');
+	return;
+end
 
 % Generages signal
 if handles.config.acoustic_generator.harm.enable
@@ -282,8 +296,6 @@ if handles.config.acoustic_generator.sls.enable
 end
 
 % Start video recorder
-video_devices = imaqhwinfo('winvideo');
-cur_cam = find(strcmp(handles.config.video_device.name, {video_devices.DeviceInfo.DeviceName}),1);
 handles.video.vidobj = videoinput('winvideo',video_devices.DeviceIDs{cur_cam}, handles.config.video_device.mode);
 set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
