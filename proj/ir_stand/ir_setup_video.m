@@ -276,7 +276,9 @@ handles.video.axis = handles.video.axis_def;
 guidata(hObject, handles);
 
 set(handles.figure1,'UserData',struct());
-start(handles.video.timer);
+if ~get(handles.zoomin,'Value')
+	start(handles.video.timer);
+end
 
 
 % --- Executes during object creation, after setting all properties.
@@ -326,7 +328,9 @@ handles.video.axis = handles.video.axis_def;
 guidata(hObject, handles);
 
 set(handles.figure1,'UserData',struct());
-start(handles.video.timer);
+if ~get(handles.zoomin,'Value')
+	start(handles.video.timer);
+end
 
 
 % --- Executes during object creation, after setting all properties.
