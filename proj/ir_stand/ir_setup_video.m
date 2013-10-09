@@ -22,7 +22,7 @@ function varargout = ir_setup_video(varargin)
 
 % Edit the above text to modify the response to help ir_setup_video
 
-% Last Modified by GUIDE v2.5 09-Oct-2013 21:25:37
+% Last Modified by GUIDE v2.5 09-Oct-2013 23:14:32
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -103,12 +103,12 @@ frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
 image(frame_cur, 'Parent',handles.video_image);
 set(handles.video_image, 'XTick',[], 'YTick',[]);
-if isempty(cfg.video_device.axis)
-	handles.video.axis = axis(handles.video_image);
-else
+handles.video.axis_def = axis(handles.video_image);
+handles.video.axis = handles.video.axis_def;
+if not(isempty(cfg.video_device.axis))
 	handles.video.axis = cfg.video_device.axis;
-	axis(handles.video_image, handles.video.axis);
 end
+axis(handles.video_image, handles.video.axis);
 
 set(handles.figure1,'UserData',struct()); % the handles.video.fps new storage
 handles.video.timer = timer('TimerFcn',@ir_setup_video_timer_func, 'Period',1/50, ...
@@ -193,7 +193,7 @@ set(handles.video_camera_text,	'Units','pixels',	'Position',[215 Y+53 60 16]);
 set(handles.video_mode,			'Units','pixels',	'Position',[10  Y+20 200 22]);
 set(handles.video_mode_text,	'Units','pixels',	'Position',[215 Y+23 60 16]);
 
-set(handles.zoomout,			'Units','pixels',	'Position',[10+X-22 Y+20 22 22]);
+set(handles.zoom_reset,			'Units','pixels',	'Position',[10+X-22 Y+20 22 22]);
 set(handles.zoomin,				'Units','pixels',	'Position',[10+X-52 Y+20 22 22]);
 set(handles.video_fps,			'Units','pixels',	'Position',[10+X-120 Y+23 60 16]);
 
@@ -214,9 +214,9 @@ delete(handles.video.timer);
 
 cfg = handles.config;
 if handles.press_ok
-	cfg.video_device.name =					handles.video.cam_info.DeviceName;
-	cfg.video_device.mode =					handles.video.mode;
-	cfg.video_device.axis =					handles.video.axis;
+	cfg.video_device.name =	handles.video.cam_info.DeviceName;
+	cfg.video_device.mode =	handles.video.mode;
+	cfg.video_device.axis =	axis(handles.video_image);
 end
 
 varargout{1} = cfg;
@@ -265,7 +265,8 @@ frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
 image(frame_cur, 'Parent',handles.video_image);
 set(handles.video_image, 'XTick',[], 'YTick',[]);
-handles.video.axis = axis(handles.video_image);
+handles.video.axis_def = axis(handles.video_image);
+handles.video.axis = handles.video.axis_def;
 guidata(hObject, handles);
 
 set(handles.figure1,'UserData',struct());
@@ -314,7 +315,8 @@ frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
 image(frame_cur, 'Parent',handles.video_image);
 set(handles.video_image, 'XTick',[], 'YTick',[]);
-handles.video.axis = axis(handles.video_image);
+handles.video.axis_def = axis(handles.video_image);
+handles.video.axis = handles.video.axis_def;
 guidata(hObject, handles);
 
 set(handles.figure1,'UserData',struct());
@@ -446,7 +448,6 @@ function zoomin_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if get(handles.zoomin,'Value')
 	stop(handles.video.timer);
-	set(handles.zoomout,'Value',0);
 	set(zoom, 'Direction','in', 'Enable','on');
 else
 	set(zoom, 'Enable','off');
@@ -455,17 +456,11 @@ else
 end
 
 
-% --- Executes on button press in zoomout.
-function zoomout_Callback(hObject, eventdata, handles)
-% hObject    handle to zoomout (see GCBO)
+% --- Executes on button press in zoom_reset.
+function zoom_reset_Callback(hObject, eventdata, handles)
+% hObject    handle to zoom_reset (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if get(handles.zoomout,'Value')
-	stop(handles.video.timer);
-	set(handles.zoomin,'Value',0);
-	set(zoom, 'Direction','out', 'Enable','on');
-else
-	set(zoom, 'Enable','off');
-	set(handles.figure1,'UserData',struct());
-	start(handles.video.timer);
-end
+handles.video.axis = handles.video.axis_def;
+guidata(hObject, handles);
+axis(handles.video_image, handles.video.axis_def);
