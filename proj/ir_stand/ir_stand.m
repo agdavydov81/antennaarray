@@ -312,7 +312,7 @@ end
 handles.video.report.img_cnt = 0;
 handles.video.report.img_toc = 0;
 
-handles.video.timer = timer('TimerFcn',@video_timer_func, 'Period',1/50, ...  % 1/50
+handles.video.timer = timer('TimerFcn',@video_timer_func, 'Period',1/100, ...
 							'ExecutionMode','fixedRate');
 handles_video = handles.video;
 handles_video.handles = handles;

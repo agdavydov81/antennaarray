@@ -114,8 +114,9 @@ end
 axis(handles.video_image, handles.video.axis);
 
 set(handles.figure1,'UserData',struct()); % the handles.video.fps new storage
-handles.video.timer = timer('TimerFcn',@ir_setup_video_timer_func, 'Period',1/50, ...
+handles.video.timer = timer('TimerFcn',@ir_setup_video_timer_func, 'Period',1/100, ...
 							'StartDelay',2, 'ExecutionMode','fixedRate', 'UserData',handles.figure1);
+set(handles.video_fps, 'String','');
 
 guidata(hObject, handles);
 
@@ -157,7 +158,8 @@ try
 					handles_video_fps.tic_queue(1:end-handles_video_fps.queue_length) = [];
 					handles_video_fps.frames_queue(1:end-handles_video_fps.queue_length) = [];
 				end
-				set(handles.video_fps,'String',sprintf('%.1f fps',sum(handles_video_fps.frames_queue)/(toc_t-handles_video_fps.tic_queue(1))));
+				ax = fix(handles.video.axis);
+				set(handles.video_fps,'String',sprintf('%d x %d @ %.1f', ax(2)-ax(1), ax(4)-ax(3), sum(handles_video_fps.frames_queue)/(toc_t-handles_video_fps.tic_queue(1))));
 			end
 		end
 	else
@@ -198,7 +200,7 @@ set(handles.video_mode_text,	'Units','pixels',	'Position',[215 Y+23 60 16]);
 
 set(handles.zoom_reset,			'Units','pixels',	'Position',[10+X-22 Y+20 22 22]);
 set(handles.zoomin,				'Units','pixels',	'Position',[10+X-52 Y+20 22 22]);
-set(handles.video_fps,			'Units','pixels',	'Position',[10+X-120 Y+23 60 16]);
+set(handles.video_fps,			'Units','pixels',	'Position',[10+X-210 Y+23 150 16]);
 
 set(handles.setup_ok,			'Units','pixels',	'Position',[10+X-70-8-70 Y+50 70 22]);
 set(handles.setup_cancel,		'Units','pixels',	'Position',[10+X-70      Y+50 70 22]);
