@@ -72,14 +72,14 @@ end
 handles.config = cfg;
 
 if not(isfield(cfg,'thresholds'));						cfg.thresholds = struct();					end
-if not(isfield(cfg.thresholds,'start_delay'));			cfg.thresholds.start_delay = 10;			end
-if not(isfield(cfg.thresholds,'start_time'));			cfg.thresholds.start_time = 5;				end
+if not(isfield(cfg.thresholds,'start_delay'));			cfg.thresholds.start_delay = 15;			end
+if not(isfield(cfg.thresholds,'start_time'));			cfg.thresholds.start_time = 15;				end
 if not(isfield(cfg.thresholds,'stat_lo'));				cfg.thresholds.stat_lo = 0.005;				end
 if not(isfield(cfg.thresholds,'stat_hi'));				cfg.thresholds.stat_hi = 0.995;				end
 if not(isfield(cfg.thresholds,'median_size'));			cfg.thresholds.median_size = 3;				end
-if not(isfield(cfg.thresholds,'detector_points'));		cfg.thresholds.detector_points = 10;		end
+if not(isfield(cfg.thresholds,'detector_points'));		cfg.thresholds.detector_points = 100;		end
 if not(isfield(cfg.thresholds,'detector_part'));		cfg.thresholds.detector_part = 0.01;		end
-if not(isfield(cfg.thresholds,'report_path'));			cfg.thresholds.report_path = '';			end
+if not(isfield(cfg.thresholds,'report_path'));			cfg.thresholds.report_path = '.';			end
 if not(isfield(cfg.thresholds,'report_img_interval'));	cfg.thresholds.report_img_interval = 60;	end
 if not(isfield(cfg.thresholds,'report_graph_time'));	cfg.thresholds.report_graph_time = 600;		end
 
