@@ -301,6 +301,12 @@ set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
 handles.video.config = handles.config;
+
+handles.video.detector_state = false;
+handles.video.detector_thresholds_on_time = -inf;
+scatter(0,0,300,0.3+[0 0 0],'filled', 'Parent',handles.detector_lamp, 'Visible','off');
+set(handles.detector_lamp, 'Visible','off');
+
 handles.video.tic_id = tic();
 handles.video.start_frames = {};
 handles.video.start_times = [];
@@ -443,22 +449,63 @@ try
 
 			imshow(double(repmat(reshape(is_signaling, frame_sz),[1 1 3])), 'Parent',handles_video.handles.work_img_bw);
 
-			handles_video.report.graphs(end+1,:) = [toc_t sum(is_signaling) mean(is_signaling)];
+			det_points = sum(is_signaling);
+			det_part =   mean(is_signaling);
+			handles_video.report.graphs(end+1,:) = [toc_t det_points det_part];
+
+			%% Detection state
+			if ~handles_video.detector_state
+				thresholds_on = det_points>handles_video.config.thresholds.detector_on_points  || det_part>handles_video.config.thresholds.detector_on_part;
+			else
+				thresholds_on = det_points>handles_video.config.thresholds.detector_off_points || det_part>handles_video.config.thresholds.detector_off_part;
+			end
+			if thresholds_on
+				handles_video.detector_thresholds_on_time = toc_t;
+			end
+			new_st = thresholds_on | toc_t-handles_video.detector_thresholds_on_time<handles_video.config.thresholds.detector_post_buff;
+
+			if handles_video.detector_state~=new_st
+				if new_st % Detector just on
+					scatter(0,0,300,[1 0 0],'filled', 'Parent',handles_video.handles.detector_lamp);
+					% @@ TODO: continue there
+				else % Detector just off
+					scatter(0,0,300,0.3+[0 0 0],'filled', 'Parent',handles_video.handles.detector_lamp, 'Visible','off');
+					% @@ TODO: continue there
+				end
+				set(handles_video.handles.detector_lamp, 'Visible','off');
+				handles_video.detector_state=new_st;
+			end
+
+
+			%% Plot graphs
 			if handles_video.config.thresholds.report_graph_time>0
 				handles_video.report.graphs(handles_video.report.graphs(:,1)<toc_t-handles_video.config.thresholds.report_graph_time,:) = [];
 			end
 			plot(handles_video.handles.work_graph_pix_num,  handles_video.report.graphs(:,1), handles_video.report.graphs(:,2));
 			plot(handles_video.handles.work_graph_pix_part, handles_video.report.graphs(:,1), handles_video.report.graphs(:,3));
 
+			set(handles_video.handles.work_graph_pix_num, 'XTickLabel',{});
+
+			%% Plot thresholds
+			x_lim = xlim(handles_video.handles.work_graph_pix_num);
+			line(x_lim, handles_video.config.thresholds.detector_on_points +[0 0], 'Parent',handles_video.handles.work_graph_pix_num, 'Color','r');
+			line(x_lim, handles_video.config.thresholds.detector_off_points+[0 0], 'Parent',handles_video.handles.work_graph_pix_num, 'Color','k');
+
+			line(x_lim, handles_video.config.thresholds.detector_on_part +[0 0], 'Parent',handles_video.handles.work_graph_pix_part, 'Color','r');
+			line(x_lim, handles_video.config.thresholds.detector_off_part+[0 0], 'Parent',handles_video.handles.work_graph_pix_part, 'Color','k');
+
+			%% Save report
 			if handles_video.report.fh~=-1
 				cur_res = handles_video.report.graphs(end,:);
 				fprintf(handles_video.report.fh, '%f\t%d\t%e\n', cur_res(1), cur_res(2), cur_res(3));
 			end
+%{
 			if not(isempty(handles_video.config.thresholds.report_path)) && handles_video.config.thresholds.report_img_interval>=0 && handles_video.report.img_toc<toc_t
 				handles_video.report.img_toc = toc_t + handles_video.config.thresholds.report_img_interval;
 				handles_video.report.img_cnt = handles_video.report.img_cnt+1;
 				imwrite(frame_cur_rgb, fullfile(handles_video.config.thresholds.report_path, sprintf('img_%06d.jpg',handles_video.report.img_cnt)), 'jpg', 'Quality',85);
 			end
+%}
 		else
 			handles_video.start_frames{end+1,1} = transpose(frame_cur(:));
 			handles_video.start_times(end+1,1) = toc_t;
@@ -468,7 +515,7 @@ try
 	
 	drawnow();
 catch ME
-	% disp(ME);
+	disp(ME);
 end
 
 
