@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 07-Oct-2013 19:34:54
+% Last Modified by GUIDE v2.5 15-Oct-2013 18:38:59
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -71,28 +71,42 @@ else
 end
 handles.config = cfg;
 
-if not(isfield(cfg,'thresholds'));						cfg.thresholds = struct();					end
-if not(isfield(cfg.thresholds,'start_delay'));			cfg.thresholds.start_delay = 15;			end
-if not(isfield(cfg.thresholds,'start_time'));			cfg.thresholds.start_time = 15;				end
-if not(isfield(cfg.thresholds,'stat_lo'));				cfg.thresholds.stat_lo = 0.005;				end
-if not(isfield(cfg.thresholds,'stat_hi'));				cfg.thresholds.stat_hi = 0.995;				end
-if not(isfield(cfg.thresholds,'median_size'));			cfg.thresholds.median_size = 3;				end
-if not(isfield(cfg.thresholds,'detector_points'));		cfg.thresholds.detector_points = 100;		end
-if not(isfield(cfg.thresholds,'detector_part'));		cfg.thresholds.detector_part = 0.01;		end
-if not(isfield(cfg.thresholds,'report_path'));			cfg.thresholds.report_path = '.';			end
-if not(isfield(cfg.thresholds,'report_img_interval'));	cfg.thresholds.report_img_interval = 60;	end
-if not(isfield(cfg.thresholds,'report_graph_time'));	cfg.thresholds.report_graph_time = 600;		end
+if not(isfield(cfg,'thresholds'));								cfg.thresholds = struct();						end
+if not(isfield(cfg.thresholds,'start_delay'));					cfg.thresholds.start_delay = 15;				end
+if not(isfield(cfg.thresholds,'start_time'));					cfg.thresholds.start_time = 15;					end
+if not(isfield(cfg.thresholds,'stat_lo'));						cfg.thresholds.stat_lo = 0.005;					end
+if not(isfield(cfg.thresholds,'stat_hi'));						cfg.thresholds.stat_hi = 0.995;					end
+if not(isfield(cfg.thresholds,'median_size'));					cfg.thresholds.median_size = 3;					end
+if not(isfield(cfg.thresholds,'detector_on_points'));			cfg.thresholds.detector_on_points = 100;		end
+if not(isfield(cfg.thresholds,'detector_on_part'));				cfg.thresholds.detector_on_part = 0.01;			end
+if not(isfield(cfg.thresholds,'detector_off_points'));			cfg.thresholds.detector_off_points = 80;		end
+if not(isfield(cfg.thresholds,'detector_off_part'));			cfg.thresholds.detector_off_part = 0.008;		end
+if not(isfield(cfg.thresholds,'detector_pre_buff'));			cfg.thresholds.detector_pre_buff = 0.5;			end
+if not(isfield(cfg.thresholds,'detector_post_buff'));			cfg.thresholds.detector_post_buff = 0.8;		end
+if not(isfield(cfg.thresholds,'report_path'));					cfg.thresholds.report_path = '.';				end
+if not(isfield(cfg.thresholds,'report_detoff_img_interval'));	cfg.thresholds.report_detoff_img_interval = 60;	end
+if not(isfield(cfg.thresholds,'report_detoff_img_number'));		cfg.thresholds.report_detoff_img_number = 1440;	end
+if not(isfield(cfg.thresholds,'report_deton_img_interval'));	cfg.thresholds.report_deton_img_interval = 1;	end
+if not(isfield(cfg.thresholds,'report_deton_img_number'));		cfg.thresholds.report_deton_img_number = 30;	end
+if not(isfield(cfg.thresholds,'report_graph_time'));			cfg.thresholds.report_graph_time = 300;			end
 
-set(handles.start_delay,		'String', num2str(cfg.thresholds.start_delay));
-set(handles.start_time,			'String', num2str(cfg.thresholds.start_time));
-set(handles.stat_lo,			'String', num2str(cfg.thresholds.stat_lo));
-set(handles.stat_hi,			'String', num2str(cfg.thresholds.stat_hi));
-set(handles.median_size,		'String', num2str(cfg.thresholds.median_size));
-set(handles.detector_points,	'String', num2str(cfg.thresholds.detector_points));
-set(handles.detector_part,		'String', num2str(cfg.thresholds.detector_part));
-set(handles.report_path,		'String', cfg.thresholds.report_path);
-set(handles.report_img_interval,'String', num2str(cfg.thresholds.report_img_interval));
-set(handles.report_graph_time,	'String', num2str(cfg.thresholds.report_graph_time));
+set(handles.start_delay,				'String', num2str(cfg.thresholds.start_delay));
+set(handles.start_time,					'String', num2str(cfg.thresholds.start_time));
+set(handles.stat_lo,					'String', num2str(cfg.thresholds.stat_lo));
+set(handles.stat_hi,					'String', num2str(cfg.thresholds.stat_hi));
+set(handles.median_size,				'String', num2str(cfg.thresholds.median_size));
+set(handles.detector_on_points,			'String', num2str(cfg.thresholds.detector_on_points));
+set(handles.detector_on_part,			'String', num2str(cfg.thresholds.detector_on_part));
+set(handles.detector_off_points,		'String', num2str(cfg.thresholds.detector_off_points));
+set(handles.detector_off_part,			'String', num2str(cfg.thresholds.detector_off_part));
+set(handles.detector_pre_buff,			'String', num2str(cfg.thresholds.detector_pre_buff));
+set(handles.detector_post_buff,			'String', num2str(cfg.thresholds.detector_post_buff));
+set(handles.report_path,				'String', cfg.thresholds.report_path);
+set(handles.report_detoff_img_interval,	'String', num2str(cfg.thresholds.report_detoff_img_interval));
+set(handles.report_detoff_img_number,	'String', num2str(cfg.thresholds.report_detoff_img_number));
+set(handles.report_deton_img_interval,	'String', num2str(cfg.thresholds.report_deton_img_interval));
+set(handles.report_deton_img_number,	'String', num2str(cfg.thresholds.report_deton_img_number));
+set(handles.report_graph_time,			'String', num2str(cfg.thresholds.report_graph_time));
 
 % Update handles structure
 guidata(hObject, handles);
@@ -110,16 +124,23 @@ function varargout = ir_setup_thresholds_OutputFcn(hObject, eventdata, handles)
 
 cfg = handles.config;
 if handles.press_ok
-	cfg.thresholds.start_delay = 		str2double(get(handles.start_delay,'String'));
-	cfg.thresholds.start_time = 		str2double(get(handles.start_time,'String'));
-	cfg.thresholds.stat_lo =			str2double(get(handles.stat_lo,'String'));
-	cfg.thresholds.stat_hi =			str2double(get(handles.stat_hi,'String'));
-	cfg.thresholds.median_size =		str2double(get(handles.median_size,	'String'));
-	cfg.thresholds.detector_points =	str2double(get(handles.detector_points,'String'));
-	cfg.thresholds.detector_part =		str2double(get(handles.detector_part,'String'));
-	cfg.thresholds.report_path =		get(handles.report_path, 'String');
-	cfg.thresholds.report_img_interval=	str2double(get(handles.report_img_interval,'String'));
-	cfg.thresholds.report_graph_time =	str2double(get(handles.report_graph_time,'String'));
+	cfg.thresholds.start_delay =				str2double(get(handles.start_delay,'String'));
+	cfg.thresholds.start_time =					str2double(get(handles.start_time,'String'));
+	cfg.thresholds.stat_lo =					str2double(get(handles.stat_lo,'String'));
+	cfg.thresholds.stat_hi =					str2double(get(handles.stat_hi,'String'));
+	cfg.thresholds.median_size =				str2double(get(handles.median_size,	'String'));
+	cfg.thresholds.detector_on_points =			str2double(get(handles.detector_on_points,'String'));
+	cfg.thresholds.detector_on_part =			str2double(get(handles.detector_on_part,'String'));
+	cfg.thresholds.detector_off_points =		str2double(get(handles.detector_off_points,'String'));
+	cfg.thresholds.detector_off_part =			str2double(get(handles.detector_off_part,'String'));
+	cfg.thresholds.detector_pre_buff =			str2double(get(handles.detector_pre_buff,'String'));
+	cfg.thresholds.detector_post_buff =			str2double(get(handles.detector_post_buff,'String'));
+	cfg.thresholds.report_path =				get(handles.report_path, 'String');
+	cfg.thresholds.report_detoff_img_interval=	str2double(get(handles.report_detoff_img_interval,'String'));
+	cfg.thresholds.report_detoff_img_number=	str2double(get(handles.report_detoff_img_number,'String'));
+	cfg.thresholds.report_deton_img_interval=	str2double(get(handles.report_deton_img_interval,'String'));
+	cfg.thresholds.report_deton_img_number=		str2double(get(handles.report_deton_img_number,'String'));
+	cfg.thresholds.report_graph_time =			str2double(get(handles.report_graph_time,'String'));
 end
 
 varargout{1} = cfg;
@@ -251,18 +272,18 @@ end
 
 
 
-function detector_points_Callback(hObject, eventdata, handles)
-% hObject    handle to detector_points (see GCBO)
+function detector_on_points_Callback(hObject, eventdata, handles)
+% hObject    handle to detector_on_points (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of detector_points as text
-%        str2double(get(hObject,'String')) returns contents of detector_points as a double
+% Hints: get(hObject,'String') returns contents of detector_on_points as text
+%        str2double(get(hObject,'String')) returns contents of detector_on_points as a double
 
 
 % --- Executes during object creation, after setting all properties.
-function detector_points_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to detector_points (see GCBO)
+function detector_on_points_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to detector_on_points (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -274,18 +295,18 @@ end
 
 
 
-function detector_part_Callback(hObject, eventdata, handles)
-% hObject    handle to detector_part (see GCBO)
+function detector_on_part_Callback(hObject, eventdata, handles)
+% hObject    handle to detector_on_part (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of detector_part as text
-%        str2double(get(hObject,'String')) returns contents of detector_part as a double
+% Hints: get(hObject,'String') returns contents of detector_on_part as text
+%        str2double(get(hObject,'String')) returns contents of detector_on_part as a double
 
 
 % --- Executes during object creation, after setting all properties.
-function detector_part_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to detector_part (see GCBO)
+function detector_on_part_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to detector_on_part (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -375,18 +396,18 @@ end
 set(handles.report_path, 'String', root);
 
 
-function report_img_interval_Callback(hObject, eventdata, handles)
-% hObject    handle to report_img_interval (see GCBO)
+function report_detoff_img_interval_Callback(hObject, eventdata, handles)
+% hObject    handle to report_detoff_img_interval (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of report_img_interval as text
-%        str2double(get(hObject,'String')) returns contents of report_img_interval as a double
+% Hints: get(hObject,'String') returns contents of report_detoff_img_interval as text
+%        str2double(get(hObject,'String')) returns contents of report_detoff_img_interval as a double
 
 
 % --- Executes during object creation, after setting all properties.
-function report_img_interval_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to report_img_interval (see GCBO)
+function report_detoff_img_interval_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to report_detoff_img_interval (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -410,6 +431,167 @@ function report_graph_time_Callback(hObject, eventdata, handles)
 % --- Executes during object creation, after setting all properties.
 function report_graph_time_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to report_graph_time (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function detector_off_points_Callback(hObject, eventdata, handles)
+% hObject    handle to detector_off_points (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of detector_off_points as text
+%        str2double(get(hObject,'String')) returns contents of detector_off_points as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function detector_off_points_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to detector_off_points (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function detector_off_part_Callback(hObject, eventdata, handles)
+% hObject    handle to detector_off_part (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of detector_off_part as text
+%        str2double(get(hObject,'String')) returns contents of detector_off_part as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function detector_off_part_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to detector_off_part (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function detector_pre_buff_Callback(hObject, eventdata, handles)
+% hObject    handle to detector_pre_buff (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of detector_pre_buff as text
+%        str2double(get(hObject,'String')) returns contents of detector_pre_buff as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function detector_pre_buff_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to detector_pre_buff (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function detector_post_buff_Callback(hObject, eventdata, handles)
+% hObject    handle to detector_post_buff (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of detector_post_buff as text
+%        str2double(get(hObject,'String')) returns contents of detector_post_buff as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function detector_post_buff_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to detector_post_buff (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function report_deton_img_interval_Callback(hObject, eventdata, handles)
+% hObject    handle to report_deton_img_interval (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of report_deton_img_interval as text
+%        str2double(get(hObject,'String')) returns contents of report_deton_img_interval as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function report_deton_img_interval_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to report_deton_img_interval (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function report_deton_img_number_Callback(hObject, eventdata, handles)
+% hObject    handle to report_deton_img_number (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of report_deton_img_number as text
+%        str2double(get(hObject,'String')) returns contents of report_deton_img_number as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function report_deton_img_number_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to report_deton_img_number (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function report_detoff_img_number_Callback(hObject, eventdata, handles)
+% hObject    handle to report_detoff_img_number (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of report_detoff_img_number as text
+%        str2double(get(hObject,'String')) returns contents of report_detoff_img_number as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function report_detoff_img_number_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to report_detoff_img_number (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
