@@ -302,22 +302,16 @@ triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
 handles.video.config = handles.config;
 
-handles.video.detector_state = false;
-handles.video.detector_thresholds_on_time = -inf;
+% Init fields for processing
+handles.video.tic_id = tic();
+handles.video.toc_frames = 0;
+handles.video.work_stage = 0;
+
+% Turn off detector lamp
 scatter(0,0,300,0.3+[0 0 0],'filled', 'Parent',handles.detector_lamp, 'Visible','off');
 set(handles.detector_lamp, 'Visible','off');
 
-handles.video.tic_id = tic();
-handles.video.start_frames = {};
-handles.video.start_times = [];
-handles.video.report.graphs = zeros(0,3);
-handles.video.report.fh=-1;
-if not(isempty(handles.video.config.thresholds.report_path))
-	handles.video.report.fh = fopen(fullfile(handles.video.config.thresholds.report_path, sprintf('report.txt')), 'wt');
-end
-handles.video.report.img_cnt = 0;
-handles.video.report.img_toc = 0;
-
+% Create image processing timer
 handles.video.timer = timer('TimerFcn',@video_timer_func, 'Period',1/100, ...
 							'ExecutionMode','fixedRate');
 handles_video = handles.video;
@@ -395,76 +389,156 @@ end
 
 function video_timer_func(timer_handle, eventdata)
 try
+	%% Camera image aquiring and displaying
 	handles_video = get(timer_handle,'UserData');
 	frame_cur_rgb = getsnapshot(handles_video.vidobj);
 	ax = fix(handles_video.config.video_device.axis);
 	frame_cur_rgb = frame_cur_rgb(ax(3)+1:ax(4), ax(1)+1:ax(2), :);
 	imshow(frame_cur_rgb, 'Parent',handles_video.handles.work_img_orig);
 	frame_cur = rgb2temp(frame_cur_rgb);
+	frame_sz = size(frame_cur);
+	frame_cur = transpose(frame_cur(:));
 
+	%% Time stamp displaying
 	toc_t = toc(handles_video.tic_id);
+	handles_video.toc_frames = handles_video.toc_frames+1;
 	time_s = fix(toc_t);
 	time_h = fix(time_s/3600);  time_s = time_s-time_h*3600;
 	time_m = fix(time_s/60);    time_s = time_s-time_m*60;
-	set(handles_video.handles.work_timer, 'String',sprintf('%02d:%02d:%02d',time_h,time_m,time_s));
+	set(handles_video.handles.work_timer, 'String',sprintf('%02d:%02d:%02d (%d)',time_h,time_m,time_s, handles_video.toc_frames));
 
-	if toc_t>handles_video.config.thresholds.start_delay
-		if toc_t>handles_video.config.thresholds.start_delay+handles_video.config.thresholds.start_time
-			if isfield(handles_video,'start_frames')
-				% Remove mean
-				frames_stat = cell2mat(handles_video.start_frames);
-
-				% remove very slow changes in scene
-				handles_video.filt.hp = struct('b',[1 -1], 'a',[1 -0.999], 'z',-mean(frames_stat));
-				frames_stat = filter(handles_video.filt.hp.b, handles_video.filt.hp.a, frames_stat, handles_video.filt.hp.z, 1);
-
-				% statistics estimation
-				if handles_video.config.thresholds.stat_lo>0
-					handles_video.stat.lo = quantile(frames_stat, handles_video.config.thresholds.stat_lo, 1);
+	%% Image processing cycle
+	switch handles_video.work_stage
+		%% Start camera initialisation stage -- just skip frames
+		case 0
+			if toc_t>handles_video.config.thresholds.start_delay && handles_video.toc_frames>10
+				handles_video.work_stage = 100;
+			end
+			
+		%% High pass filer initialisation stage
+		case 100  % Initialise high pass filter
+			if handles_video.config.thresholds.filt_hp_factor==-1
+				handles_video.work_stage = 200;
+			else
+				if ~isfield(handles_video,'filt_hp_imgs')
+					handles_video.filt_hp_imgs = {};
 				end
-				handles_video.stat.hi = quantile(frames_stat, handles_video.config.thresholds.stat_hi, 1);
+			
+				handles_video.filt_hp_imgs{end+1,1} = frame_cur;
 
-				% Cleanup
-				handles_video = rmfield(handles_video,{'start_frames' 'start_times'});
-				clear('frames_stat');
+				if size(handles_video.filt_hp_imgs,1)>=10
+					filt_hp_imgs = cell2mat(handles_video.filt_hp_imgs);
+					handles_video = rmfield(handles_video,'filt_hp_imgs');
+					
+					handles_video.filt_hp = struct('init_cnt',0, 'b',[1 -1], 'a',[1 handles_video.config.thresholds.filt_hp_factor], 'z',-mean(filt_hp_imgs));
+
+					handles_video.work_stage = 101;
+				end
+			end
+		case 101 % Stabilize high pass filter output
+			if handles_video.filt_hp.init_cnt < handles_video.config.thresholds.filter_hp_initframes
+				handles_video.filt_hp.init_cnt = handles_video.filt_hp.init_cnt+1;
+				[~, handles_video.filt_hp.z] = filter(handles_video.filt_hp.b, handles_video.filt_hp.a, frame_cur, handles_video.filt_hp.z, 1);
+			end
+			if handles_video.filt_hp.init_cnt >= handles_video.config.thresholds.filter_hp_initframes
+				handles_video.work_stage = 200;
 			end
 
-			% Main processing
-			frame_sz = size(frame_cur);
-			frame_cur = transpose(frame_cur(:));
+		%% Statistics initialisation stage
+		case 200
+			if isfield(handles_video,'filt_hp')
+				[frame_cur, handles_video.filt_hp.z] = filter(handles_video.filt_hp.b, handles_video.filt_hp.a, frame_cur, handles_video.filt_hp.z, 1);
+			end
 
-			[frame_cur, handles_video.filt.hp.z] = filter(handles_video.filt.hp.b, handles_video.filt.hp.a, frame_cur, handles_video.filt.hp.z, 1);
+			if ~isfield(handles_video,'stat_init')
+				handles_video.stat_init = struct('frames',{{}}, 'times',[]);
+			end
 
+			handles_video.stat_init.frames{end+1,1} = frame_cur;
+			handles_video.stat_init.times(end+1,1) = toc_t;
+
+			if handles_video.stat_init.times(end)-handles_video.stat_init.times(1)>handles_video.config.thresholds.stat_time && length(handles_video.stat_init.frames)>10
+				stat_imgs = cell2mat(handles_video.stat_init.frames);
+				handles_video = rmfield(handles_video,'stat_init');
+
+				if handles_video.config.thresholds.stat_lo>0
+					handles_video.stat.lo = quantile(stat_imgs, handles_video.config.thresholds.stat_lo, 1);
+				end
+				handles_video.stat.hi = quantile(stat_imgs, handles_video.config.thresholds.stat_hi, 1);
+				
+				handles_video.work_stage = 300;
+			end
+
+		%% Main work stage
+		case 300
+			% High pass filtering
+			if isfield(handles_video,'filt_hp')
+				[frame_cur, handles_video.filt_hp.z] = filter(handles_video.filt_hp.b, handles_video.filt_hp.a, frame_cur, handles_video.filt_hp.z, 1);
+			end
+
+			% Statistics checkign
 			is_signaling = false(size(frame_cur));
 			if isfield(handles_video.stat,'lo')
 				is_signaling = is_signaling | (frame_cur<handles_video.stat.lo);
 			end
 			is_signaling = is_signaling | (frame_cur>handles_video.stat.hi);
 
+			% Median filtering
 			if handles_video.config.thresholds.median_size>0
 				is_signaling = reshape(is_signaling, frame_sz);
 				is_signaling = medfilt2(is_signaling, handles_video.config.thresholds.median_size+[0 0]);
 				is_signaling = transpose(is_signaling(:));
 			end
-
 			imshow(double(repmat(reshape(is_signaling, frame_sz),[1 1 3])), 'Parent',handles_video.handles.work_img_bw);
 
+			% Detector: estimate currect values
 			det_points = sum(is_signaling);
 			det_part =   mean(is_signaling);
-			handles_video.report.graphs(end+1,:) = [toc_t det_points det_part];
+			if ~isfield(handles_video,'detector')
+				handles_video.detector = struct('graphs',zeros(0,3), 'state',false, 'thresholds_on_toc',-inf);
 
-			%% Detection state
-			if ~handles_video.detector_state
+%{
+handles.video.report.fh=-1;
+if not(isempty(handles.video.config.thresholds.report_path))
+	handles.video.report.fh = fopen(fullfile(handles.video.config.thresholds.report_path, sprintf('report.txt')), 'wt');
+end
+handles.video.report.img_cnt = 0;
+handles.video.report.img_toc = 0;
+%}
+				
+			end
+			handles_video.detector.graphs(end+1,:) = [toc_t det_points det_part];
+
+			% Detector: plot graphs
+			if handles_video.config.thresholds.report_graph_time>0
+				handles_video.detector.graphs(handles_video.detector.graphs(:,1)<toc_t-handles_video.config.thresholds.report_graph_time,:) = [];
+			end
+			plot(handles_video.handles.work_graph_pix_num,  handles_video.detector.graphs(:,1), handles_video.detector.graphs(:,2));
+			plot(handles_video.handles.work_graph_pix_part, handles_video.detector.graphs(:,1), handles_video.detector.graphs(:,3));
+
+			set(handles_video.handles.work_graph_pix_num, 'XTickLabel',{});
+
+			% Detector: plot thresholds
+			x_lim = xlim(handles_video.handles.work_graph_pix_num);
+			line(x_lim, handles_video.config.thresholds.detector_on_points +[0 0], 'Parent',handles_video.handles.work_graph_pix_num, 'Color','r');
+			line(x_lim, handles_video.config.thresholds.detector_off_points+[0 0], 'Parent',handles_video.handles.work_graph_pix_num, 'Color','k');
+
+			line(x_lim, handles_video.config.thresholds.detector_on_part +[0 0], 'Parent',handles_video.handles.work_graph_pix_part, 'Color','r');
+			line(x_lim, handles_video.config.thresholds.detector_off_part+[0 0], 'Parent',handles_video.handles.work_graph_pix_part, 'Color','k');
+			
+			% Detector state logic
+			if ~handles_video.detector.state
 				thresholds_on = det_points>handles_video.config.thresholds.detector_on_points  || det_part>handles_video.config.thresholds.detector_on_part;
 			else
 				thresholds_on = det_points>handles_video.config.thresholds.detector_off_points || det_part>handles_video.config.thresholds.detector_off_part;
 			end
 			if thresholds_on
-				handles_video.detector_thresholds_on_time = toc_t;
+				handles_video.detector.thresholds_on_toc = toc_t;
 			end
-			new_st = thresholds_on | toc_t-handles_video.detector_thresholds_on_time<handles_video.config.thresholds.detector_post_buff;
+			new_st = thresholds_on | toc_t-handles_video.detector.thresholds_on_toc<handles_video.config.thresholds.detector_post_buff;
 
-			if handles_video.detector_state~=new_st
+			% Detector switch on|off logic
+			if handles_video.detector.state~=new_st
 				if new_st % Detector just on
 					scatter(0,0,300,[1 0 0],'filled', 'Parent',handles_video.handles.detector_lamp);
 					% @@ TODO: continue there
@@ -473,27 +547,17 @@ try
 					% @@ TODO: continue there
 				end
 				set(handles_video.handles.detector_lamp, 'Visible','off');
-				handles_video.detector_state=new_st;
+				handles_video.detector.state=new_st;
 			end
 
-
-			%% Plot graphs
-			if handles_video.config.thresholds.report_graph_time>0
-				handles_video.report.graphs(handles_video.report.graphs(:,1)<toc_t-handles_video.config.thresholds.report_graph_time,:) = [];
-			end
-			plot(handles_video.handles.work_graph_pix_num,  handles_video.report.graphs(:,1), handles_video.report.graphs(:,2));
-			plot(handles_video.handles.work_graph_pix_part, handles_video.report.graphs(:,1), handles_video.report.graphs(:,3));
-
-			set(handles_video.handles.work_graph_pix_num, 'XTickLabel',{});
-
-			%% Plot thresholds
-			x_lim = xlim(handles_video.handles.work_graph_pix_num);
-			line(x_lim, handles_video.config.thresholds.detector_on_points +[0 0], 'Parent',handles_video.handles.work_graph_pix_num, 'Color','r');
-			line(x_lim, handles_video.config.thresholds.detector_off_points+[0 0], 'Parent',handles_video.handles.work_graph_pix_num, 'Color','k');
-
-			line(x_lim, handles_video.config.thresholds.detector_on_part +[0 0], 'Parent',handles_video.handles.work_graph_pix_part, 'Color','r');
-			line(x_lim, handles_video.config.thresholds.detector_off_part+[0 0], 'Parent',handles_video.handles.work_graph_pix_part, 'Color','k');
-
+			
+		%% Program logic error trap
+		otherwise
+			disp('ERROR: Unknown work stage.');
+			error('ERROR: Unknown work stage.');
+	end
+	
+%{
 			%% Save report
 			if handles_video.report.fh~=-1
 				cur_res = handles_video.report.graphs(end,:);
@@ -506,16 +570,13 @@ try
 				imwrite(frame_cur_rgb, fullfile(handles_video.config.thresholds.report_path, sprintf('img_%06d.jpg',handles_video.report.img_cnt)), 'jpg', 'Quality',85);
 			end
 %}
-		else
-			handles_video.start_frames{end+1,1} = transpose(frame_cur(:));
-			handles_video.start_times(end+1,1) = toc_t;
-		end
-		set(timer_handle, 'UserData',handles_video);
-	end
+%}
 	
+	set(timer_handle, 'UserData',handles_video);
+
 	drawnow();
 catch ME
-	disp(ME);
+	% disp(ME);
 end
 
 

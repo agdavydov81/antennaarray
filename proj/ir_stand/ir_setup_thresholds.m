@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 15-Oct-2013 18:38:59
+% Last Modified by GUIDE v2.5 16-Oct-2013 18:18:59
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -73,9 +73,11 @@ handles.config = cfg;
 
 if not(isfield(cfg,'thresholds'));								cfg.thresholds = struct();						end
 if not(isfield(cfg.thresholds,'start_delay'));					cfg.thresholds.start_delay = 15;				end
-if not(isfield(cfg.thresholds,'start_time'));					cfg.thresholds.start_time = 15;					end
+if not(isfield(cfg.thresholds,'filt_hp_factor'));				cfg.thresholds.filt_hp_factor = -0.97;			end
+if not(isfield(cfg.thresholds,'filter_hp_initframes'));			cfg.thresholds.filter_hp_initframes = 200;		end
 if not(isfield(cfg.thresholds,'stat_lo'));						cfg.thresholds.stat_lo = 0.005;					end
 if not(isfield(cfg.thresholds,'stat_hi'));						cfg.thresholds.stat_hi = 0.995;					end
+if not(isfield(cfg.thresholds,'stat_time'));					cfg.thresholds.stat_time = 15;					end
 if not(isfield(cfg.thresholds,'median_size'));					cfg.thresholds.median_size = 3;					end
 if not(isfield(cfg.thresholds,'detector_on_points'));			cfg.thresholds.detector_on_points = 100;		end
 if not(isfield(cfg.thresholds,'detector_on_part'));				cfg.thresholds.detector_on_part = 0.01;			end
@@ -91,9 +93,11 @@ if not(isfield(cfg.thresholds,'report_deton_img_number'));		cfg.thresholds.repor
 if not(isfield(cfg.thresholds,'report_graph_time'));			cfg.thresholds.report_graph_time = 300;			end
 
 set(handles.start_delay,				'String', num2str(cfg.thresholds.start_delay));
-set(handles.start_time,					'String', num2str(cfg.thresholds.start_time));
+set(handles.filt_hp_factor,				'String', num2str(cfg.thresholds.filt_hp_factor));
+set(handles.filter_hp_initframes,		'String', num2str(cfg.thresholds.filter_hp_initframes));
 set(handles.stat_lo,					'String', num2str(cfg.thresholds.stat_lo));
 set(handles.stat_hi,					'String', num2str(cfg.thresholds.stat_hi));
+set(handles.stat_time,					'String', num2str(cfg.thresholds.stat_time));
 set(handles.median_size,				'String', num2str(cfg.thresholds.median_size));
 set(handles.detector_on_points,			'String', num2str(cfg.thresholds.detector_on_points));
 set(handles.detector_on_part,			'String', num2str(cfg.thresholds.detector_on_part));
@@ -125,9 +129,11 @@ function varargout = ir_setup_thresholds_OutputFcn(hObject, eventdata, handles)
 cfg = handles.config;
 if handles.press_ok
 	cfg.thresholds.start_delay =				str2double(get(handles.start_delay,'String'));
-	cfg.thresholds.start_time =					str2double(get(handles.start_time,'String'));
+	cfg.thresholds.filt_hp_factor =				str2double(get(handles.filt_hp_factor,'String'));
+	cfg.thresholds.filter_hp_initframes =		str2double(get(handles.filter_hp_initframes,'String'));
 	cfg.thresholds.stat_lo =					str2double(get(handles.stat_lo,'String'));
 	cfg.thresholds.stat_hi =					str2double(get(handles.stat_hi,'String'));
+	cfg.thresholds.stat_time =					str2double(get(handles.stat_time,'String'));
 	cfg.thresholds.median_size =				str2double(get(handles.median_size,	'String'));
 	cfg.thresholds.detector_on_points =			str2double(get(handles.detector_on_points,'String'));
 	cfg.thresholds.detector_on_part =			str2double(get(handles.detector_on_part,'String'));
@@ -249,29 +255,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-function start_time_Callback(hObject, eventdata, handles)
-% hObject    handle to start_time (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of start_time as text
-%        str2double(get(hObject,'String')) returns contents of start_time as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function start_time_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to start_time (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
 function detector_on_points_Callback(hObject, eventdata, handles)
 % hObject    handle to detector_on_points (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -292,7 +275,6 @@ function detector_on_points_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function detector_on_part_Callback(hObject, eventdata, handles)
@@ -338,6 +320,7 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
+
 function start_delay_Callback(hObject, eventdata, handles)
 % hObject    handle to start_delay (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -358,7 +341,6 @@ function start_delay_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function report_path_Callback(hObject, eventdata, handles)
@@ -418,7 +400,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function report_graph_time_Callback(hObject, eventdata, handles)
 % hObject    handle to report_graph_time (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -439,7 +420,6 @@ function report_graph_time_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function detector_off_points_Callback(hObject, eventdata, handles)
@@ -464,7 +444,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function detector_off_part_Callback(hObject, eventdata, handles)
 % hObject    handle to detector_off_part (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -485,7 +464,6 @@ function detector_off_part_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function detector_pre_buff_Callback(hObject, eventdata, handles)
@@ -510,7 +488,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function detector_post_buff_Callback(hObject, eventdata, handles)
 % hObject    handle to detector_post_buff (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -531,7 +508,6 @@ function detector_post_buff_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function report_deton_img_interval_Callback(hObject, eventdata, handles)
@@ -556,7 +532,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function report_deton_img_number_Callback(hObject, eventdata, handles)
 % hObject    handle to report_deton_img_number (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -579,7 +554,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function report_detoff_img_number_Callback(hObject, eventdata, handles)
 % hObject    handle to report_detoff_img_number (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -592,6 +566,72 @@ function report_detoff_img_number_Callback(hObject, eventdata, handles)
 % --- Executes during object creation, after setting all properties.
 function report_detoff_img_number_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to report_detoff_img_number (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function filt_hp_factor_Callback(hObject, eventdata, handles)
+% hObject    handle to filt_hp_factor (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of filt_hp_factor as text
+%        str2double(get(hObject,'String')) returns contents of filt_hp_factor as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function filt_hp_factor_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to filt_hp_factor (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function filter_hp_initframes_Callback(hObject, eventdata, handles)
+% hObject    handle to filter_hp_initframes (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of filter_hp_initframes as text
+%        str2double(get(hObject,'String')) returns contents of filter_hp_initframes as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function filter_hp_initframes_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to filter_hp_initframes (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function stat_time_Callback(hObject, eventdata, handles)
+% hObject    handle to stat_time (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of stat_time as text
+%        str2double(get(hObject,'String')) returns contents of stat_time as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function stat_time_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to stat_time (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
