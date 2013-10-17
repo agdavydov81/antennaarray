@@ -209,6 +209,56 @@ if isfield(handles,'video')
 			if isfield(handles_video.report,'fh')
 				if handles_video.report.fh~=-1
 					fclose(handles_video.report.fh);
+					
+					try
+						xml_write(handles.config_file, handles.config, 'ir_stand');
+					catch ME
+					end
+
+					% Save overall report to file
+					fh = fopen([handles_video.report.path 'report.html'],'w');
+					if fh~=-1
+						[~, rep_name] = fileparts(handles_video.report.path(1:end-1));
+						
+						fprintf(fh, ['<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">\n' ...
+									'<html>\n' ...
+									'<head>\n' ...
+									'<meta http-equiv="content-type" content="text/html; windows-1252">\n' ...
+									'<title>' rep_name ' report</title>\n' ...
+									'</head>\n' ...
+									'<body>\n' ...
+									'<div style="text-align: left; font-family: Arial;">\n']);
+
+						if isempty(handles_video.report.overall)
+							fprintf(fh, 'Аномалий не обнаружено.\n');
+						else
+							fprintf(fh, 'Обнаружено %d aномалий.<br><br>\n', size(handles_video.report.overall,1));
+
+							fprintf(fh, ['<table border="1" cellpadding="0" cellspacing="0">\n' ...
+										'<caption>Перечень аномалий</caption>\n' ...
+										'<tbody>\n']);
+
+							fprintf(fh, ['<tr><th rowspan="2">Путь к каталогу аномалии</th>' ...
+										'<th colspan="3">Начало аномалии</th>' ...
+										'<th colspan="3">Окончание аномалии</th></tr>\n' ...
+										'<tr><th>Дата и время</th><th>С начала работы</th><th>Номер кадра</th>' ...
+										    '<th>Дата и время</th><th>С начала работы</th><th>Номер кадра</th></tr>\n']);
+										
+							for i=1:size(handles_video.report.overall,1)
+								rel_path = char(handles_video.report.overall{i,1});
+								[~,rel_path,rel_path2] = fileparts(rel_path(1:end-1));
+								fprintf(fh, '<tr><td><a href="%s%s">%s</a></td>', rel_path, rel_path2, char(handles_video.report.overall{i,1}));
+								cellfun(@(x) fprintf(fh,'<td>%s</td>',char(x)), handles_video.report.overall(i,2:end));
+								fprintf(fh, '</tr>\n');
+							end
+							
+							fprintf(fh, '</tbody></table>\n');
+						end
+
+						fprintf(fh, '</div></body></html>\n');
+
+						fclose(fh);
+					end
 				end
 			end
 		end
@@ -522,7 +572,7 @@ try
 				handles_video.detector = struct('graphs',zeros(0,3), 'state',false, 'thresholds_on_toc',-inf);
 
 				handles_video.report = struct(	'fh',-1, 'prebuf_img',{{}}, 'prebuf_toc',zeros(0,2), ...
-												'normal_img_cnt',0, 'normal_img_toc',-inf);
+												'normal_img_cnt',0, 'normal_img_toc',-inf, 'overall',{{}});
 
 				if not(isempty(handles_video.config.thresholds.report_path))
 					[cur.Y, cur.M, cur.D, cur.H, cur.MN, cur.S] = datevec(now);
@@ -584,6 +634,8 @@ try
 			% Detector switch on|off logic
 			if handles_video.detector.state~=new_st
 				if new_st % Detector just turn ON - make anomaly report
+					handles_video.report.overall(end+1,2:4) = {datestr(now) toc2str(toc_t,':') sprintf('%d',handles_video.toc_frames)};
+
 					scatter(0,0,300,[1 0 0],'filled', 'Parent',handles_video.handles.detector_lamp);
 
 					if handles_video.report.fh~=-1 && handles_video.config.thresholds.report_deton_img_number>0
@@ -592,6 +644,8 @@ try
 						if mk_status~=1
 							error('disp:report',['Ошибка создания каталога "' handles_video.report.anomaly_path '" протокола: ' mk_message]);
 						end
+						
+						handles_video.report.overall{end,1} = handles_video.report.anomaly_path;
 
 						% Save prebuffered images to log
 						handles_video.report.anomaly_img_cnt = numel(handles_video.report.prebuf_img);
@@ -607,6 +661,8 @@ try
 					% @@ TODO: Save Generators state
 
 				else % Detector just turn OFF
+					handles_video.report.overall(end,5:7) = {datestr(now) toc2str(toc_t,':') sprintf('%d',handles_video.toc_frames)};
+
 					scatter(0,0,300,0.3+[0 0 0],'filled', 'Parent',handles_video.handles.detector_lamp, 'Visible','off');
 					handles_video.report.normal_img_toc = toc_t;
 				end
