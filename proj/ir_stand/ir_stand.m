@@ -578,22 +578,22 @@ handles.video.report.img_toc = 0;
 
 			% Detector switch on|off logic
 			if handles_video.detector.state~=new_st
-				if new_st % Detector just turn ON - make alarm report
+				if new_st % Detector just turn ON - make anomaly report
 					scatter(0,0,300,[1 0 0],'filled', 'Parent',handles_video.handles.detector_lamp);
 
 					if handles_video.report.fh~=-1 && handles_video.config.thresholds.report_deton_img_number>0
-						handles_video.report.alarm_path = fullfile(handles_video.report.path, sprintf('alarm_%06d_%s', handles_video.toc_frames, toc2str(toc_t,'.')), filesep);
-						[mk_status, mk_message] = mkdir(handles_video.report.alarm_path);
+						handles_video.report.anomaly_path = fullfile(handles_video.report.path, sprintf('anomaly_%06d_%s', handles_video.toc_frames, toc2str(toc_t,'.')), filesep);
+						[mk_status, mk_message] = mkdir(handles_video.report.anomaly_path);
 						if mk_status~=1
 							error('disp:report',['Ошибка создания каталога протокола: ' mk_message]);
 						end
 
 						% Save prebuffered images to log
-						handles_video.report.alarm_img_cnt = numel(handles_video.report.prebuf_img);
-						handles_video.report.alarm_img_toc = -inf;
+						handles_video.report.anomaly_img_cnt = numel(handles_video.report.prebuf_img);
+						handles_video.report.anomaly_img_toc = -inf;
 
-						for ii = 1:handles_video.report.alarm_img_cnt
-							imwrite(handles_video.report.prebuf_img{ii}, sprintf('%simage_%06d_%s.jpg',handles_video.report.alarm_path, handles_video.report.prebuf_toc(ii,1), toc2str(handles_video.report.prebuf_toc(ii,2),'.')), 'jpg');
+						for ii = 1:handles_video.report.anomaly_img_cnt
+							imwrite(handles_video.report.prebuf_img{ii}, sprintf('%simage_%06d_%s.jpg',handles_video.report.anomaly_path, handles_video.report.prebuf_toc(ii,1), toc2str(handles_video.report.prebuf_toc(ii,2),'.')), 'jpg');
 						end
 						handles_video.report.prebuf_img = {};
 						handles_video.report.prebuf_toc = zeros(0,2);
@@ -610,11 +610,11 @@ handles.video.report.img_toc = 0;
 			end
 
 			if	handles_video.detector.state && handles_video.report.fh~=-1 && handles_video.config.thresholds.report_deton_img_number>0
-				if handles_video.report.alarm_img_cnt < handles_video.config.thresholds.report_deton_img_number && ...
-						toc_t-handles_video.report.alarm_img_toc >= handles_video.config.thresholds.report_deton_img_interval
-					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.jpg',handles_video.report.alarm_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'jpg');
-					handles_video.report.alarm_img_cnt = handles_video.report.alarm_img_cnt+1;
-					handles_video.report.alarm_img_toc = toc_t;
+				if handles_video.report.anomaly_img_cnt < handles_video.config.thresholds.report_deton_img_number && ...
+						toc_t-handles_video.report.anomaly_img_toc >= handles_video.config.thresholds.report_deton_img_interval
+					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.jpg',handles_video.report.anomaly_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'jpg');
+					handles_video.report.anomaly_img_cnt = handles_video.report.anomaly_img_cnt+1;
+					handles_video.report.anomaly_img_toc = toc_t;
 				end
 			end
 
