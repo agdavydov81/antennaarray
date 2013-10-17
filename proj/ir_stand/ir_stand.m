@@ -244,7 +244,35 @@ catch
 end
 handles.video.config = handles.config;
 
+set(handles.work_start_btn, 'Enable','off');
+set(handles.work_abort_btn, 'Enable','on');
+set(handles.setup_emi_btn, 'Enable','off');
+set(handles.setup_irvideo_btn, 'Enable','off');
+set(handles.setup_acoustics_btn, 'Enable','off');
+set(handles.setup_btn, 'Enable','off');
 
+
+% Init fields for processing
+handles.video.tic_id = tic();
+handles.video.toc_frames = 0;
+handles.video.work_stage = 0;
+
+% Turn off detector lamp
+scatter(0,0,300,0.3+[0 0 0],'filled', 'Parent',handles.detector_lamp, 'Visible','off');
+set(handles.detector_lamp, 'Visible','off');
+
+% Create image processing timer
+handles.video.timer = timer('TimerFcn',@video_timer_func, 'Period',1/100, ...
+							'ExecutionMode','fixedRate');
+handles_video = handles.video;
+handles_video.handles = handles;
+set(handles.video.timer, 'UserData',handles_video);
+
+guidata(handles.figure1, handles);
+
+start(handles.video.timer);
+
+function start_generators(handles)
 % Generages signal
 if handles.config.acoustic_generator.harm.enable
 	play.fs = 44100;
@@ -301,39 +329,12 @@ if handles.config.acoustic_generator.harm.enable
 	start(handles.play.timer.handle);
 end
 
-set(handles.work_start_btn, 'Enable','off');
-set(handles.work_abort_btn, 'Enable','on');
-set(handles.setup_emi_btn, 'Enable','off');
-set(handles.setup_irvideo_btn, 'Enable','off');
-set(handles.setup_acoustics_btn, 'Enable','off');
-set(handles.setup_btn, 'Enable','off');
-
 % Fork SLS process
 if handles.config.acoustic_generator.sls.enable
 	handles.sls_watchdog = timer('TimerFcn',@watchdog_timer_func, 'StopFcn',@player_timer_stop, ...
 								 'Period',1, 'ExecutionMode','fixedRate', 'UserData',handles);
 	start(handles.sls_watchdog);
 end
-
-% Init fields for processing
-handles.video.tic_id = tic();
-handles.video.toc_frames = 0;
-handles.video.work_stage = 0;
-
-% Turn off detector lamp
-scatter(0,0,300,0.3+[0 0 0],'filled', 'Parent',handles.detector_lamp, 'Visible','off');
-set(handles.detector_lamp, 'Visible','off');
-
-% Create image processing timer
-handles.video.timer = timer('TimerFcn',@video_timer_func, 'Period',1/100, ...
-							'ExecutionMode','fixedRate');
-handles_video = handles.video;
-handles_video.handles = handles;
-set(handles.video.timer, 'UserData',handles_video);
-
-guidata(handles.figure1, handles);
-
-start(handles.video.timer);
 
 
 function player_timer_func(timer_handle, eventdata)
@@ -432,7 +433,7 @@ try
 			if toc_t>handles_video.config.thresholds.start_delay && handles_video.toc_frames>10
 				handles_video.work_stage = 100;
 			end
-			
+
 		%% High pass filer initialisation stage
 		case 100  % Initialise high pass filter
 			if handles_video.config.thresholds.filt_hp_factor==-1
@@ -441,7 +442,7 @@ try
 				if ~isfield(handles_video,'filt_hp_imgs')
 					handles_video.filt_hp_imgs = {};
 				end
-			
+
 				handles_video.filt_hp_imgs{end+1,1} = frame_cur;
 
 				if size(handles_video.filt_hp_imgs,1)>=10
@@ -483,8 +484,9 @@ try
 					handles_video.stat.lo = quantile(stat_imgs, handles_video.config.thresholds.stat_lo, 1);
 				end
 				handles_video.stat.hi = quantile(stat_imgs, handles_video.config.thresholds.stat_hi, 1);
-				
+
 				handles_video.work_stage = 300;
+				start_generators(handles_video.handles);
 			end
 
 		%% Main work stage
@@ -533,11 +535,11 @@ try
 						error('disp:report','Ошибка создания файла протокола.');
 					end
 				end
-%{				
+%{
 handles.video.report.img_cnt = 0;
 handles.video.report.img_toc = 0;
 %}
-				
+
 			end
 			handles_video.detector.graphs(end+1,:) = [toc_t det_points det_part];
 
@@ -557,7 +559,7 @@ handles.video.report.img_toc = 0;
 
 			line(x_lim, handles_video.config.thresholds.detector_on_part +[0 0], 'Parent',handles_video.handles.work_graph_pix_part, 'Color','r');
 			line(x_lim, handles_video.config.thresholds.detector_off_part+[0 0], 'Parent',handles_video.handles.work_graph_pix_part, 'Color','k');
-			
+
 			% Detector state logic
 			if ~handles_video.detector.state
 				thresholds_on = det_points>handles_video.config.thresholds.detector_on_points  || det_part>handles_video.config.thresholds.detector_on_part;
@@ -568,7 +570,7 @@ handles.video.report.img_toc = 0;
 				handles_video.detector.thresholds_on_toc = toc_t;
 			end
 			new_st = thresholds_on | toc_t-handles_video.detector.thresholds_on_toc<handles_video.config.thresholds.detector_post_buff;
-			
+
 			% Save report graphs file
 			if handles_video.report.fh~=-1
 				fprintf(handles_video.report.fh, '%d\t%f\t%d\t%e\n', handles_video.toc_frames, toc_t, det_points, det_part);
@@ -588,11 +590,7 @@ handles.video.report.img_toc = 0;
 
 						% Save prebuffered images to log
 						handles_video.report.alarm_img_cnt = numel(handles_video.report.prebuf_img);
-						if ~isempty(handles_video.report.prebuf_toc)
-							handles_video.report.alarm_img_toc = handles_video.report.prebuf_toc(end,2);
-						else
-							handles_video.report.alarm_img_toc = -inf;
-						end
+						handles_video.report.alarm_img_toc = -inf;
 
 						for ii = 1:handles_video.report.alarm_img_cnt
 							imwrite(handles_video.report.prebuf_img{ii}, sprintf('%simage_%06d_%s.jpg',handles_video.report.alarm_path, handles_video.report.prebuf_toc(ii,1), toc2str(handles_video.report.prebuf_toc(ii,2),'.')), 'jpg');
@@ -610,7 +608,7 @@ handles.video.report.img_toc = 0;
 				set(handles_video.handles.detector_lamp, 'Visible','off');
 				handles_video.detector.state=new_st;
 			end
-			
+
 			if	handles_video.detector.state && handles_video.report.fh~=-1
 				if handles_video.report.alarm_img_cnt < handles_video.config.thresholds.report_deton_img_number && ...
 						toc_t-handles_video.report.alarm_img_toc >= handles_video.config.thresholds.report_deton_img_interval
@@ -625,7 +623,7 @@ handles.video.report.img_toc = 0;
 				handles_video.report.prebuf_toc(end+1,:) = [handles_video.toc_frames toc_t];
 
 				kill_mask = handles_video.report.prebuf_toc(:,2) < toc_t-handles_video.config.thresholds.detector_pre_buff;
-				kill_mask(1 : end-handles_video.config.thresholds.report_deton_img_number) = true;
+				kill_mask(1 : end-max(0,handles_video.config.thresholds.report_deton_img_number-1)) = true;
 
 				handles_video.report.prebuf_img(kill_mask) = [];
 				handles_video.report.prebuf_toc(kill_mask,:) = [];
@@ -636,7 +634,7 @@ handles.video.report.img_toc = 0;
 			disp('ERROR: Unknown work stage.');
 			error('ERROR: Unknown work stage.');
 	end
-	
+
 %{
 			if not(isempty(handles_video.config.thresholds.report_path)) && handles_video.config.thresholds.report_img_interval>=0 && handles_video.report.img_toc<toc_t
 				handles_video.report.img_toc = toc_t + handles_video.config.thresholds.report_img_interval;
@@ -662,7 +660,7 @@ yuv_luma = 0.299*pic_rgb(:,:,1) + 0.587*pic_rgb(:,:,2) + 0.114*pic_rgb(:,:,3);
 
 temp = 0.005319*yuv_luma -0.1609;
 
-temp = min(1,max(0,temp));
+% temp = min(1,max(0,temp));
 
 
 function player_timer_stop(timer_handle, eventdata)
