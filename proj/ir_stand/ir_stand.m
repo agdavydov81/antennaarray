@@ -222,8 +222,21 @@ video_devices = imaqhwinfo('winvideo');
 cur_cam = find(strcmp(handles.config.video_device.name, {video_devices.DeviceInfo.DeviceName}),1);
 if isempty(cur_cam)
 	errordlg(['Не обнаружено видео устройство "' handles.config.video_device.name '".'], [mfilename ' help'], 'modal');
-	return;
+	return
 end
+
+% Start video recorder
+handles.video.vidobj = videoinput('winvideo',video_devices.DeviceIDs{cur_cam}, handles.config.video_device.mode);
+set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
+triggerconfig(handles.video.vidobj, 'manual');
+try
+	start(handles.video.vidobj);
+catch
+	errordlg(['Ошибка получения изображения из "' handles.config.video_device.name '".'], [mfilename ' help'], 'modal');
+	return
+end
+handles.video.config = handles.config;
+
 
 % Generages signal
 if handles.config.acoustic_generator.harm.enable
@@ -294,13 +307,6 @@ if handles.config.acoustic_generator.sls.enable
 								 'Period',1, 'ExecutionMode','fixedRate', 'UserData',handles);
 	start(handles.sls_watchdog);
 end
-
-% Start video recorder
-handles.video.vidobj = videoinput('winvideo',video_devices.DeviceIDs{cur_cam}, handles.config.video_device.mode);
-set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
-triggerconfig(handles.video.vidobj, 'manual');
-start(handles.video.vidobj);
-handles.video.config = handles.config;
 
 % Init fields for processing
 handles.video.tic_id = tic();

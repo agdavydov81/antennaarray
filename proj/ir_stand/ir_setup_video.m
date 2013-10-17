@@ -101,7 +101,12 @@ handles.video.cam_info =	imaqhwinfo('winvideo',handles.video.devices.DeviceIDs{h
 handles.video.vidobj =		videoinput('winvideo',handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
 set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
-start(handles.video.vidobj);
+try
+	start(handles.video.vidobj);
+catch ME % Some times image aquision can't start
+	return
+end
+
 frame_cur = getsnapshot(handles.video.vidobj);
 resize_for_image(handles, size(frame_cur));
 image(frame_cur, 'Parent',handles.video_image);
