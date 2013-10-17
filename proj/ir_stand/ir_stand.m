@@ -140,6 +140,7 @@ function setup_acoustics_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 handles.config = ir_setup_acoustic(handles.config);
+xml_write(handles.config_file, handles.config, 'ir_stand');
 guidata(hObject, handles);
 check_config(handles);
 
@@ -156,6 +157,7 @@ if isempty(ret_cfg)
 end
 
 handles.config = ret_cfg;
+xml_write(handles.config_file, handles.config, 'ir_stand');
 guidata(hObject, handles);
 check_config(handles);
 
@@ -166,6 +168,7 @@ function setup_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 handles.config = ir_setup_thresholds(handles.config);
+xml_write(handles.config_file, handles.config, 'ir_stand');
 guidata(hObject, handles);
 check_config(handles);
 
@@ -200,10 +203,14 @@ if isfield(handles,'video')
 			delete(handles.video.vidobj);
 		end
 		if isvalid(handles.video.timer)
+			handles_video = get(handles.video.timer,'UserData');
 			stop(handles.video.timer);
-		end
-		if handles.video.report.fh~=-1
-			fclose(handles.video.report.fh);
+
+			if isfield(handles_video.report,'fh')
+				if handles_video.report.fh~=-1
+					fclose(handles_video.report.fh);
+				end
+			end
 		end
 	catch ME
 		% disp(ME);
@@ -392,6 +399,11 @@ catch ME
 	% disp(ME);
 end
 
+function str = toc2str(toc_t, sep_ch)
+	time_s = fix(toc_t);
+	time_h = fix(time_s/3600);  time_s = time_s-time_h*3600;
+	time_m = fix(time_s/60);    time_s = time_s-time_m*60;
+	str = sprintf('%02d%c%02d%c%02d', time_h, sep_ch, time_m, sep_ch, time_s);
 
 function video_timer_func(timer_handle, eventdata)
 try
@@ -411,7 +423,7 @@ try
 	time_s = fix(toc_t);
 	time_h = fix(time_s/3600);  time_s = time_s-time_h*3600;
 	time_m = fix(time_s/60);    time_s = time_s-time_m*60;
-	set(handles_video.handles.work_timer, 'String',sprintf('%02d:%02d:%02d (%d)',time_h,time_m,time_s, handles_video.toc_frames));
+	set(handles_video.handles.work_timer, 'String', [toc2str(toc_t,':') sprintf(' (%d)', handles_video.toc_frames)]);
 
 	%% Image processing cycle
 	switch handles_video.work_stage
@@ -495,19 +507,33 @@ try
 				is_signaling = medfilt2(is_signaling, handles_video.config.thresholds.median_size+[0 0]);
 				is_signaling = transpose(is_signaling(:));
 			end
-			imshow(double(repmat(reshape(is_signaling, frame_sz),[1 1 3])), 'Parent',handles_video.handles.work_img_bw);
+			frame_cur_bw_mask = repmat(reshape(is_signaling, frame_sz),[1 1 3]);
+			frame_cur_bw = uint8(frame_cur_bw_mask);
+			frame_cur_bw(frame_cur_bw_mask) = 255;
+			imshow(frame_cur_bw, 'Parent',handles_video.handles.work_img_bw);
 
 			% Detector: estimate currect values
 			det_points = sum(is_signaling);
 			det_part =   mean(is_signaling);
+
 			if ~isfield(handles_video,'detector')
 				handles_video.detector = struct('graphs',zeros(0,3), 'state',false, 'thresholds_on_toc',-inf);
 
-%{
-handles.video.report.fh=-1;
-if not(isempty(handles.video.config.thresholds.report_path))
-	handles.video.report.fh = fopen(fullfile(handles.video.config.thresholds.report_path, sprintf('report.txt')), 'wt');
-end
+				handles_video.report = struct('fh',-1, 'prebuf_img',{{}}, 'prebuf_toc',zeros(0,2));
+				if not(isempty(handles_video.config.thresholds.report_path))
+					[cur.Y, cur.M, cur.D, cur.H, cur.MN, cur.S] = datevec(now);
+					handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%d.%d_%02d.%02d.%02d', mfilename, cur.Y, cur.M, cur.D, cur.H, cur.MN, round(cur.S)), filesep);
+					[mk_status, mk_message] = mkdir(handles_video.report.path);
+					if mk_status~=1
+						error('disp:report',['Ошибка создания каталога протокола: ' mk_message]);
+					end
+
+					handles_video.report.fh = fopen([handles_video.report.path 'report.txt'], 'wt');
+					if handles_video.report.fh==-1
+						error('disp:report','Ошибка создания файла протокола.');
+					end
+				end
+%{				
 handles.video.report.img_cnt = 0;
 handles.video.report.img_toc = 0;
 %}
@@ -542,21 +568,69 @@ handles.video.report.img_toc = 0;
 				handles_video.detector.thresholds_on_toc = toc_t;
 			end
 			new_st = thresholds_on | toc_t-handles_video.detector.thresholds_on_toc<handles_video.config.thresholds.detector_post_buff;
+			
+			% Save report graphs file
+			if handles_video.report.fh~=-1
+				fprintf(handles_video.report.fh, '%d\t%f\t%d\t%e\n', handles_video.toc_frames, toc_t, det_points, det_part);
+			end
 
 			% Detector switch on|off logic
 			if handles_video.detector.state~=new_st
-				if new_st % Detector just on
+				if new_st % Detector just turn ON - make alarm report
 					scatter(0,0,300,[1 0 0],'filled', 'Parent',handles_video.handles.detector_lamp);
-					% @@ TODO: continue there
-				else % Detector just off
+
+					if handles_video.report.fh~=-1
+						handles_video.report.alarm_path = fullfile(handles_video.report.path, sprintf('alarm_%06d_%s', handles_video.toc_frames, toc2str(toc_t,'.')), filesep);
+						[mk_status, mk_message] = mkdir(handles_video.report.alarm_path);
+						if mk_status~=1
+							error('disp:report',['Ошибка создания каталога протокола: ' mk_message]);
+						end
+
+						% Save prebuffered images to log
+						handles_video.report.alarm_img_cnt = numel(handles_video.report.prebuf_img);
+						if ~isempty(handles_video.report.prebuf_toc)
+							handles_video.report.alarm_img_toc = handles_video.report.prebuf_toc(end,2);
+						else
+							handles_video.report.alarm_img_toc = -inf;
+						end
+
+						for ii = 1:handles_video.report.alarm_img_cnt
+							imwrite(handles_video.report.prebuf_img{ii}, sprintf('%simage_%06d_%s.jpg',handles_video.report.alarm_path, handles_video.report.prebuf_toc(ii,1), toc2str(handles_video.report.prebuf_toc(ii,2),'.')), 'jpg');
+						end
+						handles_video.report.prebuf_img = {};
+						handles_video.report.prebuf_toc = zeros(0,2);
+					end
+
+					% @@ TODO: Save Generators state
+
+				else % Detector just turn OFF
 					scatter(0,0,300,0.3+[0 0 0],'filled', 'Parent',handles_video.handles.detector_lamp, 'Visible','off');
-					% @@ TODO: continue there
 				end
+
 				set(handles_video.handles.detector_lamp, 'Visible','off');
 				handles_video.detector.state=new_st;
 			end
-
 			
+			if	handles_video.detector.state && handles_video.report.fh~=-1
+				if handles_video.report.alarm_img_cnt < handles_video.config.thresholds.report_deton_img_number && ...
+						toc_t-handles_video.report.alarm_img_toc >= handles_video.config.thresholds.report_deton_img_interval
+					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.jpg',handles_video.report.alarm_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'jpg');
+					handles_video.report.alarm_img_cnt = handles_video.report.alarm_img_cnt+1;
+					handles_video.report.alarm_img_toc = toc_t;
+				end
+			end
+
+			if ~handles_video.detector.state && handles_video.config.thresholds.detector_pre_buff>0 && handles_video.config.thresholds.report_deton_img_number>0
+				handles_video.report.prebuf_img{end+1} = [frame_cur_rgb frame_cur_bw];
+				handles_video.report.prebuf_toc(end+1,:) = [handles_video.toc_frames toc_t];
+
+				kill_mask = handles_video.report.prebuf_toc(:,2) < toc_t-handles_video.config.thresholds.detector_pre_buff;
+				kill_mask(1 : end-handles_video.config.thresholds.report_deton_img_number) = true;
+
+				handles_video.report.prebuf_img(kill_mask) = [];
+				handles_video.report.prebuf_toc(kill_mask,:) = [];
+			end
+
 		%% Program logic error trap
 		otherwise
 			disp('ERROR: Unknown work stage.');
@@ -564,25 +638,20 @@ handles.video.report.img_toc = 0;
 	end
 	
 %{
-			%% Save report
-			if handles_video.report.fh~=-1
-				cur_res = handles_video.report.graphs(end,:);
-				fprintf(handles_video.report.fh, '%f\t%d\t%e\n', cur_res(1), cur_res(2), cur_res(3));
-			end
-%{
 			if not(isempty(handles_video.config.thresholds.report_path)) && handles_video.config.thresholds.report_img_interval>=0 && handles_video.report.img_toc<toc_t
 				handles_video.report.img_toc = toc_t + handles_video.config.thresholds.report_img_interval;
 				handles_video.report.img_cnt = handles_video.report.img_cnt+1;
 				imwrite(frame_cur_rgb, fullfile(handles_video.config.thresholds.report_path, sprintf('img_%06d.jpg',handles_video.report.img_cnt)), 'jpg', 'Quality',85);
 			end
 %}
-%}
 	
 	set(timer_handle, 'UserData',handles_video);
 
 	drawnow();
 catch ME
-	% disp(ME);
+	if strcmp(ME.identifier,'disp:report')
+		disp(['ERROR: ' ME.message]);
+	end
 end
 
 
@@ -605,8 +674,6 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 % hObject    handle to figure1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-xml_write(handles.config_file, handles.config, 'ir_stand');
 
 work_abort_btn_Callback(hObject, eventdata, handles)
 
