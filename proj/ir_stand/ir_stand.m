@@ -521,25 +521,30 @@ try
 			if ~isfield(handles_video,'detector')
 				handles_video.detector = struct('graphs',zeros(0,3), 'state',false, 'thresholds_on_toc',-inf);
 
-				handles_video.report = struct('fh',-1, 'prebuf_img',{{}}, 'prebuf_toc',zeros(0,2));
+				handles_video.report = struct(	'fh',-1, 'prebuf_img',{{}}, 'prebuf_toc',zeros(0,2), ...
+												'normal_img_cnt',0, 'normal_img_toc',-inf);
+
 				if not(isempty(handles_video.config.thresholds.report_path))
 					[cur.Y, cur.M, cur.D, cur.H, cur.MN, cur.S] = datevec(now);
 					handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%d.%d_%02d.%02d.%02d', mfilename, cur.Y, cur.M, cur.D, cur.H, cur.MN, round(cur.S)), filesep);
 					[mk_status, mk_message] = mkdir(handles_video.report.path);
 					if mk_status~=1
-						error('disp:report',['Ошибка создания каталога протокола: ' mk_message]);
+						error('disp:report',['Ошибка создания каталога "' handles_video.report.path '" протокола: ' mk_message]);
 					end
 
-					handles_video.report.fh = fopen([handles_video.report.path 'report.txt'], 'wt');
+					handles_video.report.fh = fopen([handles_video.report.path 'graphs.txt'], 'wt');
 					if handles_video.report.fh==-1
-						error('disp:report','Ошибка создания файла протокола.');
+						error('disp:report',['Ошибка создания файла "' handles_video.report.path 'graphs.txt" протокола.']);
+					end
+
+					if handles_video.config.thresholds.report_detoff_img_number>0
+						handles_video.report.normal_path = fullfile(handles_video.report.path, 'normal', filesep);
+						[mk_status, mk_message] = mkdir(handles_video.report.normal_path);
+						if mk_status~=1
+							error('disp:report',['Ошибка создания каталога "' handles_video.report.normal_path '" протокола: ' mk_message]);
+						end
 					end
 				end
-%{
-handles.video.report.img_cnt = 0;
-handles.video.report.img_toc = 0;
-%}
-
 			end
 			handles_video.detector.graphs(end+1,:) = [toc_t det_points det_part];
 
@@ -585,7 +590,7 @@ handles.video.report.img_toc = 0;
 						handles_video.report.anomaly_path = fullfile(handles_video.report.path, sprintf('anomaly_%06d_%s', handles_video.toc_frames, toc2str(toc_t,'.')), filesep);
 						[mk_status, mk_message] = mkdir(handles_video.report.anomaly_path);
 						if mk_status~=1
-							error('disp:report',['Ошибка создания каталога протокола: ' mk_message]);
+							error('disp:report',['Ошибка создания каталога "' handles_video.report.anomaly_path '" протокола: ' mk_message]);
 						end
 
 						% Save prebuffered images to log
@@ -593,7 +598,7 @@ handles.video.report.img_toc = 0;
 						handles_video.report.anomaly_img_toc = -inf;
 
 						for ii = 1:handles_video.report.anomaly_img_cnt
-							imwrite(handles_video.report.prebuf_img{ii}, sprintf('%simage_%06d_%s.jpg',handles_video.report.anomaly_path, handles_video.report.prebuf_toc(ii,1), toc2str(handles_video.report.prebuf_toc(ii,2),'.')), 'jpg');
+							imwrite(handles_video.report.prebuf_img{ii}, sprintf('%simage_%06d_%s.jpg',handles_video.report.anomaly_path, handles_video.report.prebuf_toc(ii,1), toc2str(handles_video.report.prebuf_toc(ii,2),'.')), 'jpg', 'Quality',85);
 						end
 						handles_video.report.prebuf_img = {};
 						handles_video.report.prebuf_toc = zeros(0,2);
@@ -603,6 +608,7 @@ handles.video.report.img_toc = 0;
 
 				else % Detector just turn OFF
 					scatter(0,0,300,0.3+[0 0 0],'filled', 'Parent',handles_video.handles.detector_lamp, 'Visible','off');
+					handles_video.report.normal_img_toc = toc_t;
 				end
 
 				set(handles_video.handles.detector_lamp, 'Visible','off');
@@ -612,21 +618,30 @@ handles.video.report.img_toc = 0;
 			if	handles_video.detector.state && handles_video.report.fh~=-1 && handles_video.config.thresholds.report_deton_img_number>0
 				if handles_video.report.anomaly_img_cnt < handles_video.config.thresholds.report_deton_img_number && ...
 						toc_t-handles_video.report.anomaly_img_toc >= handles_video.config.thresholds.report_deton_img_interval
-					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.jpg',handles_video.report.anomaly_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'jpg');
+					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.jpg',handles_video.report.anomaly_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'jpg', 'Quality',85);
 					handles_video.report.anomaly_img_cnt = handles_video.report.anomaly_img_cnt+1;
 					handles_video.report.anomaly_img_toc = toc_t;
 				end
 			end
 
-			if ~handles_video.detector.state && handles_video.config.thresholds.detector_pre_buff>0 && handles_video.config.thresholds.report_deton_img_number>0
-				handles_video.report.prebuf_img{end+1} = [frame_cur_rgb frame_cur_bw];
-				handles_video.report.prebuf_toc(end+1,:) = [handles_video.toc_frames toc_t];
+			if ~handles_video.detector.state
+				if handles_video.report.normal_img_cnt < handles_video.config.thresholds.report_detoff_img_number && ...
+						toc_t-handles_video.report.normal_img_toc >= handles_video.config.thresholds.report_detoff_img_interval
+					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.jpg',handles_video.report.normal_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'jpg', 'Quality',85);
+					handles_video.report.normal_img_cnt = handles_video.report.normal_img_cnt+1;
+					handles_video.report.normal_img_toc = toc_t;
+				end
 
-				kill_mask = handles_video.report.prebuf_toc(:,2) < toc_t-handles_video.config.thresholds.detector_pre_buff;
-				kill_mask(1 : end-max(0,handles_video.config.thresholds.report_deton_img_number-1)) = true;
+				if handles_video.config.thresholds.detector_pre_buff>0 && handles_video.config.thresholds.report_deton_img_number>0
+					handles_video.report.prebuf_img{end+1} = [frame_cur_rgb frame_cur_bw];
+					handles_video.report.prebuf_toc(end+1,:) = [handles_video.toc_frames toc_t];
 
-				handles_video.report.prebuf_img(kill_mask) = [];
-				handles_video.report.prebuf_toc(kill_mask,:) = [];
+					kill_mask = handles_video.report.prebuf_toc(:,2) < toc_t-handles_video.config.thresholds.detector_pre_buff;
+					kill_mask(1 : end-max(0,handles_video.config.thresholds.report_deton_img_number-1)) = true;
+
+					handles_video.report.prebuf_img(kill_mask) = [];
+					handles_video.report.prebuf_toc(kill_mask,:) = [];
+				end
 			end
 
 		%% Program logic error trap
@@ -634,14 +649,6 @@ handles.video.report.img_toc = 0;
 			disp('ERROR: Unknown work stage.');
 			error('ERROR: Unknown work stage.');
 	end
-
-%{
-			if not(isempty(handles_video.config.thresholds.report_path)) && handles_video.config.thresholds.report_img_interval>=0 && handles_video.report.img_toc<toc_t
-				handles_video.report.img_toc = toc_t + handles_video.config.thresholds.report_img_interval;
-				handles_video.report.img_cnt = handles_video.report.img_cnt+1;
-				imwrite(frame_cur_rgb, fullfile(handles_video.config.thresholds.report_path, sprintf('img_%06d.jpg',handles_video.report.img_cnt)), 'jpg', 'Quality',85);
-			end
-%}
 	
 	set(timer_handle, 'UserData',handles_video);
 
