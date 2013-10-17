@@ -581,7 +581,7 @@ handles.video.report.img_toc = 0;
 				if new_st % Detector just turn ON - make alarm report
 					scatter(0,0,300,[1 0 0],'filled', 'Parent',handles_video.handles.detector_lamp);
 
-					if handles_video.report.fh~=-1
+					if handles_video.report.fh~=-1 && handles_video.config.thresholds.report_deton_img_number>0
 						handles_video.report.alarm_path = fullfile(handles_video.report.path, sprintf('alarm_%06d_%s', handles_video.toc_frames, toc2str(toc_t,'.')), filesep);
 						[mk_status, mk_message] = mkdir(handles_video.report.alarm_path);
 						if mk_status~=1
@@ -609,7 +609,7 @@ handles.video.report.img_toc = 0;
 				handles_video.detector.state=new_st;
 			end
 
-			if	handles_video.detector.state && handles_video.report.fh~=-1
+			if	handles_video.detector.state && handles_video.report.fh~=-1 && handles_video.config.thresholds.report_deton_img_number>0
 				if handles_video.report.alarm_img_cnt < handles_video.config.thresholds.report_deton_img_number && ...
 						toc_t-handles_video.report.alarm_img_toc >= handles_video.config.thresholds.report_deton_img_interval
 					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.jpg',handles_video.report.alarm_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'jpg');
