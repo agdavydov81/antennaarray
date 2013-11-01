@@ -107,6 +107,10 @@ function check_config(handles)
 cfg = handles.config;
 is_ok = true;
 
+if is_ok && not(isfield(cfg,'emi_generator'))
+	msgbox('Настройте геренатор ЭМВ для начала работы.', [mfilename ' help'], 'help', 'modal');
+	is_ok = false;
+end
 if is_ok && not(isfield(cfg,'acoustic_generator'))
 	msgbox('Настройте геренатор акустического воздействия для начала работы.', [mfilename ' help'], 'help', 'modal');
 	is_ok = false;
@@ -132,6 +136,17 @@ function setup_emi_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_emi_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+emi_program = -1;
+if isfield(handles.config,'emi_generator')
+	emi_program = handles.config.emi_generator.program;
+end
+ret = inputdlg('Введите номер программы (-1 = отключить)','Настройка генератора ЭМВ',1,{num2str(emi_program)});
+if not(isempty(ret))
+	handles.config.emi_generator.program = str2double(ret{1});
+	xml_write(handles.config_file, handles.config, 'ir_stand');
+	guidata(hObject, handles);
+end
+check_config(handles);
 
 
 % --- Executes on button press in setup_acoustics_btn.
@@ -186,7 +201,7 @@ set(handles.setup_irvideo_btn, 'Enable','on');
 set(handles.setup_acoustics_btn, 'Enable','on');
 set(handles.setup_btn, 'Enable','on');
 
-stop_emi_generator();
+stop_emi_generator(handles);
 
 dos('taskkill /F /IM Lobanov_mark.exe 1>nul 2>&1');
 
@@ -389,10 +404,14 @@ if handles.config.acoustic_generator.sls.enable
 end
 
 % Start EMI generator
-start_emi_generator();
+start_emi_generator(handles);
 
 
-function start_emi_generator()
+function start_emi_generator(handles)
+if handles.config.emi_generator.program == -1
+	return
+end
+
 %% USB Connection (VISA)
 
 obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
@@ -423,38 +442,46 @@ fprintf(obj1,':OUTPut:MODulation:STATe OFF');
 fprintf(obj1,':FREQuency 66MHz');
 fprintf(obj1,':POWer -10dBm');
 
-fprintf(obj1,'*RCL 04,0');
+fprintf(obj1,'*RCL 0%d,0', handles.config.emi_generator.program);
 fprintf(obj1,':FREQuency:MODE LIST');
 fprintf(obj1,':OUTPut:STATe ON');
 
 %%
 fclose(obj1);
 
-function stop_emi_generator()
-%% USB Connection (VISA)
 
-obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
-% Create the VISA-USB object if it does not exist
-% otherwise use the object that was found.
-if isempty(obj1)
-    obj1 = visa('AGILENT', 'USB0::0x0957::0x1F01::my51350313::0::INSTR');
-else
-    fclose(obj1);
-    obj1 = obj1(1);
+function stop_emi_generator(handles)
+try
+	if handles.config.emi_generator.program == -1
+		return
+	end
+	
+	%% USB Connection (VISA)
+	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
+	% Create the VISA-USB object if it does not exist
+	% otherwise use the object that was found.
+	if isempty(obj1)
+		obj1 = visa('AGILENT', 'USB0::0x0957::0x1F01::my51350313::0::INSTR');
+	else
+		fclose(obj1);
+		obj1 = obj1(1);
+	end
+	% Connect to instrument object, obj1.
+	fopen(obj1);
+
+	%% Reset & Status
+
+	fprintf(obj1, '*CLS');
+	fprintf(obj1, '*RST');
+	% instrumentInfo = query(obj1, '*IDN?');
+	% disp(['Instrument identification information: ' instrumentInfo]);
+
+	%% Commands
+
+	fclose(obj1);
+catch ME
+	% disp(ME);
 end
-% Connect to instrument object, obj1.
-fopen(obj1);
-
-%% Reset & Status
-
-fprintf(obj1, '*CLS');
-fprintf(obj1, '*RST');
-% instrumentInfo = query(obj1, '*IDN?');
-% disp(['Instrument identification information: ' instrumentInfo]);
-
-%% Commands
-
-fclose(obj1);
 
 
 function player_timer_func(timer_handle, eventdata)
