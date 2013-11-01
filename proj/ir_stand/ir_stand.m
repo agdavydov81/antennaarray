@@ -186,6 +186,8 @@ set(handles.setup_irvideo_btn, 'Enable','on');
 set(handles.setup_acoustics_btn, 'Enable','on');
 set(handles.setup_btn, 'Enable','on');
 
+stop_emi_generator();
+
 dos('taskkill /F /IM Lobanov_mark.exe 1>nul 2>&1');
 
 if handles.config.acoustic_generator.harm.enable
@@ -385,6 +387,74 @@ if handles.config.acoustic_generator.sls.enable
 								 'Period',1, 'ExecutionMode','fixedRate', 'UserData',handles);
 	start(handles.sls_watchdog);
 end
+
+% Start EMI generator
+start_emi_generator();
+
+
+function start_emi_generator()
+%% USB Connection (VISA)
+
+obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
+% Create the VISA-USB object if it does not exist
+% otherwise use the object that was found.
+if isempty(obj1)
+    obj1 = visa('AGILENT', 'USB0::0x0957::0x1F01::my51350313::0::INSTR');
+else
+    fclose(obj1);
+    obj1 = obj1(1);
+end
+% Connect to instrument object, obj1.
+fopen(obj1);
+
+%% Reset & Status
+
+fprintf(obj1, '*CLS');
+fprintf(obj1, '*RST');
+% instrumentInfo = query(obj1, '*IDN?');
+% disp(['Instrument identification information: ' instrumentInfo]);
+
+%% Commands
+
+fprintf(obj1,':OUTPut:STATe OFF');
+fprintf(obj1,':OUTPut:MODulation:STATe OFF');
+
+
+fprintf(obj1,':FREQuency 66MHz');
+fprintf(obj1,':POWer -10dBm');
+
+fprintf(obj1,'*RCL 04,0');
+fprintf(obj1,':FREQuency:MODE LIST');
+fprintf(obj1,':OUTPut:STATe ON');
+
+%%
+fclose(obj1);
+
+function stop_emi_generator()
+%% USB Connection (VISA)
+
+obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
+% Create the VISA-USB object if it does not exist
+% otherwise use the object that was found.
+if isempty(obj1)
+    obj1 = visa('AGILENT', 'USB0::0x0957::0x1F01::my51350313::0::INSTR');
+else
+    fclose(obj1);
+    obj1 = obj1(1);
+end
+% Connect to instrument object, obj1.
+fopen(obj1);
+
+%% Reset & Status
+
+fprintf(obj1, '*CLS');
+fprintf(obj1, '*RST');
+% instrumentInfo = query(obj1, '*IDN?');
+% disp(['Instrument identification information: ' instrumentInfo]);
+
+%% Commands
+
+fclose(obj1);
 
 
 function player_timer_func(timer_handle, eventdata)
