@@ -209,7 +209,10 @@ if handles.config.acoustic_generator.harm.enable
 	try
 		playrec('reset');
 	catch ME
-		% disp(ME);
+		if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+			disp(ME.message);
+			disp(ME.stack(1));
+		end
 	end
 end
 
@@ -230,7 +233,10 @@ if isfield(handles,'video')
 					try
 						xml_write(handles.config_file, handles.config, 'ir_stand');
 					catch ME
-						% disp(ME);
+						if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+							disp(ME.message);
+							disp(ME.stack(1));
+						end
 					end
 
 					% Save overall report to file
@@ -281,7 +287,10 @@ if isfield(handles,'video')
 			end
 		end
 	catch ME
-		% disp(ME);
+		if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+			disp(ME.message);
+			disp(ME.stack(1));
+		end
 	end
 end
 
@@ -481,7 +490,10 @@ try
 
 	fclose(obj1);
 catch ME
-	% disp(ME);
+	if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+		disp(ME.message);
+		disp(ME.stack(1));
+	end
 end
 
 
@@ -526,7 +538,10 @@ try
 
 	set(timer_handle, 'UserData',handles_play);
 catch ME
-	% disp(ME);
+% 	if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+% 		disp(ME.message);
+% 		disp(ME.stack(1));
+% 	end
 end
 
 
@@ -545,7 +560,10 @@ try
 		dos(dos_str);
 	end
 catch ME
-	% disp(ME);
+% 	if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+% 		disp(ME.message);
+% 		disp(ME.stack(1));
+% 	end
 end
 
 function str = toc2str(toc_t, sep_ch)
@@ -559,8 +577,9 @@ try
 	%% Camera image aquiring and displaying
 	handles_video = get(timer_handle,'UserData');
 	frame_cur_rgb = getsnapshot(handles_video.vidobj);
+	frame_cur_rgb = frame_cur_rgb(1:end-3,1:end-3,1);
 	ax = fix(handles_video.config.video_device.axis);
-	frame_cur_rgb = frame_cur_rgb(ax(3)+1:min(ax(4),size(frame_cur_rgb,1)-3), ax(1)+1:ax(2), 1);
+	frame_cur_rgb = frame_cur_rgb(ax(3)+1:ax(4), ax(1)+1:ax(2));
 	imagesc(frame_cur_rgb, 'Parent',handles_video.handles.work_img_orig);
 	colormap(handles_video.handles.work_img_orig,'hot');
 	axis(handles_video.handles.work_img_orig,'equal');
@@ -812,8 +831,9 @@ try
 
 	drawnow();
 catch ME
-	if strcmp(ME.identifier,'disp:report')
-		disp(['ERROR: ' ME.message]);
+	if strcmp(ME.identifier,'disp:report') || (isfield(handles.config,'disp_debug') && handles.config.disp_debug)
+		disp(ME.message);
+		disp(ME.stack(1));
 	end
 end
 

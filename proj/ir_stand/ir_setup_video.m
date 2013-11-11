@@ -22,7 +22,7 @@ function varargout = ir_setup_video(varargin)
 
 % Edit the above text to modify the response to help ir_setup_video
 
-% Last Modified by GUIDE v2.5 09-Oct-2013 23:14:32
+% Last Modified by GUIDE v2.5 11-Nov-2013 19:12:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -66,6 +66,18 @@ if not(isfield(cfg,'video_device'));					cfg.video_device = struct();				end
 if not(isfield(cfg.video_device,'name'));				cfg.video_device.name = '';					end
 if not(isfield(cfg.video_device,'mode'));				cfg.video_device.mode = '';					end
 if not(isfield(cfg.video_device,'axis'));				cfg.video_device.axis = [];					end
+if not(isfield(cfg.video_device,'t_range'));			cfg.video_device.t_range = [-40 150];		end
+if not(isfield(cfg.video_device,'palette'));			cfg.video_device.palette = 'HSV';			end
+if not(isfield(cfg.video_device,'autobalance'));		cfg.video_device.autobalance = 1;			end
+
+
+set(handles.t_range,		'String',	num2str(cfg.video_device.t_range));
+set(handles.palette_menu,	'Value',	find(strcmp(cfg.video_device.palette, get(handles.palette_menu, 'String')),1));
+set(handles.autobalance,	'Value',	cfg.video_device.autobalance);
+
+imagesc(linspace(0,1,1024)', 'Parent',handles.palette_axes);
+set(handles.palette_axes, 'XTick',[], 'YTick',[]);
+axis(handles.palette_axes, 'xy');
 
 handles.video.devices = imaqhwinfo('winvideo');
 if isempty(handles.video.devices.DeviceInfo)
@@ -108,10 +120,14 @@ catch ME % Some times image aquision can't start
 end
 
 frame_cur = getsnapshot(handles.video.vidobj);
-frame_cur = frame_cur(:,1:end-3,1);
+frame_cur = frame_cur(1:end-3,1:end-3,1);
 resize_for_image(handles, size(frame_cur));
-imagesc(frame_cur, 'Parent',handles.video_image);
-colormap(handles.video_image,'hot');
+if get(handles.autobalance,	'Value')
+	imagesc(frame_cur, 'Parent',handles.video_image);
+else
+	image(double(frame_cur)/4, 'Parent',handles.video_image);
+end
+colormap(handles.video_image, cfg.video_device.palette);
 set(handles.video_image, 'XTick',[], 'YTick',[]);
 handles.video.axis_def = axis(handles.video_image);
 handles.video.axis = handles.video.axis_def;
@@ -145,9 +161,12 @@ try
 
 	if isfield(handles_video_fps,'ticID')
 		frame_cur = getsnapshot(handles.video.vidobj);
-		frame_cur = frame_cur(1:end-3,:,1);
-		imagesc(frame_cur, 'Parent',handles.video_image);
-%		colormap(handles.video_image,'hot');
+		frame_cur = frame_cur(1:end-3,1:end-3,1);
+		if get(handles.autobalance,	'Value')
+			imagesc(frame_cur, 'Parent',handles.video_image);
+		else
+			image(double(frame_cur)/4, 'Parent',handles.video_image);
+		end
 		set(handles.video_image, 'XTick',[], 'YTick',[]);
 		axis(handles.video_image, handles.video.axis);
 
@@ -199,20 +218,30 @@ if X<480
 	Y = round(Y*mul_k);
 end
 
-set(handles.figure1, 'Units','pixels', 'Position',[(scr_sz(3)-(X+20))/2 (scr_sz(4)-(Y+90))/2 X+20 Y+82]);
+set(handles.figure1, 'Units','pixels', 'Position',[(scr_sz(3)-(X+40))/2 (scr_sz(4)-(Y+150))/2 X+40 Y+142]);
 
 set(handles.video_image,		'Units','pixels',	'Position',[10  10 X Y]); %
-set(handles.video_camera,		'Units','pixels',	'Position',[10  Y+50 200 22]);
-set(handles.video_camera_text,	'Units','pixels',	'Position',[215 Y+53 60 16]);
-set(handles.video_mode,			'Units','pixels',	'Position',[10  Y+20 200 22]);
-set(handles.video_mode_text,	'Units','pixels',	'Position',[215 Y+23 60 16]);
+set(handles.palette_axes,		'Units','pixels',	'Position',[20+X 10 10 Y]);
 
-set(handles.zoom_reset,			'Units','pixels',	'Position',[10+X-22 Y+20 22 22]);
-set(handles.zoomin,				'Units','pixels',	'Position',[10+X-52 Y+20 22 22]);
-set(handles.video_fps,			'Units','pixels',	'Position',[10+X-210 Y+23 150 16]);
+set(handles.video_camera,		'Units','pixels',	'Position',[10  Y+110 200 22]);
+set(handles.video_camera_text,	'Units','pixels',	'Position',[215 Y+113 60 16]);
 
-set(handles.setup_ok,			'Units','pixels',	'Position',[10+X-70-8-70 Y+50 70 22]);
-set(handles.setup_cancel,		'Units','pixels',	'Position',[10+X-70      Y+50 70 22]);
+set(handles.video_mode,			'Units','pixels',	'Position',[10  Y+80 200 22]);
+set(handles.video_mode_text,	'Units','pixels',	'Position',[215 Y+83 60 16]);
+
+set(handles.t_range,			'Units','pixels',	'Position',[10 Y+50 80 22]);
+set(handles.t_range_text,		'Units','pixels',	'Position',[95 Y+53 200 16]);
+set(handles.palette_menu,		'Units','pixels',	'Position',[310 Y+50 90 22]);
+set(handles.palette_text,		'Units','pixels',	'Position',[405 Y+52 60 16]);
+
+set(handles.autobalance,		'Units','pixels',	'Position',[10 Y+20 325 25]);
+
+set(handles.zoom_reset,			'Units','pixels',	'Position',[30+X-22 Y+80 22 22]);
+set(handles.zoomin,				'Units','pixels',	'Position',[30+X-52 Y+80 22 22]);
+set(handles.video_fps,			'Units','pixels',	'Position',[30+X-210 Y+83 150 16]);
+
+set(handles.setup_ok,			'Units','pixels',	'Position',[30+X-70-8-70 Y+110 70 22]);
+set(handles.setup_cancel,		'Units','pixels',	'Position',[30+X-70      Y+110 70 22]);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -230,9 +259,14 @@ if isfield(handles,'output')
 
 	cfg = handles.config;
 	if handles.press_ok
-		cfg.video_device.name =	handles.video.cam_info.DeviceName;
-		cfg.video_device.mode =	handles.video.mode;
-		cfg.video_device.axis =	axis(handles.video_image);
+		cfg.video_device.name =		handles.video.cam_info.DeviceName;
+		cfg.video_device.mode =		handles.video.mode;
+		cfg.video_device.axis =		axis(handles.video_image);
+
+		cfg.video_device.t_range =	str2num(get(handles.t_range,'String'));
+		cur_pal = get(handles.palette_menu,'String');
+		cfg.video_device.palette =	cur_pal{get(handles.palette_menu,'Value')};
+		cfg.video_device.autobalance = get(handles.autobalance, 'Value');
 	end
 
 	varargout{1} = cfg;
@@ -279,10 +313,14 @@ set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
 frame_cur = getsnapshot(handles.video.vidobj);
-frame_cur = frame_cur(1:end-3,:,1);
+frame_cur = frame_cur(1:end-3,1:end-3,1);
 resize_for_image(handles, size(frame_cur));
-imagesc(frame_cur, 'Parent',handles.video_image);
-colormap(handles.video_image,'hot');
+if get(handles.autobalance,	'Value')
+	imagesc(frame_cur, 'Parent',handles.video_image);
+else
+	image(double(frame_cur)/4, 'Parent',handles.video_image);
+end
+% colormap(handles.video_image,'hot');
 set(handles.video_image, 'XTick',[], 'YTick',[]);
 handles.video.axis_def = axis(handles.video_image);
 handles.video.axis = handles.video.axis_def;
@@ -333,10 +371,14 @@ set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
 frame_cur = getsnapshot(handles.video.vidobj);
-frame_cur = frame_cur(:,1:end-3,1);
+frame_cur = frame_cur(1:end-3,1:end-3,1);
 resize_for_image(handles, size(frame_cur));
-imagesc(frame_cur, 'Parent',handles.video_image);
-colormap(handles.video_image,'hot');
+if get(handles.autobalance,	'Value')
+	imagesc(frame_cur, 'Parent',handles.video_image);
+else
+	image(double(frame_cur)/4, 'Parent',handles.video_image);
+end
+% colormap(handles.video_image,'hot');
 set(handles.video_image, 'XTick',[], 'YTick',[]);
 handles.video.axis_def = axis(handles.video_image);
 handles.video.axis = handles.video.axis_def;
@@ -355,50 +397,6 @@ function video_mode_CreateFcn(hObject, eventdata, handles)
 % handles    empty - handles not created until after all CreateFcns called
 
 % Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-function detector_quantiles_Callback(hObject, eventdata, handles)
-% hObject    handle to detector_quantiles (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of detector_quantiles as text
-%        str2double(get(hObject,'String')) returns contents of detector_quantiles as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function detector_quantiles_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to detector_quantiles (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-function detector_estimation_time_Callback(hObject, eventdata, handles)
-% hObject    handle to detector_estimation_time (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of detector_estimation_time as text
-%        str2double(get(hObject,'String')) returns contents of detector_estimation_time as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function detector_estimation_time_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to detector_estimation_time (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
@@ -489,3 +487,61 @@ function zoom_reset_Callback(hObject, eventdata, handles)
 handles.video.axis = handles.video.axis_def;
 guidata(hObject, handles);
 axis(handles.video_image, handles.video.axis_def);
+
+
+
+function t_range_Callback(hObject, eventdata, handles)
+% hObject    handle to t_range (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of t_range as text
+%        str2double(get(hObject,'String')) returns contents of t_range as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function t_range_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to t_range (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on selection change in palette_menu.
+function palette_menu_Callback(hObject, eventdata, handles)
+% hObject    handle to palette_menu (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns palette_menu contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from palette_menu
+cur_pal = get(hObject,'String');
+cur_pal = cur_pal{get(hObject,'Value')};
+colormap(handles.video_image, cur_pal);
+
+
+% --- Executes during object creation, after setting all properties.
+function palette_menu_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to palette_menu (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in autobalance.
+function autobalance_Callback(hObject, eventdata, handles)
+% hObject    handle to autobalance (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of autobalance
