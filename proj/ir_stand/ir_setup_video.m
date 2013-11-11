@@ -108,8 +108,10 @@ catch ME % Some times image aquision can't start
 end
 
 frame_cur = getsnapshot(handles.video.vidobj);
+frame_cur = frame_cur(:,1:end-3,1);
 resize_for_image(handles, size(frame_cur));
-image(frame_cur, 'Parent',handles.video_image);
+imagesc(frame_cur, 'Parent',handles.video_image);
+colormap(handles.video_image,'hot');
 set(handles.video_image, 'XTick',[], 'YTick',[]);
 handles.video.axis_def = axis(handles.video_image);
 handles.video.axis = handles.video.axis_def;
@@ -143,7 +145,9 @@ try
 
 	if isfield(handles_video_fps,'ticID')
 		frame_cur = getsnapshot(handles.video.vidobj);
-		image(frame_cur, 'Parent',handles.video_image);
+		frame_cur = frame_cur(1:end-3,:,1);
+		imagesc(frame_cur, 'Parent',handles.video_image);
+%		colormap(handles.video_image,'hot');
 		set(handles.video_image, 'XTick',[], 'YTick',[]);
 		axis(handles.video_image, handles.video.axis);
 
@@ -275,8 +279,10 @@ set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
 frame_cur = getsnapshot(handles.video.vidobj);
+frame_cur = frame_cur(1:end-3,:,1);
 resize_for_image(handles, size(frame_cur));
-image(frame_cur, 'Parent',handles.video_image);
+imagesc(frame_cur, 'Parent',handles.video_image);
+colormap(handles.video_image,'hot');
 set(handles.video_image, 'XTick',[], 'YTick',[]);
 handles.video.axis_def = axis(handles.video_image);
 handles.video.axis = handles.video.axis_def;
@@ -327,8 +333,10 @@ set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
 start(handles.video.vidobj);
 frame_cur = getsnapshot(handles.video.vidobj);
+frame_cur = frame_cur(:,1:end-3,1);
 resize_for_image(handles, size(frame_cur));
-image(frame_cur, 'Parent',handles.video_image);
+imagesc(frame_cur, 'Parent',handles.video_image);
+colormap(handles.video_image,'hot');
 set(handles.video_image, 'XTick',[], 'YTick',[]);
 handles.video.axis_def = axis(handles.video_image);
 handles.video.axis = handles.video.axis_def;

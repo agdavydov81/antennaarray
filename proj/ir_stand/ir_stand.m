@@ -230,6 +230,7 @@ if isfield(handles,'video')
 					try
 						xml_write(handles.config_file, handles.config, 'ir_stand');
 					catch ME
+						% disp(ME);
 					end
 
 					% Save overall report to file
@@ -559,9 +560,13 @@ try
 	handles_video = get(timer_handle,'UserData');
 	frame_cur_rgb = getsnapshot(handles_video.vidobj);
 	ax = fix(handles_video.config.video_device.axis);
-	frame_cur_rgb = frame_cur_rgb(ax(3)+1:ax(4), ax(1)+1:ax(2), :);
-	imshow(frame_cur_rgb, 'Parent',handles_video.handles.work_img_orig);
-	frame_cur = rgb2temp(frame_cur_rgb);
+	frame_cur_rgb = frame_cur_rgb(ax(3)+1:min(ax(4),size(frame_cur_rgb,1)-3), ax(1)+1:ax(2), 1);
+	imagesc(frame_cur_rgb, 'Parent',handles_video.handles.work_img_orig);
+	colormap(handles_video.handles.work_img_orig,'hot');
+	axis(handles_video.handles.work_img_orig,'equal');
+	set(handles_video.handles.work_img_orig, 'XTick',[], 'YTick',[]);
+%	frame_cur = rgb2temp(frame_cur_rgb);
+	frame_cur = double(frame_cur_rgb);
 	frame_sz = size(frame_cur);
 	frame_cur = transpose(frame_cur(:));
 
