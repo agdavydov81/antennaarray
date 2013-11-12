@@ -226,7 +226,7 @@ if isfield(handles,'video')
 			handles_video = get(handles.video.timer,'UserData');
 			stop(handles.video.timer);
 
-			if isfield(handles_video.report,'fh')
+			if isfield(handles_video,'report') && isfield(handles_video.report,'fh')
 				if handles_video.report.fh~=-1
 					fclose(handles_video.report.fh);
 					
@@ -579,22 +579,24 @@ try
 	frame_cur_rgb = getsnapshot(handles_video.vidobj);
 	frame_cur_rgb = frame_cur_rgb(1:end-3,1:end-3,1);
 	ax = fix(handles_video.config.video_device.axis);
-	frame_cur_rgb = frame_cur_rgb(ax(3)+1:ax(4), ax(1)+1:ax(2));
-	imagesc(frame_cur_rgb, 'Parent',handles_video.handles.work_img_orig);
-	colormap(handles_video.handles.work_img_orig,'hot');
+	frame_cur_rgb = double(frame_cur_rgb(ax(3)+1:ax(4), ax(1)+1:ax(2)));
+	if handles_video.config.video_device.autobalance
+		t_rg = handles_video.config.video_device.t_range;
+		imagesc(frame_cur_rgb/255*(t_rg(2)-t_rg(1))+t_rg(1), 'Parent',handles_video.handles.work_img_orig);
+	else
+		image(frame_cur_rgb/4, 'Parent',handles_video.handles.work_img_orig);
+	end
+	ir_colormap(handles_video.handles.work_img_orig, handles_video.config.video_device.palette);
 	axis(handles_video.handles.work_img_orig,'equal');
 	set(handles_video.handles.work_img_orig, 'XTick',[], 'YTick',[]);
 %	frame_cur = rgb2temp(frame_cur_rgb);
 	frame_cur = double(frame_cur_rgb);
 	frame_sz = size(frame_cur);
 	frame_cur = transpose(frame_cur(:));
-
+	
 	%% Time stamp displaying
 	toc_t = toc(handles_video.tic_id);
 	handles_video.toc_frames = handles_video.toc_frames+1;
-	time_s = fix(toc_t);
-	time_h = fix(time_s/3600);  time_s = time_s-time_h*3600;
-	time_m = fix(time_s/60);    time_s = time_s-time_m*60;
 	set(handles_video.handles.work_timer, 'String', [toc2str(toc_t,':') sprintf(' (%d)', handles_video.toc_frames)]);
 
 	%% Image processing cycle
@@ -675,7 +677,7 @@ try
 			is_signaling = is_signaling | (frame_cur>handles_video.stat.hi);
 
 			% Median filtering
-			if handles_video.config.thresholds.median_size>0
+			if handles_video.config.thresholds.median_size>1
 				is_signaling = reshape(is_signaling, frame_sz);
 				is_signaling = medfilt2(is_signaling, handles_video.config.thresholds.median_size+[0 0]);
 				is_signaling = transpose(is_signaling(:));
@@ -831,7 +833,7 @@ try
 
 	drawnow();
 catch ME
-	if strcmp(ME.identifier,'disp:report') || (isfield(handles.config,'disp_debug') && handles.config.disp_debug)
+	if strcmp(ME.identifier,'disp:report') || (isfield(handles_video.config,'disp_debug') && handles_video.config.disp_debug)
 		disp(ME.message);
 		disp(ME.stack(1));
 	end
