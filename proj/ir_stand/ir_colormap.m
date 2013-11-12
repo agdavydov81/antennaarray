@@ -1,11 +1,11 @@
-function ir_colormap(ax, palette)
+function cm = ir_colormap(ax, palette)
     if ischar(palette)
         palette=getcolormap(palette);
     end
 	if isa(palette,'float') && size(palette,2)==4
 		palette=makecolormap(palette);
 	end
-    colormap(ax, palette);
+    cm = colormap(ax, palette);
 end
 
 function map=getcolormap(colormaptype)

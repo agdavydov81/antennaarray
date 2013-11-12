@@ -343,6 +343,7 @@ handles.video.timer = timer('TimerFcn',@video_timer_func, 'Period',1/100, ...
 							'ExecutionMode','fixedRate');
 handles_video = handles.video;
 handles_video.handles = handles;
+handles_video.palette = uint8(255 * ir_colormap(handles_video.handles.work_img_orig, handles_video.config.video_device.palette));
 set(handles.video.timer, 'UserData',handles_video);
 
 guidata(handles.figure1, handles);
@@ -576,21 +577,23 @@ function video_timer_func(timer_handle, eventdata)
 try
 	%% Camera image aquiring and displaying
 	handles_video = get(timer_handle,'UserData');
-	frame_cur_rgb = getsnapshot(handles_video.vidobj);
-	frame_cur_rgb = frame_cur_rgb(1:end-3,1:end-3,1);
+	frame_cur = getsnapshot(handles_video.vidobj);
+	frame_cur = frame_cur(1:end-3,1:end-3,1);
 	ax = fix(handles_video.config.video_device.axis);
-	frame_cur_rgb = double(frame_cur_rgb(ax(3)+1:ax(4), ax(1)+1:ax(2)));
+	frame_cur = double(frame_cur(ax(3)+1:ax(4), ax(1)+1:ax(2)));
 	if handles_video.config.video_device.autobalance
 		t_rg = handles_video.config.video_device.t_range;
-		imagesc(frame_cur_rgb/255*(t_rg(2)-t_rg(1))+t_rg(1), 'Parent',handles_video.handles.work_img_orig);
+		imagesc(frame_cur/255*(t_rg(2)-t_rg(1))+t_rg(1), 'Parent',handles_video.handles.work_img_orig);
+		cur_min = min(frame_cur(:));
+		cur_max = max(frame_cur(:));
+		frame_cur_rgb = fix((frame_cur-cur_min)/(cur_max-cur_min)*63)+1;
 	else
-		image(frame_cur_rgb/4, 'Parent',handles_video.handles.work_img_orig);
+		image(frame_cur/4, 'Parent',handles_video.handles.work_img_orig);
+		frame_cur_rgb = fix(frame_cur/4);
 	end
-	ir_colormap(handles_video.handles.work_img_orig, handles_video.config.video_device.palette);
+	frame_cur_rgb = reshape(handles_video.palette(max(1,min(64,frame_cur_rgb)),:,:), [size(frame_cur_rgb) 3]);
 	axis(handles_video.handles.work_img_orig,'equal');
 	set(handles_video.handles.work_img_orig, 'XTick',[], 'YTick',[]);
-%	frame_cur = rgb2temp(frame_cur_rgb);
-	frame_cur = double(frame_cur_rgb);
 	frame_sz = size(frame_cur);
 	frame_cur = transpose(frame_cur(:));
 	
