@@ -67,7 +67,7 @@ if not(isfield(cfg.video_device,'name'));				cfg.video_device.name = '';					end
 if not(isfield(cfg.video_device,'mode'));				cfg.video_device.mode = '';					end
 if not(isfield(cfg.video_device,'axis'));				cfg.video_device.axis = [];					end
 if not(isfield(cfg.video_device,'t_range'));			cfg.video_device.t_range = [-40 150];		end
-if not(isfield(cfg.video_device,'palette'));			cfg.video_device.palette = 'HSV';			end
+if not(isfield(cfg.video_device,'palette'));			cfg.video_device.palette = 'FLIR';			end
 if not(isfield(cfg.video_device,'autobalance'));		cfg.video_device.autobalance = 1;			end
 
 
@@ -127,7 +127,7 @@ if get(handles.autobalance,	'Value')
 else
 	image(double(frame_cur)/4, 'Parent',handles.video_image);
 end
-colormap(handles.video_image, cfg.video_device.palette);
+ir_colormap(handles.video_image, cfg.video_device.palette);
 set(handles.video_image, 'XTick',[], 'YTick',[]);
 handles.video.axis_def = axis(handles.video_image);
 handles.video.axis = handles.video.axis_def;
@@ -320,7 +320,7 @@ if get(handles.autobalance,	'Value')
 else
 	image(double(frame_cur)/4, 'Parent',handles.video_image);
 end
-% colormap(handles.video_image,'hot');
+% ir_colormap(handles.video_image,'hot');
 set(handles.video_image, 'XTick',[], 'YTick',[]);
 handles.video.axis_def = axis(handles.video_image);
 handles.video.axis = handles.video.axis_def;
@@ -378,7 +378,7 @@ if get(handles.autobalance,	'Value')
 else
 	image(double(frame_cur)/4, 'Parent',handles.video_image);
 end
-% colormap(handles.video_image,'hot');
+% ir_colormap(handles.video_image,'hot');
 set(handles.video_image, 'XTick',[], 'YTick',[]);
 handles.video.axis_def = axis(handles.video_image);
 handles.video.axis = handles.video.axis_def;
@@ -522,7 +522,7 @@ function palette_menu_Callback(hObject, eventdata, handles)
 %        contents{get(hObject,'Value')} returns selected item from palette_menu
 cur_pal = get(hObject,'String');
 cur_pal = cur_pal{get(hObject,'Value')};
-colormap(handles.video_image, cur_pal);
+ir_colormap(handles.video_image, cur_pal);
 
 
 % --- Executes during object creation, after setting all properties.
