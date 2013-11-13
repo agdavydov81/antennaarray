@@ -228,7 +228,10 @@ if isfield(handles,'video')
 
 			if isfield(handles_video,'report') && isfield(handles_video.report,'fh')
 				if handles_video.report.fh~=-1
-					fclose(handles_video.report.fh);
+					try
+						fclose(handles_video.report.fh);
+					catch
+					end
 					
 					try
 						xml_write(handles.config_file, handles.config, 'ir_stand');
@@ -580,15 +583,15 @@ try
 	frame_cur = getsnapshot(handles_video.vidobj);
 	frame_cur = frame_cur(1:end-3,1:end-3,1);
 	ax = fix(handles_video.config.video_device.axis);
-	frame_cur = double(frame_cur(ax(3)+1:ax(4), ax(1)+1:ax(2)));
+	frame_cur = double(frame_cur(ax(3)+1:ax(4), ax(1)+1:ax(2))) / double(intmax(class(frame_cur)));
 	if handles_video.config.video_device.autobalance
 		t_rg = handles_video.config.video_device.t_range;
-		imagesc(frame_cur/255*(t_rg(2)-t_rg(1))+t_rg(1), 'Parent',handles_video.handles.work_img_orig);
+		imagesc(frame_cur*(t_rg(2)-t_rg(1))+t_rg(1), 'Parent',handles_video.handles.work_img_orig);
 		cur_min = min(frame_cur(:));
 		cur_max = max(frame_cur(:));
 		frame_cur_rgb = fix((frame_cur-cur_min)/(cur_max-cur_min)*63)+1;
 	else
-		image(frame_cur/4, 'Parent',handles_video.handles.work_img_orig);
+		image(frame_cur*64, 'Parent',handles_video.handles.work_img_orig);
 		frame_cur_rgb = fix(frame_cur/4);
 	end
 	frame_cur_rgb = reshape(handles_video.palette(max(1,min(64,frame_cur_rgb)),:,:), [size(frame_cur_rgb) 3]);

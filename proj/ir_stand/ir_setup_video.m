@@ -125,7 +125,7 @@ resize_for_image(handles, size(frame_cur));
 if get(handles.autobalance,	'Value')
 	imagesc(frame_cur, 'Parent',handles.video_image);
 else
-	image(double(frame_cur)/4, 'Parent',handles.video_image);
+	image(double(frame_cur)/double(intmax(class(frame_cur)))*64, 'Parent',handles.video_image);
 end
 ir_colormap(handles.video_image, cfg.video_device.palette);
 set(handles.video_image, 'XTick',[], 'YTick',[]);
@@ -165,7 +165,7 @@ try
 		if get(handles.autobalance,	'Value')
 			imagesc(frame_cur, 'Parent',handles.video_image);
 		else
-			image(double(frame_cur)/4, 'Parent',handles.video_image);
+			image(double(frame_cur)/double(intmax(class(frame_cur)))*64, 'Parent',handles.video_image);
 		end
 		set(handles.video_image, 'XTick',[], 'YTick',[]);
 		axis(handles.video_image, handles.video.axis);
@@ -318,7 +318,7 @@ resize_for_image(handles, size(frame_cur));
 if get(handles.autobalance,	'Value')
 	imagesc(frame_cur, 'Parent',handles.video_image);
 else
-	image(double(frame_cur)/4, 'Parent',handles.video_image);
+	image(double(frame_cur)/double(intmax(class(frame_cur)))*64, 'Parent',handles.video_image);
 end
 % ir_colormap(handles.video_image,'hot');
 set(handles.video_image, 'XTick',[], 'YTick',[]);
@@ -376,7 +376,7 @@ resize_for_image(handles, size(frame_cur));
 if get(handles.autobalance,	'Value')
 	imagesc(frame_cur, 'Parent',handles.video_image);
 else
-	image(double(frame_cur)/4, 'Parent',handles.video_image);
+	image(double(frame_cur)/double(intmax(class(frame_cur)))*64, 'Parent',handles.video_image);
 end
 % ir_colormap(handles.video_image,'hot');
 set(handles.video_image, 'XTick',[], 'YTick',[]);
