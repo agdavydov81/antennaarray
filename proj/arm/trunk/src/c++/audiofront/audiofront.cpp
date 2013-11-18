@@ -27,10 +27,10 @@ int main(int argc, const char *argv[]) {
 	PaError pa_err=paNoError;
 
 	try {
-		std::cout << "AudioFront 0.0.1" << std::endl;
+		std::cout << "AudioFront 0.0.2" << std::endl;
 
-		if(argc!=1 && argc!=3)
-			throw std::runtime_error("Usage: audiofront [dev_in dev_out]");
+		if(argc!=1 && argc!=3 && argc!=4)
+			throw std::runtime_error("Usage: audiofront [dev_in dev_out] [fs]");
 
 		std::cout << Pa_GetVersionText() << std::endl;
 
@@ -40,20 +40,25 @@ int main(int argc, const char *argv[]) {
 
 		PaDeviceIndex in_dev, out_dev;
 
-		if(argc==1) {
+		if(argc<2) {
 			if((in_dev=Pa_GetDefaultInputDevice())==paNoDevice)
 				throw std::runtime_error("PortAudio: No default input device");
 			if((out_dev=Pa_GetDefaultOutputDevice())==paNoDevice)
 				throw std::runtime_error("PortAudio: No default output device");
 		}
-		else {
+		if(argc>=3) {
 			in_dev = atoi(argv[1]);
 			out_dev = atoi(argv[2]);
+		}
+		if(argc>=4) {
+			fs = atof(argv[3]);
 		}
 
 		disp_dev_info("Input device", in_dev);
 
 		disp_dev_info("Output device", out_dev);
+
+		std::cout << "Sample rate: " << fs << std::endl;
 
 		PaStream *audio_stream;
 		PaStreamParameters in_stream_info =  {in_dev,  1, paInt16, Pa_GetDeviceInfo(in_dev )->defaultHighInputLatency,  NULL};
@@ -86,8 +91,8 @@ void disp_dev_info(const char *dev_type, PaDeviceIndex dev_ind) {
 	std::cout << dev_type << " (id=" << dev_ind << "):" << std::endl;
 
 	std::cout	<< "    " << api_info->name << ": " << dev_info->name << " ("
-		<< dev_info->maxInputChannels  << " ch, " << dev_info->defaultLowInputLatency  << " delay IN | "
-		<< dev_info->maxOutputChannels << " ch, " << dev_info->defaultLowOutputLatency << " delay OUT, at "
+		<< dev_info->maxInputChannels  << " ch, " << dev_info->defaultHighInputLatency  << " delay IN | "
+		<< dev_info->maxOutputChannels << " ch, " << dev_info->defaultHighOutputLatency << " delay OUT, at "
 		<< dev_info->defaultSampleRate << " Hz)"
 		<< std::endl;
 }
