@@ -34,7 +34,7 @@ int main(int argc, const char *argv[]) {
 
 		std::cout << Pa_GetVersionText() << std::endl;
 
-		double fs = 11025;
+		double fs = 44100;
 
 		PA_OBJECT pa_obj;
 
@@ -56,8 +56,8 @@ int main(int argc, const char *argv[]) {
 		disp_dev_info("Output device", out_dev);
 
 		PaStream *audio_stream;
-		PaStreamParameters in_stream_info =  {in_dev,  1, paInt16, Pa_GetDeviceInfo(in_dev )->defaultLowInputLatency,  NULL};
-		PaStreamParameters out_stream_info = {out_dev, 1, paInt16, Pa_GetDeviceInfo(out_dev)->defaultLowOutputLatency, NULL};
+		PaStreamParameters in_stream_info =  {in_dev,  1, paInt16, Pa_GetDeviceInfo(in_dev )->defaultHighInputLatency,  NULL};
+		PaStreamParameters out_stream_info = {out_dev, 1, paInt16, Pa_GetDeviceInfo(out_dev)->defaultHighOutputLatency, NULL};
 
 		if((pa_err=Pa_OpenStream(&audio_stream, &in_stream_info, &out_stream_info, fs, paFramesPerBufferUnspecified, paClipOff, audio_stream_callback, NULL))!=paNoError)
 			throw std::runtime_error(std::string("Pa_OpenStream error: ")+Pa_GetErrorText(pa_err));
