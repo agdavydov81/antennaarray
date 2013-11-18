@@ -15,36 +15,45 @@ struct PA_OBJECT {
 	}
 };
 
-void disp_dev_info(PaDeviceIndex dev_ind);
+void disp_dev_info(const char *dev_type, PaDeviceIndex dev_ind);
 int audio_stream_callback(	const void *input, void *output,
 							unsigned long frameCount,
 							const PaStreamCallbackTimeInfo* timeInfo,
 							PaStreamCallbackFlags statusFlags,
 							void *userData );
 
-int main(void) {
+int main(int argc, const char *argv[]) {
 	int ret=0;
 	PaError pa_err=paNoError;
 
 	try {
 		std::cout << "AudioFront 0.0.1" << std::endl;
+
+		if(argc!=1 && argc!=3)
+			throw std::runtime_error("Usage: audiofront [dev_in dev_out]");
+
 		std::cout << Pa_GetVersionText() << std::endl;
 
 		double fs = 11025;
 
 		PA_OBJECT pa_obj;
 
-		PaDeviceIndex in_dev=Pa_GetDefaultInputDevice();
-		if(in_dev==paNoDevice)
-			throw std::runtime_error("PortAudio: No default input device");
-		std::cout << "Input device:" << std::endl;
-		disp_dev_info(in_dev);
+		PaDeviceIndex in_dev, out_dev;
 
-		PaDeviceIndex out_dev=Pa_GetDefaultOutputDevice();
-		if(out_dev==paNoDevice)
-			throw std::runtime_error("PortAudio: No default output device");
-		std::cout << "Output device:" << std::endl;
-		disp_dev_info(out_dev);
+		if(argc==1) {
+			if((in_dev=Pa_GetDefaultInputDevice())==paNoDevice)
+				throw std::runtime_error("PortAudio: No default input device");
+			if((out_dev=Pa_GetDefaultOutputDevice())==paNoDevice)
+				throw std::runtime_error("PortAudio: No default output device");
+		}
+		else {
+			in_dev = atoi(argv[1]);
+			out_dev = atoi(argv[2]);
+		}
+
+		disp_dev_info("Input device", in_dev);
+
+		disp_dev_info("Output device", out_dev);
 
 		PaStream *audio_stream;
 		PaStreamParameters in_stream_info =  {in_dev,  1, paInt16, Pa_GetDeviceInfo(in_dev )->defaultLowInputLatency,  NULL};
@@ -70,9 +79,11 @@ int main(void) {
 	return ret;
 }
 
-void disp_dev_info(PaDeviceIndex dev_ind) {
+void disp_dev_info(const char *dev_type, PaDeviceIndex dev_ind) {
 	const PaDeviceInfo * dev_info = Pa_GetDeviceInfo(dev_ind);
 	const PaHostApiInfo * api_info = Pa_GetHostApiInfo(dev_info->hostApi);
+
+	std::cout << dev_type << " (id=" << dev_ind << "):" << std::endl;
 
 	std::cout	<< "    " << api_info->name << ": " << dev_info->name << " ("
 		<< dev_info->maxInputChannels  << " ch, " << dev_info->defaultLowInputLatency  << " delay IN | "
