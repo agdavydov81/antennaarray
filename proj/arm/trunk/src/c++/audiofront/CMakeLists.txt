@@ -13,3 +13,10 @@ if (NOT WIN32)
 endif()
 
 install(TARGETS ${NAME}   DESTINATION bin)
+
+
+
+add_executable(pa_devs pa_devs.c)
+target_link_libraries(pa_devs ${PORTAUDIO_LIBRARIES})
+install(TARGETS pa_devs   DESTINATION bin)
+
