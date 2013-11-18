@@ -6,13 +6,15 @@
 #  PORTAUDIO_FOUND, If false, do not try to use PORTAUDIO.
 
 # set(PORTAUDIO_USE_STATIC_LIBS ON) # OFF by default
-if (PORTAUDIO_USE_STATIC_LIBS)
-	set(PA_STATIC "_static")
-endif()
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	set(PA_PLATFORM "_x64")
-else(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	set(PA_PLATFORM "_x86")
+if (WIN32)
+	if (PORTAUDIO_USE_STATIC_LIBS)
+		set(PA_STATIC "_static")
+	endif()
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(PA_PLATFORM "_x64")
+	else(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(PA_PLATFORM "_x86")
+	endif()
 endif()
 
 find_path(PORTAUDIO_INCLUDE_DIRS portaudio.h  /usr/include )

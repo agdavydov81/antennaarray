@@ -60,14 +60,14 @@ if (PORTAUDIO_FOUND)
 endif()
 
 # Plug DSP libraries
-set(IPP_USE_STATIC_LIBS ON)
-find_package(IPP REQUIRED) # Plug IPP
-if (IPP_FOUND)
-	include_directories(${IPP_INCLUDE_DIRS})
-	add_definitions(-DHAVE_IPP)
-	add_definitions(-DDSP_FFT_IPP)
-	set(DSP_LIBRARIES ${DSP_LIBRARIES} ${IPP_LIBRARIES})
-endif()
+# set(IPP_USE_STATIC_LIBS ON)
+# find_package(IPP REQUIRED) # Plug IPP
+# if (IPP_FOUND)
+# 	include_directories(${IPP_INCLUDE_DIRS})
+# 	add_definitions(-DHAVE_IPP)
+# 	add_definitions(-DDSP_FFT_IPP)
+# 	set(DSP_LIBRARIES ${DSP_LIBRARIES} ${IPP_LIBRARIES})
+# endif()
 
 # if(WIN32)
 # 	set(MKL_USE_STATIC_LIBS ON)

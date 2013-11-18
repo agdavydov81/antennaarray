@@ -1,8 +1,7 @@
 set(NAME audiofront)
 
 set(${NAME}_SRCS
-#	audiofront.cpp
-	pa_devs.c
+	audiofront.cpp
 	)
 
 add_definitions(-DUNICODE -D_UNICODE)

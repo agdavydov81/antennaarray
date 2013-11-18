@@ -48,6 +48,15 @@
 #include <math.h>
 #include "portaudio.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#if defined(_MSC_VER)
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
+
 #ifdef WIN32
 #if PA_USE_ASIO
 #include "pa_asio.h"
@@ -103,8 +112,17 @@ int main(void)
     const   PaDeviceInfo *deviceInfo;
     PaStreamParameters inputParameters, outputParameters;
     PaError err;
+	int fd;
 
-    
+	// Suppress error messages output directly from library
+#ifdef WIN32
+	fd = open("nul", O_WRONLY);
+#else
+	fd = open("/dev/null", O_WRONLY);
+#endif
+	dup2(fd, 2);
+	close(fd);
+
     Pa_Initialize();
 
     printf( "PortAudio version number = %d\nPortAudio version text = '%s'\n",
