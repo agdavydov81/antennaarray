@@ -61,8 +61,8 @@ int main(int argc, const char *argv[]) {
 		std::cout << "Sample rate: " << fs << std::endl;
 
 		PaStream *in_stream, *out_stream;
-		PaStreamParameters in_stream_info =  {in_dev,  1, paInt16, Pa_GetDeviceInfo(in_dev )->defaultLowInputLatency,  NULL};
-		PaStreamParameters out_stream_info = {out_dev, 1, paInt16, Pa_GetDeviceInfo(out_dev)->defaultLowOutputLatency, NULL};
+		PaStreamParameters in_stream_info =  {in_dev,  1, paInt16, Pa_GetDeviceInfo(in_dev )->defaultHighInputLatency,  NULL};
+		PaStreamParameters out_stream_info = {out_dev, 1, paInt16, Pa_GetDeviceInfo(out_dev)->defaultHighOutputLatency, NULL};
 
 		if((pa_err=Pa_OpenStream(&out_stream, NULL, &out_stream_info, fs, paFramesPerBufferUnspecified, paClipOff, NULL, NULL))!=paNoError)
 			throw std::runtime_error(std::string("Output Pa_OpenStream error: ")+Pa_GetErrorText(pa_err));
@@ -103,8 +103,8 @@ void disp_dev_info(const char *dev_type, PaDeviceIndex dev_ind) {
 	std::cout << dev_type << " (id=" << dev_ind << "):" << std::endl;
 
 	std::cout	<< "    " << api_info->name << ": " << dev_info->name << " ("
-		<< dev_info->maxInputChannels  << " ch, " << dev_info->defaultLowInputLatency  << " delay IN | "
-		<< dev_info->maxOutputChannels << " ch, " << dev_info->defaultLowOutputLatency << " delay OUT, at "
+		<< dev_info->maxInputChannels  << " ch, " << dev_info->defaultHighInputLatency  << " delay IN | "
+		<< dev_info->maxOutputChannels << " ch, " << dev_info->defaultHighOutputLatency << " delay OUT, at "
 		<< dev_info->defaultSampleRate << " Hz)"
 		<< std::endl;
 }
