@@ -60,9 +60,10 @@ int main(int argc, const char *argv[]) {
 
 		std::cout << "Sample rate: " << fs << std::endl;
 
+		int ch_num = 2;
 		PaStream *in_stream, *out_stream;
-		PaStreamParameters in_stream_info =  {in_dev,  1, paInt16, Pa_GetDeviceInfo(in_dev )->defaultHighInputLatency,  NULL};
-		PaStreamParameters out_stream_info = {out_dev, 1, paInt16, Pa_GetDeviceInfo(out_dev)->defaultHighOutputLatency, NULL};
+		PaStreamParameters in_stream_info =  {in_dev,  ch_num, paInt16, Pa_GetDeviceInfo(in_dev )->defaultHighInputLatency,  NULL};
+		PaStreamParameters out_stream_info = {out_dev, ch_num, paInt16, Pa_GetDeviceInfo(out_dev)->defaultHighOutputLatency, NULL};
 
 		if((pa_err=Pa_OpenStream(&out_stream, NULL, &out_stream_info, fs, paFramesPerBufferUnspecified, paClipOff, NULL, NULL))!=paNoError)
 			throw std::runtime_error(std::string("Output Pa_OpenStream error: ")+Pa_GetErrorText(pa_err));
@@ -72,8 +73,8 @@ int main(int argc, const char *argv[]) {
 		// Output stream buffering
 		if((pa_err=Pa_StartStream(out_stream))!=paNoError)
 			throw std::runtime_error(std::string("Output Pa_StartStream error: ")+Pa_GetErrorText(pa_err));
-		std::vector<int16_t> delay_buf((size_t)(fs*0.5));
-		if((pa_err=Pa_WriteStream(out_stream, &delay_buf[0], delay_buf.size())))
+		std::vector<int16_t> delay_buf(ch_num*(size_t)(fs*0.5));
+		if((pa_err=Pa_WriteStream(out_stream, &delay_buf[0], delay_buf.size()/ch_num)))
 			throw std::runtime_error(std::string("Output Pa_WriteStream error: ")+Pa_GetErrorText(pa_err));
 
 		// Now start recording
