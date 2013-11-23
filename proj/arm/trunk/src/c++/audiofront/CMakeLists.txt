@@ -20,3 +20,7 @@ add_executable(pa_devs pa_devs.c)
 target_link_libraries(pa_devs ${PORTAUDIO_LIBRARIES})
 install(TARGETS pa_devs   DESTINATION bin)
 
+
+add_executable(paex_read_write_wire paex_read_write_wire.c)
+target_link_libraries(paex_read_write_wire ${PORTAUDIO_LIBRARIES})
+install(TARGETS paex_read_write_wire   DESTINATION bin)
