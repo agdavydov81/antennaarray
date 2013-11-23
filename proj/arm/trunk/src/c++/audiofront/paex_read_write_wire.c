@@ -160,6 +160,13 @@ int main(void)
     if( err != paNoError ) goto error;
     printf("Wire on. Will run %d seconds.\n", NUM_SECONDS); fflush(stdout);
 
+	// Some output prebuffer
+	for( i=0; i<10; ++i)
+	{
+		err = Pa_WriteStream( stream, sampleBlock, FRAMES_PER_BUFFER );
+		if( err && CHECK_UNDERFLOW ) goto xrun;
+	}
+
     for( i=0; i<(NUM_SECONDS*SAMPLE_RATE)/FRAMES_PER_BUFFER; ++i )
     {
        err = Pa_WriteStream( stream, sampleBlock, FRAMES_PER_BUFFER );
