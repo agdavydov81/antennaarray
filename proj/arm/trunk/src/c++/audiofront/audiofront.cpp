@@ -22,7 +22,7 @@ int audio_stream_callback(	const void *input, void *output,
 							PaStreamCallbackFlags statusFlags,
 							void *userData );
 
-int ch_num = 1;
+int ch_num = 2;
 
 int main(int argc, const char *argv[]) {
 	int ret=0;
