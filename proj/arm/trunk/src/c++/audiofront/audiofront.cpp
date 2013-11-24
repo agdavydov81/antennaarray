@@ -15,14 +15,14 @@ struct PA_OBJECT {
 	}
 };
 
-void disp_dev_info(const char *dev_type, PaDeviceIndex dev_ind);
-int audio_stream_callback(	const void *input, void *output,
+void disp_dev_info(const char *dev_type, PaDeviceIndex dev_ind, int ch_num);
+int audio_stream_callback(	const int16_t *input, int16_t *output,
 							unsigned long frameCount,
 							const PaStreamCallbackTimeInfo* timeInfo,
 							PaStreamCallbackFlags statusFlags,
 							void *userData );
 
-int ch_num = 2;
+int in_ch_num = 1, out_ch_num = 2;
 
 int main(int argc, const char *argv[]) {
 	int ret=0;
@@ -56,17 +56,17 @@ int main(int argc, const char *argv[]) {
 			fs = atof(argv[3]);
 		}
 
-		disp_dev_info("Input device", in_dev);
+		disp_dev_info("Input device", in_dev, in_ch_num);
 
-		disp_dev_info("Output device", out_dev);
+		disp_dev_info("Output device", out_dev, out_ch_num);
 
 		std::cout << "Sample rate: " << fs << std::endl;
 
 		PaStream *audio_stream;
-		PaStreamParameters in_stream_info =  {in_dev,  ch_num, paInt16, Pa_GetDeviceInfo(in_dev )->defaultHighInputLatency,  NULL};
-		PaStreamParameters out_stream_info = {out_dev, ch_num, paInt16, Pa_GetDeviceInfo(out_dev)->defaultHighOutputLatency, NULL};
+		PaStreamParameters in_stream_info =  {in_dev,  in_ch_num,  paInt16, Pa_GetDeviceInfo(in_dev )->defaultHighInputLatency,  NULL};
+		PaStreamParameters out_stream_info = {out_dev, out_ch_num, paInt16, Pa_GetDeviceInfo(out_dev)->defaultHighOutputLatency, NULL};
 
-		if((pa_err=Pa_OpenStream(&audio_stream, &in_stream_info, &out_stream_info, fs, paFramesPerBufferUnspecified, paClipOff, audio_stream_callback, NULL))!=paNoError)
+		if((pa_err=Pa_OpenStream(&audio_stream, &in_stream_info, &out_stream_info, fs, paFramesPerBufferUnspecified, paClipOff, (PaStreamCallback *)audio_stream_callback, NULL))!=paNoError)
 			throw std::runtime_error(std::string("Pa_OpenStream error: ")+Pa_GetErrorText(pa_err));
 
 		// Now start recording
@@ -87,7 +87,7 @@ int main(int argc, const char *argv[]) {
 	return ret;
 }
 
-void disp_dev_info(const char *dev_type, PaDeviceIndex dev_ind) {
+void disp_dev_info(const char *dev_type, PaDeviceIndex dev_ind, int ch_num) {
 	const PaDeviceInfo * dev_info = Pa_GetDeviceInfo(dev_ind);
 	const PaHostApiInfo * api_info = Pa_GetHostApiInfo(dev_info->hostApi);
 
@@ -96,20 +96,38 @@ void disp_dev_info(const char *dev_type, PaDeviceIndex dev_ind) {
 	std::cout	<< "    " << api_info->name << ": " << dev_info->name << " ("
 		<< dev_info->maxInputChannels  << " ch, " << dev_info->defaultHighInputLatency  << " delay IN | "
 		<< dev_info->maxOutputChannels << " ch, " << dev_info->defaultHighOutputLatency << " delay OUT, at "
-		<< dev_info->defaultSampleRate << " Hz)"
+		<< dev_info->defaultSampleRate << " Hz); " << ch_num << " channels open"
 		<< std::endl;
 }
 
-int audio_stream_callback(	const void *input, void *output,
+int audio_stream_callback(	const int16_t *input, int16_t *output,
 							unsigned long frameCount,
 							const PaStreamCallbackTimeInfo* timeInfo,
 							PaStreamCallbackFlags statusFlags,
 							void *userData ) {
 
-	if(input)
-		memmove(output, input, ch_num*frameCount*sizeof(int16_t));
-	else
-		memset(output, 0, ch_num*frameCount*sizeof(int16_t));
+	if(in_ch_num==out_ch_num) {
+		if(input)
+			memmove(output, input, in_ch_num*frameCount*sizeof(*output));
+		else
+			memset(output, 0, in_ch_num*frameCount*sizeof(*output));
+	}
+	else { // in_ch_num!=out_ch_num
+		if(in_ch_num==1 && out_ch_num==2) {
+			int16_t *out_data=output;
+			for(const int16_t *in_data=input, *in_end=input+frameCount*in_ch_num; in_data!=in_end; ) {
+				*(out_data++) = *in_data;
+				*(out_data++) = *(in_data++);
+			}
+		}
+		else {
+			for(int out_ch=0; out_ch<out_ch_num; ++out_ch) {
+				int16_t *out_data=output+out_ch;
+				for(const int16_t *in_data=input, *in_end=input+frameCount*in_ch_num; in_data!=in_end; in_data+=in_ch_num, out_data+=out_ch_num)
+					*out_data = *in_data;
+			}
+		}
+	}
 
 	return paContinue;
 }
