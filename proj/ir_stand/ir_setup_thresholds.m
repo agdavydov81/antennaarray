@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 16-Oct-2013 18:18:59
+% Last Modified by GUIDE v2.5 27-Nov-2013 12:21:13
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -78,6 +78,7 @@ if not(isfield(cfg.thresholds,'filter_hp_initframes'));			cfg.thresholds.filter_
 if not(isfield(cfg.thresholds,'stat_lo'));						cfg.thresholds.stat_lo = 0.005;					end
 if not(isfield(cfg.thresholds,'stat_hi'));						cfg.thresholds.stat_hi = 0.995;					end
 if not(isfield(cfg.thresholds,'stat_time'));					cfg.thresholds.stat_time = 15;					end
+if not(isfield(cfg.thresholds,'stat_pixshift'));				cfg.thresholds.stat_pixshift = 1;				end
 if not(isfield(cfg.thresholds,'median_size'));					cfg.thresholds.median_size = 3;					end
 if not(isfield(cfg.thresholds,'detector_on_points'));			cfg.thresholds.detector_on_points = 100;		end
 if not(isfield(cfg.thresholds,'detector_on_part'));				cfg.thresholds.detector_on_part = 0.01;			end
@@ -98,6 +99,7 @@ set(handles.filter_hp_initframes,		'String', num2str(cfg.thresholds.filter_hp_in
 set(handles.stat_lo,					'String', num2str(cfg.thresholds.stat_lo));
 set(handles.stat_hi,					'String', num2str(cfg.thresholds.stat_hi));
 set(handles.stat_time,					'String', num2str(cfg.thresholds.stat_time));
+set(handles.stat_pixshift,				'String', num2str(cfg.thresholds.stat_pixshift));
 set(handles.median_size,				'String', num2str(cfg.thresholds.median_size));
 set(handles.detector_on_points,			'String', num2str(cfg.thresholds.detector_on_points));
 set(handles.detector_on_part,			'String', num2str(cfg.thresholds.detector_on_part));
@@ -134,6 +136,7 @@ if handles.press_ok
 	cfg.thresholds.stat_lo =					str2double(get(handles.stat_lo,'String'));
 	cfg.thresholds.stat_hi =					str2double(get(handles.stat_hi,'String'));
 	cfg.thresholds.stat_time =					str2double(get(handles.stat_time,'String'));
+	cfg.thresholds.stat_pixshift =				str2double(get(handles.stat_pixshift,'String'));
 	cfg.thresholds.median_size =				str2double(get(handles.median_size,	'String'));
 	cfg.thresholds.detector_on_points =			str2double(get(handles.detector_on_points,'String'));
 	cfg.thresholds.detector_on_part =			str2double(get(handles.detector_on_part,'String'));
@@ -632,6 +635,28 @@ function stat_time_Callback(hObject, eventdata, handles)
 % --- Executes during object creation, after setting all properties.
 function stat_time_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to stat_time (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function stat_pixshift_Callback(hObject, eventdata, handles)
+% hObject    handle to stat_pixshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of stat_pixshift as text
+%        str2double(get(hObject,'String')) returns contents of stat_pixshift as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function stat_pixshift_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to stat_pixshift (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 

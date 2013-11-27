@@ -575,6 +575,21 @@ function str = toc2str(toc_t, sep_ch)
 	time_h = fix(time_s/3600);  time_s = time_s-time_h*3600;
 	time_m = fix(time_s/60);    time_s = time_s-time_m*60;
 	str = sprintf('%02d%c%02d%c%02d', time_h, sep_ch, time_m, sep_ch, time_s);
+	
+function data = make_stat_shift(data, shift_sz, merge_func)
+	data_merge = zeros([size(data) 2*shift_sz+1]);
+
+	data_big = [repmat(data(1,:),shift_sz,1); data; repmat(data(end,:),shift_sz,1)];
+	for sh=-shift_sz:shift_sz
+		data_merge(:,:,sh+shift_sz+1) = data_big(sh+shift_sz+(1:size(data,1)),:);
+	end
+	data = merge_func(data_merge, [], 3);
+
+	data_big = [repmat(data(:,1),1,shift_sz), data, repmat(data(:,end),1,shift_sz)];
+	for sh=-shift_sz:shift_sz
+		data_merge(:,:,sh+shift_sz+1) = data_big(:,sh+shift_sz+(1:size(data,2)));
+	end
+	data = merge_func(data_merge, [], 3);
 
 function video_timer_func(timer_handle, eventdata)
 try
@@ -661,8 +676,20 @@ try
 
 				if handles_video.config.thresholds.stat_lo>0
 					handles_video.stat.lo = quantile(stat_imgs, handles_video.config.thresholds.stat_lo, 1);
+				else
+					handles_video.stat.lo = -inf(1,size(stat_imgs,2));
 				end
 				handles_video.stat.hi = quantile(stat_imgs, handles_video.config.thresholds.stat_hi, 1);
+
+				if handles_video.config.thresholds.stat_pixshift>0
+					stat_lo_sqr = reshape(handles_video.stat.lo, frame_sz);
+					stat_lo_sqr = make_stat_shift(stat_lo_sqr, handles_video.config.thresholds.stat_pixshift, @min);
+					handles_video.stat.lo = reshape(stat_lo_sqr, size(handles_video.stat.lo));
+
+					stat_hi_sqr = reshape(handles_video.stat.hi, frame_sz);
+					stat_hi_sqr = make_stat_shift(stat_hi_sqr, handles_video.config.thresholds.stat_pixshift, @max);
+					handles_video.stat.hi = reshape(stat_hi_sqr, size(handles_video.stat.hi));
+				end
 
 				handles_video.work_stage = 300;
 				start_generators(handles_video.handles);
@@ -676,11 +703,7 @@ try
 			end
 
 			% Statistics checkign
-			is_signaling = false(size(frame_cur));
-			if isfield(handles_video.stat,'lo')
-				is_signaling = is_signaling | (frame_cur<handles_video.stat.lo);
-			end
-			is_signaling = is_signaling | (frame_cur>handles_video.stat.hi);
+			is_signaling = (frame_cur<handles_video.stat.lo) | (frame_cur>handles_video.stat.hi);
 
 			% Median filtering
 			if handles_video.config.thresholds.median_size>1
