@@ -22,7 +22,8 @@ function test_OLA()
 	fb = fs/fft_sz;
 
 	t = (0:size(x,1)-1)'/fs;
-	x = 0.8*cos(2*pi*fc*t + sin(2*pi*0.5*fb*t));
+	x = 0*cos(2*pi*(fc+10)*t + sin(pi*fb*t)) + 5*randn(size(t));
+	x = 0.95*x/max(abs(x));
 	wavwrite(x,fs,'xxxx.wav');
 
 	S1 = spectrogram_phased_buf(x, rectwin(fft_sz), fft_sz-1);
@@ -33,23 +34,28 @@ function test_OLA()
 %	subplot(1,2,1); imagesc(angle(S1)); axis('xy'); colormap(gray); subplot(1,2,2); imagesc(angle(S2)); axis('xy'); colormap(gray);
 
 	figure('Units','normalized', 'Position',[0 0 1 1]);
-	subplot(3,1,1);
-	bb = fir1(fft_sz, (fc+fb.*[-1 1]/2)/(fs/2), rectwin(fft_sz+1));			plot(filtfilt(bb,1,x),'b');
-	hold('on');
-	bb = fir1(fft_sz, (fc+fb.*[-1 1]/2)/(fs/2), hamming(fft_sz+1));			plot(filtfilt(bb,1,x),'r');
-	bb = fir1(fft_sz, (fc+fb.*[-1 1]/2)/(fs/2), blackmanharris(fft_sz+1));	plot(filtfilt(bb,1,x),'g');
+%	subplot(3,1,1);
+%	bb = fir1(fft_sz, (fc+fb.*[-1 1]/2)/(fs/2), rectwin(fft_sz+1));			plot(filtfilt(bb,1,x),'b');
+%	hold('on');
+%	bb = fir1(fft_sz, (fc+fb.*[-1 1]/2)/(fs/2), hamming(fft_sz+1));			plot(filtfilt(bb,1,x),'r');
+%	bb = fir1(fft_sz, (fc+fb.*[-1 1]/2)/(fs/2), blackmanharris(fft_sz+1));	plot(filtfilt(bb,1,x),'g');
 	
-	subplot(3,1,2);
-	plot(abs(S1(fi,:)).*cos(2*pi*fs*fi/fft_sz*(0:size(S1,2)-1)/fs + angle(S1(fi,:))),'b');
+	subplot(2,1,1);
+	plot(abs(S1(fi,:)).*cos(2*pi*fs*fi/fft_sz*((0:size(S1,2)-1)+fft_sz/2)/fs + angle(S1(fi,:))),'b');
 	hold('on');
-	plot(abs(S2(fi,:)).*cos(2*pi*fs*fi/fft_sz*(0:size(S2,2)-1)/fs + angle(S2(fi,:))),'r');
-	plot(abs(S3(fi,:)).*cos(2*pi*fs*fi/fft_sz*(0:size(S3,2)-1)/fs + angle(S3(fi,:))),'g');
+	plot(abs(S2(fi,:)).*cos(2*pi*fs*fi/fft_sz*((0:size(S2,2)-1)+fft_sz/2)/fs + angle(S2(fi,:))),'r');
+	plot(abs(S3(fi,:)).*cos(2*pi*fs*fi/fft_sz*((0:size(S3,2)-1)+fft_sz/2)/fs + angle(S3(fi,:))),'g');
 
-	subplot(3,1,3);
-	plot(angle(S1(fi,:)),'b');
+	subplot(2,1,2);
+	plot(unwrap(angle(S1(fi,:))),'b');
 	hold('on');
-	plot(angle(S2(fi,:)),'r');
-	plot(angle(S3(fi,:)),'g');
+	plot(unwrap(angle(S2(fi,:))),'r');
+	plot(unwrap(angle(S3(fi,:))),'g');
+
+	set(zoom,'ActionPostCallback',@OnZoomPan);
+	set(pan ,'ActionPostCallback',@OnZoomPan);
+	zoom('xon');
+	set(pan, 'Motion', 'horizontal');
 end
 
 function test_generation()
@@ -154,4 +160,10 @@ function x = spec_synth(Sa, Sp)
 	for i = 1:size(Sa,2)
 		x = x + Sa(:,i).*cos(pi* (i-1) *  t_ind / (size(Sa,2)-1) + Sp(:,i));
 	end
+end
+
+function OnZoomPan(hObject, eventdata)
+	x_lim=xlim();
+	child=get(hObject,'Children');
+	set( child( strcmp(get(child,'type'),'axes') & not(strcmp(get(child,'tag'),'legend')) ), 'XLim', x_lim);
 end
