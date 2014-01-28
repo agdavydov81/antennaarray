@@ -193,8 +193,14 @@ end
 
 function on_load(hObject,eventdata)
 	data=get_data(hObject);
+	
+	if isfield(data,'antenna_file')
+		dlg_xml = data.antenna_file;
+	else
+		dlg_xml = '';
+	end
 
-	[dlg_name,dlg_path]=uigetfile({'*.xml','XML files (*.xml)'},'Select antenna description file');
+	[dlg_name,dlg_path]=uigetfile({'*.xml','XML files (*.xml)'},'Select antenna description file',dlg_xml);
 	if dlg_name==0
 		return;
 	end
