@@ -34,7 +34,7 @@ function [x,y,z, antenna_center, main_lobe_ind, side_lobe_part, c_angle, c_lvl]=
 %	Copyright 2009-2010 For Fun Inc.
 %	Version: 1.0.1.3
 
-	%% Prepare input config
+	    %% Prepare input config
 	antenna=struct('expr','y=sum([x{:}],2)', 'frequency',1000, 'c',331.46, 'src_dist',100, 'src_points',180, 'use_parfor',true);
 
 	% Merge default and input values
