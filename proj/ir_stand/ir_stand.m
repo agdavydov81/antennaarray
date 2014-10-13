@@ -153,7 +153,7 @@ end
 ret = inputdlg('Введите номер программы (-1 = отключить)','Настройка генератора ЭМВ',1,{num2str(emi_program)});
 if not(isempty(ret))
 	handles.config.emi_generator.program = str2double(ret{1});
-	xml_write(handles.config_file, handles.config, 'ir_stand');
+	xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
 	guidata(hObject, handles);
 end
 check_config(handles);
@@ -165,7 +165,7 @@ function setup_acoustics_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 handles.config = ir_setup_acoustic(handles.config);
-xml_write(handles.config_file, handles.config, 'ir_stand');
+xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
 guidata(hObject, handles);
 check_config(handles);
 
@@ -182,7 +182,7 @@ if isempty(ret_cfg)
 end
 
 handles.config = ret_cfg;
-xml_write(handles.config_file, handles.config, 'ir_stand');
+xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
 guidata(hObject, handles);
 check_config(handles);
 
@@ -192,8 +192,8 @@ function setup_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.config = ir_setup_thresholds(handles.config);
-xml_write(handles.config_file, handles.config, 'ir_stand');
+handles.config = ir_setup_thresholds_simple(handles.config);
+xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
 guidata(hObject, handles);
 check_config(handles);
 
@@ -244,7 +244,7 @@ if isfield(handles,'video')
 					end
 					
 					try
-						xml_write(handles.config_file, handles.config, 'ir_stand');
+						xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
 					catch ME
 						if isfield(handles.config,'disp_debug') && handles.config.disp_debug
 							disp(ME.message);

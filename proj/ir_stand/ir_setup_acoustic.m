@@ -133,42 +133,6 @@ varargout{1} = cfg;
 delete(handles.figure1);
 
 
-% --- Executes on button press in radiobutton2.
-function radiobutton1_Callback(hObject, eventdata, handles)
-% hObject    handle to radiobutton2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of radiobutton2
-
-
-% --- Executes on button press in radiobutton2.
-function radiobutton2_Callback(hObject, eventdata, handles)
-% hObject    handle to radiobutton2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of radiobutton2
-
-
-% --- Executes on button press in radiobutton3.
-function radiobutton3_Callback(hObject, eventdata, handles)
-% hObject    handle to radiobutton3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of radiobutton3
-
-
-% --- Executes on button press in radiobutton4.
-function radiobutton4_Callback(hObject, eventdata, handles)
-% hObject    handle to radiobutton4 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of radiobutton4
-
-
 % --- Executes on button press in get_sls_chkbtn.
 function get_sls_chkbtn_Callback(hObject, eventdata, handles)
 % hObject    handle to get_sls_chkbtn (see GCBO)
@@ -179,6 +143,7 @@ function get_sls_chkbtn_Callback(hObject, eventdata, handles)
 set(handles.get_sls_chkbtn, 'Value', 1);
 set(handles.get_harm_chkbtn,'Value', 0);
 harm_enable_controls(handles);
+
 
 % --- Executes on button press in get_harm_chkbtn.
 function get_harm_chkbtn_Callback(hObject, eventdata, handles)
@@ -203,97 +168,6 @@ set(handles.harm_scan_time_ed,   'Enable',is_enable);
 set(handles.harm_scan_lin,		 'Enable',is_enable);
 set(handles.harm_scan_log,		 'Enable',is_enable);
 set(handles.harm_amplitude_ed,	 'Enable',is_enable);
-
-
-function harm_freq_start_ed_Callback(hObject, eventdata, handles)
-% hObject    handle to harm_freq_start_ed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of harm_freq_start_ed as text
-%        str2double(get(hObject,'String')) returns contents of harm_freq_start_ed as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function harm_freq_start_ed_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to harm_freq_start_ed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
-function harm_freq_finish_ed_Callback(hObject, eventdata, handles)
-% hObject    handle to harm_freq_finish_ed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of harm_freq_finish_ed as text
-%        str2double(get(hObject,'String')) returns contents of harm_freq_finish_ed as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function harm_freq_finish_ed_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to harm_freq_finish_ed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
-function harm_scan_time_ed_Callback(hObject, eventdata, handles)
-% hObject    handle to harm_scan_time_ed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of harm_scan_time_ed as text
-%        str2double(get(hObject,'String')) returns contents of harm_scan_time_ed as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function harm_scan_time_ed_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to harm_scan_time_ed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
-function harm_scan_speed_ed_Callback(hObject, eventdata, handles)
-% hObject    handle to harm_scan_speed_ed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of harm_scan_speed_ed as text
-%        str2double(get(hObject,'String')) returns contents of harm_scan_speed_ed as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function harm_scan_speed_ed_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to harm_scan_speed_ed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
 
 
 % --- Executes on button press in ok_btn.
@@ -349,26 +223,4 @@ if any(is_key_esc_ret)
 	handles.press_ok = is_key_esc_ret(2);
 	guidata(hObject, handles);
 	uiresume(handles.figure1);
-end
-
-
-function harm_amplitude_ed_Callback(hObject, eventdata, handles)
-% hObject    handle to harm_amplitude_ed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of harm_amplitude_ed as text
-%        str2double(get(hObject,'String')) returns contents of harm_amplitude_ed as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function harm_amplitude_ed_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to harm_amplitude_ed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
 end
