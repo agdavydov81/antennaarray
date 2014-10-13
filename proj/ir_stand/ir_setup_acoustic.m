@@ -81,6 +81,7 @@ if not(isfield(cfg.acoustic_generator.harm,'freq_finish'));	cfg.acoustic_generat
 if not(isfield(cfg.acoustic_generator.harm,'scan_time'));	cfg.acoustic_generator.harm.scan_time = 10;		end
 if not(isfield(cfg.acoustic_generator.harm,'scan_type'));	cfg.acoustic_generator.harm.scan_type = 'log';	end
 if not(isfield(cfg.acoustic_generator.harm,'amplitude'));	cfg.acoustic_generator.harm.amplitude = 0.95;	end
+cfg.acoustic_generator.harm.enable = ~cfg.acoustic_generator.sls.enable;
 
 set(handles.get_sls_chkbtn,		 'Value',cfg.acoustic_generator.sls.enable);
 set(handles.get_harm_chkbtn,	 'Value',cfg.acoustic_generator.harm.enable);
@@ -95,7 +96,7 @@ switch cfg.acoustic_generator.harm.scan_type
 		set(handles.harm_scan_log, 'Value',1);
 	otherwise
 end
-get_harm_chkbtn_Callback([], [], handles);
+harm_enable_controls(handles);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -175,7 +176,9 @@ function get_sls_chkbtn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of get_sls_chkbtn
-
+set(handles.get_sls_chkbtn, 'Value', 1);
+set(handles.get_harm_chkbtn,'Value', 0);
+harm_enable_controls(handles);
 
 % --- Executes on button press in get_harm_chkbtn.
 function get_harm_chkbtn_Callback(hObject, eventdata, handles)
@@ -184,6 +187,11 @@ function get_harm_chkbtn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of get_harm_chkbtn
+set(handles.get_sls_chkbtn, 'Value', 0);
+set(handles.get_harm_chkbtn,'Value', 1);
+harm_enable_controls(handles);
+
+function harm_enable_controls(handles)
 if get(handles.get_harm_chkbtn, 'Value')
 	is_enable = 'on';
 else

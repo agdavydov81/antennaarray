@@ -43,6 +43,16 @@ else
 end
 % End initialization code - DO NOT EDIT
 
+function ret = isfield_ex(obj, fl_name)
+	ret = true;
+	while ret && ~isempty(fl_name)
+		[cur_fl fl_name] = strtok(fl_name,'.');
+		ret = isfield(obj,cur_fl);
+		if ~ret
+			break
+		end
+		obj = obj.(cur_fl);
+	end
 
 % --- Executes just before ir_stand is made visible.
 function ir_stand_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -137,7 +147,7 @@ function setup_emi_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 emi_program = -1;
-if isfield(handles.config,'emi_generator')
+if isfield_ex(handles,'config.emi_generator.program')
 	emi_program = handles.config.emi_generator.program;
 end
 ret = inputdlg('Введите номер программы (-1 = отключить)','Настройка генератора ЭМВ',1,{num2str(emi_program)});
@@ -205,7 +215,7 @@ stop_emi_generator(handles);
 
 dos('taskkill /F /IM Lobanov_mark.exe 1>nul 2>&1');
 
-if handles.config.acoustic_generator.harm.enable
+if isfield_ex(handles,'config.acoustic_generator.harm.enable') && handles.config.acoustic_generator.harm.enable
 	try
 		playrec('reset');
 	catch ME
@@ -804,7 +814,7 @@ try
 						handles_video.report.anomaly_img_toc = -inf;
 
 						for ii = 1:handles_video.report.anomaly_img_cnt
-							imwrite(handles_video.report.prebuf_img{ii}, sprintf('%simage_%06d_%s.jpg',handles_video.report.anomaly_path, handles_video.report.prebuf_toc(ii,1), toc2str(handles_video.report.prebuf_toc(ii,2),'.')), 'jpg', 'Quality',85);
+							imwrite(handles_video.report.prebuf_img{ii}, sprintf('%simage_%06d_%s.png',handles_video.report.anomaly_path, handles_video.report.prebuf_toc(ii,1), toc2str(handles_video.report.prebuf_toc(ii,2),'.')), 'png');
 						end
 						handles_video.report.prebuf_img = {};
 						handles_video.report.prebuf_toc = zeros(0,2);
@@ -826,7 +836,7 @@ try
 			if	handles_video.detector.state && handles_video.report.fh~=-1 && handles_video.config.thresholds.report_deton_img_number>0
 				if handles_video.report.anomaly_img_cnt < handles_video.config.thresholds.report_deton_img_number && ...
 						toc_t-handles_video.report.anomaly_img_toc >= handles_video.config.thresholds.report_deton_img_interval
-					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.jpg',handles_video.report.anomaly_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'jpg', 'Quality',85);
+					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.png',handles_video.report.anomaly_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'png');
 					handles_video.report.anomaly_img_cnt = handles_video.report.anomaly_img_cnt+1;
 					handles_video.report.anomaly_img_toc = toc_t;
 				end
@@ -835,7 +845,7 @@ try
 			if ~handles_video.detector.state
 				if handles_video.report.normal_img_cnt < handles_video.config.thresholds.report_detoff_img_number && ...
 						toc_t-handles_video.report.normal_img_toc >= handles_video.config.thresholds.report_detoff_img_interval
-					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.jpg',handles_video.report.normal_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'jpg', 'Quality',85);
+					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.png',handles_video.report.normal_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'png');
 					handles_video.report.normal_img_cnt = handles_video.report.normal_img_cnt+1;
 					handles_video.report.normal_img_toc = toc_t;
 				end
