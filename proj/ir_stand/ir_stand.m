@@ -640,37 +640,37 @@ try
 
 		%% High pass filer initialisation stage
 		case 100  % Initialise high pass filter
-			if handles_video.config.thresholds.filt_hp_factor==-1
+			if handles_video.config.thresholds.filter_hp_factor==-1
 				handles_video.work_stage = 200;
 			else
-				if ~isfield(handles_video,'filt_hp_imgs')
-					handles_video.filt_hp_imgs = {};
+				if ~isfield(handles_video,'filter_hp_images')
+					handles_video.filter_hp_images = {};
 				end
 
-				handles_video.filt_hp_imgs{end+1,1} = frame_cur;
+				handles_video.filter_hp_images{end+1,1} = frame_cur;
 
-				if size(handles_video.filt_hp_imgs,1)>=10
-					filt_hp_imgs = cell2mat(handles_video.filt_hp_imgs);
-					handles_video = rmfield(handles_video,'filt_hp_imgs');
+				if size(handles_video.filter_hp_images,1)>=10
+					filter_hp_images = cell2mat(handles_video.filter_hp_images);
+					handles_video = rmfield(handles_video,'filter_hp_images');
 					
-					handles_video.filt_hp = struct('init_cnt',0, 'b',[1 -1], 'a',[1 handles_video.config.thresholds.filt_hp_factor], 'z',-mean(filt_hp_imgs));
+					handles_video.filter_hp = struct('init_cnt',0, 'b',[1 -1], 'a',[1 handles_video.config.thresholds.filter_hp_factor], 'z',-mean(filter_hp_images));
 
 					handles_video.work_stage = 101;
 				end
 			end
 		case 101 % Stabilize high pass filter output
-			if handles_video.filt_hp.init_cnt < handles_video.config.thresholds.filter_hp_initframes
-				handles_video.filt_hp.init_cnt = handles_video.filt_hp.init_cnt+1;
-				[~, handles_video.filt_hp.z] = filter(handles_video.filt_hp.b, handles_video.filt_hp.a, frame_cur, handles_video.filt_hp.z, 1);
+			if handles_video.filter_hp.init_cnt < handles_video.config.thresholds.filter_hp_initframes
+				handles_video.filter_hp.init_cnt = handles_video.filter_hp.init_cnt+1;
+				[~, handles_video.filter_hp.z] = filter(handles_video.filter_hp.b, handles_video.filter_hp.a, frame_cur, handles_video.filter_hp.z, 1);
 			end
-			if handles_video.filt_hp.init_cnt >= handles_video.config.thresholds.filter_hp_initframes
+			if handles_video.filter_hp.init_cnt >= handles_video.config.thresholds.filter_hp_initframes
 				handles_video.work_stage = 200;
 			end
 
 		%% Statistics initialisation stage
 		case 200
-			if isfield(handles_video,'filt_hp')
-				[frame_cur, handles_video.filt_hp.z] = filter(handles_video.filt_hp.b, handles_video.filt_hp.a, frame_cur, handles_video.filt_hp.z, 1);
+			if isfield(handles_video,'filter_hp')
+				[frame_cur, handles_video.filter_hp.z] = filter(handles_video.filter_hp.b, handles_video.filter_hp.a, frame_cur, handles_video.filter_hp.z, 1);
 			end
 
 			if ~isfield(handles_video,'stat_init')
@@ -708,8 +708,8 @@ try
 		%% Main work stage
 		case 300
 			% High pass filtering
-			if isfield(handles_video,'filt_hp')
-				[frame_cur, handles_video.filt_hp.z] = filter(handles_video.filt_hp.b, handles_video.filt_hp.a, frame_cur, handles_video.filt_hp.z, 1);
+			if isfield(handles_video,'filter_hp')
+				[frame_cur, handles_video.filter_hp.z] = filter(handles_video.filter_hp.b, handles_video.filter_hp.a, frame_cur, handles_video.filter_hp.z, 1);
 			end
 
 			% Statistics checkign

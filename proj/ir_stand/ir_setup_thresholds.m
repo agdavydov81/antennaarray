@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 14-Oct-2014 01:34:01
+% Last Modified by GUIDE v2.5 14-Oct-2014 04:05:30
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -73,7 +73,7 @@ handles.config = cfg;
 
 if not(isfield(cfg,'thresholds'));								cfg.thresholds = struct();						end
 if not(isfield(cfg.thresholds,'start_delay'));					cfg.thresholds.start_delay = 15;				end
-if not(isfield(cfg.thresholds,'filt_hp_factor'));				cfg.thresholds.filt_hp_factor = -0.97;			end
+if not(isfield(cfg.thresholds,'filter_hp_factor'));				cfg.thresholds.filter_hp_factor = -0.97;		end
 if not(isfield(cfg.thresholds,'filter_hp_initframes'));			cfg.thresholds.filter_hp_initframes = 200;		end
 if not(isfield(cfg.thresholds,'stat_lo'));						cfg.thresholds.stat_lo = 0.005;					end
 if not(isfield(cfg.thresholds,'stat_hi'));						cfg.thresholds.stat_hi = 0.995;					end
@@ -88,7 +88,7 @@ if not(isfield(cfg.thresholds,'report_deton_img_number'));		cfg.thresholds.repor
 if not(isfield(cfg.thresholds,'report_graph_time'));			cfg.thresholds.report_graph_time = 300;			end
 
 set(handles.start_delay,				'String', num2str(cfg.thresholds.start_delay));
-set(handles.filt_hp_factor,				'String', num2str(cfg.thresholds.filt_hp_factor));
+set(handles.filter_hp_factor,			'String', num2str(cfg.thresholds.filter_hp_factor));
 set(handles.filter_hp_initframes,		'String', num2str(cfg.thresholds.filter_hp_initframes));
 set(handles.stat_lo,					'String', num2str(cfg.thresholds.stat_lo));
 set(handles.stat_hi,					'String', num2str(cfg.thresholds.stat_hi));
@@ -119,7 +119,7 @@ function varargout = ir_setup_thresholds_OutputFcn(hObject, eventdata, handles)
 cfg = handles.config;
 if handles.press_ok
 	cfg.thresholds.start_delay =				str2double(get(handles.start_delay,'String'));
-	cfg.thresholds.filt_hp_factor =				str2double(get(handles.filt_hp_factor,'String'));
+	cfg.thresholds.filter_hp_factor =			str2double(get(handles.filter_hp_factor,'String'));
 	cfg.thresholds.filter_hp_initframes =		str2double(get(handles.filter_hp_initframes,'String'));
 	cfg.thresholds.stat_lo =					str2double(get(handles.stat_lo,'String'));
 	cfg.thresholds.stat_hi =					str2double(get(handles.stat_hi,'String'));
@@ -207,3 +207,12 @@ if not(root)
 	return;
 end
 set(handles.report_path, 'String', root);
+
+
+% --- Executes on button press in filter_hp_freqz_btn.
+function filter_hp_freqz_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to filter_hp_freqz_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+filter_hp_factor = str2double(get(handles.filter_hp_factor,'String'));
+fvtool([1 -1],[1 filter_hp_factor]);
