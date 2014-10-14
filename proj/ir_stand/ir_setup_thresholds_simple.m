@@ -69,8 +69,8 @@ if isempty(varargin)
 else
 	cfg = varargin{1};
 end
+
 handles.config_orig = cfg;
-handles.config = cfg;
 
 if not(isfield(cfg,'thresholds'));								cfg.thresholds = struct();						end
 if not(isfield(cfg.thresholds,'detector_on_points'));			cfg.thresholds.detector_on_points = 100;		end
@@ -79,6 +79,23 @@ if not(isfield(cfg.thresholds,'detector_off_points'));			cfg.thresholds.detector
 if not(isfield(cfg.thresholds,'detector_off_part'));			cfg.thresholds.detector_off_part = 0.008;		end
 if not(isfield(cfg.thresholds,'detector_pre_buff'));			cfg.thresholds.detector_pre_buff = 0.5;			end
 if not(isfield(cfg.thresholds,'detector_post_buff'));			cfg.thresholds.detector_post_buff = 0.8;		end
+
+if not(isfield(cfg.thresholds,'start_delay'));					cfg.thresholds.start_delay = 15;				end
+if not(isfield(cfg.thresholds,'filter_hp_factor'));				cfg.thresholds.filter_hp_factor = -0.97;		end
+if not(isfield(cfg.thresholds,'filter_hp_initframes'));			cfg.thresholds.filter_hp_initframes = 200;		end
+if not(isfield(cfg.thresholds,'stat_lo'));						cfg.thresholds.stat_lo = 0.005;					end
+if not(isfield(cfg.thresholds,'stat_hi'));						cfg.thresholds.stat_hi = 0.995;					end
+if not(isfield(cfg.thresholds,'stat_time'));					cfg.thresholds.stat_time = 15;					end
+if not(isfield(cfg.thresholds,'stat_pixshift'));				cfg.thresholds.stat_pixshift = 1;				end
+if not(isfield(cfg.thresholds,'median_size'));					cfg.thresholds.median_size = 3;					end
+if not(isfield(cfg.thresholds,'report_path'));					cfg.thresholds.report_path = '.';				end
+if not(isfield(cfg.thresholds,'report_detoff_img_interval'));	cfg.thresholds.report_detoff_img_interval = 60;	end
+if not(isfield(cfg.thresholds,'report_detoff_img_number'));		cfg.thresholds.report_detoff_img_number = 1440;	end
+if not(isfield(cfg.thresholds,'report_deton_img_interval'));	cfg.thresholds.report_deton_img_interval = 1;	end
+if not(isfield(cfg.thresholds,'report_deton_img_number'));		cfg.thresholds.report_deton_img_number = 30;	end
+if not(isfield(cfg.thresholds,'report_graph_time'));			cfg.thresholds.report_graph_time = 300;			end
+
+handles.config = cfg;
 
 set(handles.detector_on_points,			'String', num2str(cfg.thresholds.detector_on_points));
 set(handles.detector_on_part,			'String', num2str(cfg.thresholds.detector_on_part));
@@ -95,7 +112,7 @@ uiwait(handles.figure1);
 
 
 % --- Outputs from this function are returned to the command line.
-function varargout = ir_setup_thresholds_simple_OutputFcn(hObject, eventdata, handles) 
+function varargout = ir_setup_thresholds_simple_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB

@@ -743,6 +743,8 @@ try
 					if mk_status~=1
 						error('disp:report',['Ошибка создания каталога "' handles_video.report.path '" протокола: ' mk_message]);
 					end
+					
+					xml_write(fullfile(handles_video.report.path,'config.xml'), handles_video.config, 'ir_stand', struct('StructItem',false));
 
 					handles_video.report.fh = fopen([handles_video.report.path 'graphs.txt'], 'wt');
 					if handles_video.report.fh==-1

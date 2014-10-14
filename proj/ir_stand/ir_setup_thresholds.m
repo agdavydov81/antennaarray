@@ -71,21 +71,25 @@ else
 end
 handles.config = cfg;
 
-if not(isfield(cfg,'thresholds'));								cfg.thresholds = struct();						end
-if not(isfield(cfg.thresholds,'start_delay'));					cfg.thresholds.start_delay = 15;				end
-if not(isfield(cfg.thresholds,'filter_hp_factor'));				cfg.thresholds.filter_hp_factor = -0.97;		end
-if not(isfield(cfg.thresholds,'filter_hp_initframes'));			cfg.thresholds.filter_hp_initframes = 200;		end
-if not(isfield(cfg.thresholds,'stat_lo'));						cfg.thresholds.stat_lo = 0.005;					end
-if not(isfield(cfg.thresholds,'stat_hi'));						cfg.thresholds.stat_hi = 0.995;					end
-if not(isfield(cfg.thresholds,'stat_time'));					cfg.thresholds.stat_time = 15;					end
-if not(isfield(cfg.thresholds,'stat_pixshift'));				cfg.thresholds.stat_pixshift = 1;				end
-if not(isfield(cfg.thresholds,'median_size'));					cfg.thresholds.median_size = 3;					end
-if not(isfield(cfg.thresholds,'report_path'));					cfg.thresholds.report_path = '.';				end
-if not(isfield(cfg.thresholds,'report_detoff_img_interval'));	cfg.thresholds.report_detoff_img_interval = 60;	end
-if not(isfield(cfg.thresholds,'report_detoff_img_number'));		cfg.thresholds.report_detoff_img_number = 1440;	end
-if not(isfield(cfg.thresholds,'report_deton_img_interval'));	cfg.thresholds.report_deton_img_interval = 1;	end
-if not(isfield(cfg.thresholds,'report_deton_img_number'));		cfg.thresholds.report_deton_img_number = 30;	end
-if not(isfield(cfg.thresholds,'report_graph_time'));			cfg.thresholds.report_graph_time = 300;			end
+if not(isfield(cfg,'thresholds'));
+	% Сохранено только для отладки
+	% Настоящая инициализация производится в ir_setup_thresholds_simple
+	cfg.thresholds = struct();
+	cfg.thresholds.start_delay = 15;
+	cfg.thresholds.filter_hp_factor = -0.97;
+	cfg.thresholds.filter_hp_initframes = 200;
+	cfg.thresholds.stat_lo = 0.005;
+	cfg.thresholds.stat_hi = 0.995;
+	cfg.thresholds.stat_time = 15;
+	cfg.thresholds.stat_pixshift = 1;
+	cfg.thresholds.median_size = 3;
+	cfg.thresholds.report_path = '.';
+	cfg.thresholds.report_detoff_img_interval = 60;
+	cfg.thresholds.report_detoff_img_number = 1440;
+	cfg.thresholds.report_deton_img_interval = 1;
+	cfg.thresholds.report_deton_img_number = 30;
+	cfg.thresholds.report_graph_time = 300;
+end
 
 set(handles.start_delay,				'String', num2str(cfg.thresholds.start_delay));
 set(handles.filter_hp_factor,			'String', num2str(cfg.thresholds.filter_hp_factor));
@@ -110,7 +114,7 @@ uiwait(handles.figure1);
 
 
 % --- Outputs from this function are returned to the command line.
-function varargout = ir_setup_thresholds_OutputFcn(hObject, eventdata, handles) 
+function varargout = ir_setup_thresholds_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
