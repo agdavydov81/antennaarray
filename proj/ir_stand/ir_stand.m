@@ -607,6 +607,9 @@ try
 	handles_video = get(timer_handle,'UserData');
 	frame_cur = getsnapshot(handles_video.vidobj);
 	frame_cur = frame_cur(1:end-3,1:end-3,1);
+	
+%	save(sprintf('frame_cur_%05d.mat',handles_video.toc_frames),'frame_cur','-v6');
+	
 	ax = fix(handles_video.config.video_device.axis);
 	frame_cur = double(frame_cur(ax(3)+1:ax(4), ax(1)+1:ax(2))) / double(intmax(class(frame_cur)));
 	if handles_video.config.video_device.autobalance
