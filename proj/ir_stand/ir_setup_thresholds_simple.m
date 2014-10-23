@@ -81,6 +81,7 @@ if not(isfield(cfg.thresholds,'detector_pre_buff'));			cfg.thresholds.detector_p
 if not(isfield(cfg.thresholds,'detector_post_buff'));			cfg.thresholds.detector_post_buff = 0.8;		end
 
 if not(isfield(cfg.thresholds,'start_delay'));					cfg.thresholds.start_delay = 15;				end
+if not(isfield(cfg.thresholds,'filter_no_median'));				cfg.thresholds.filter_no_median = 1;			end
 if not(isfield(cfg.thresholds,'filter_hp_factor'));				cfg.thresholds.filter_hp_factor = -0.97;		end
 if not(isfield(cfg.thresholds,'filter_hp_initframes'));			cfg.thresholds.filter_hp_initframes = 200;		end
 if not(isfield(cfg.thresholds,'stat_lo'));						cfg.thresholds.stat_lo = 0.005;					end

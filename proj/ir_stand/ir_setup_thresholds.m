@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 14-Oct-2014 04:05:30
+% Last Modified by GUIDE v2.5 23-Oct-2014 05:04:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -76,6 +76,7 @@ if not(isfield(cfg,'thresholds'));
 	% Ќасто€ща€ инициализаци€ производитс€ в ir_setup_thresholds_simple
 	cfg.thresholds = struct();
 	cfg.thresholds.start_delay = 15;
+	cfg.thresholds.filter_no_median = 1;
 	cfg.thresholds.filter_hp_factor = -0.97;
 	cfg.thresholds.filter_hp_initframes = 200;
 	cfg.thresholds.stat_lo = 0.005;
@@ -92,6 +93,7 @@ if not(isfield(cfg,'thresholds'));
 end
 
 set(handles.start_delay,				'String', num2str(cfg.thresholds.start_delay));
+set(handles.filter_no_median,			'Value',  cfg.thresholds.filter_no_median);
 set(handles.filter_hp_factor,			'String', num2str(cfg.thresholds.filter_hp_factor));
 set(handles.filter_hp_initframes,		'String', num2str(cfg.thresholds.filter_hp_initframes));
 set(handles.stat_lo,					'String', num2str(cfg.thresholds.stat_lo));
@@ -123,6 +125,7 @@ function varargout = ir_setup_thresholds_OutputFcn(hObject, eventdata, handles)
 cfg = handles.config;
 if handles.press_ok
 	cfg.thresholds.start_delay =				str2double(get(handles.start_delay,'String'));
+	cfg.thresholds.filter_no_median =			get(handles.filter_no_median, 'Value');
 	cfg.thresholds.filter_hp_factor =			str2double(get(handles.filter_hp_factor,'String'));
 	cfg.thresholds.filter_hp_initframes =		str2double(get(handles.filter_hp_initframes,'String'));
 	cfg.thresholds.stat_lo =					str2double(get(handles.stat_lo,'String'));

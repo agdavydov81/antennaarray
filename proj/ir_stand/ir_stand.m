@@ -242,7 +242,7 @@ if isfield(handles,'video')
 						fclose(handles_video.report.fh);
 					catch
 					end
-					
+
 					try
 						xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
 					catch ME
@@ -607,9 +607,10 @@ try
 	handles_video = get(timer_handle,'UserData');
 	frame_cur = getsnapshot(handles_video.vidobj);
 	frame_cur = frame_cur(1:end-3,1:end-3,1);
-	
-%	save(sprintf('frame_cur_%05d.mat',handles_video.toc_frames),'frame_cur','-v6');
-	
+
+	% For DEBUG ONLY
+	% save(sprintf('frame_cur_%05d.mat',handles_video.toc_frames),'frame_cur','-v6');
+
 	ax = fix(handles_video.config.video_device.axis);
 	frame_cur = double(frame_cur(ax(3)+1:ax(4), ax(1)+1:ax(2))) / double(intmax(class(frame_cur)));
 	if handles_video.config.video_device.autobalance
@@ -627,7 +628,12 @@ try
 	set(handles_video.handles.work_img_orig, 'XTick',[], 'YTick',[]);
 	frame_sz = size(frame_cur);
 	frame_cur = transpose(frame_cur(:));
-	
+
+	%% Brightness changing adaptation
+	if handles_video.config.thresholds.filter_no_median
+		frame_cur = frame_cur - median(frame_cur);
+	end
+
 	%% Time stamp displaying
 	toc_t = toc(handles_video.tic_id);
 	handles_video.toc_frames = handles_video.toc_frames+1;
@@ -749,9 +755,9 @@ try
 					
 					xml_write(fullfile(handles_video.report.path,'config.xml'), handles_video.config, 'ir_stand', struct('StructItem',false));
 
-					handles_video.report.fh = fopen([handles_video.report.path 'graphs.txt'], 'wt');
+					handles_video.report.fh = fopen(fullfile(handles_video.report.path,'graphs.txt'), 'wt');
 					if handles_video.report.fh==-1
-						error('disp:report',['Ошибка создания файла "' handles_video.report.path 'graphs.txt" протокола.']);
+						error('disp:report',['Ошибка создания файла "' fullfile(handles_video.report.path,'graphs.txt') '" протокола.']);
 					end
 
 					if handles_video.config.thresholds.report_detoff_img_number>0
