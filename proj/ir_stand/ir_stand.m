@@ -146,16 +146,9 @@ function setup_emi_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_emi_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-emi_program = -1;
-if isfield_ex(handles,'config.emi_generator.program')
-	emi_program = handles.config.emi_generator.program;
-end
-ret = inputdlg('Введите номер программы (-1 = отключить)','Настройка генератора ЭМВ',1,{num2str(emi_program)});
-if not(isempty(ret))
-	handles.config.emi_generator.program = str2double(ret{1});
-	xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
-	guidata(hObject, handles);
-end
+handles.config = ir_setup_emi(handles.config);
+xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
+guidata(hObject, handles);
 check_config(handles);
 
 
@@ -432,9 +425,12 @@ start_emi_generator(handles);
 
 
 function start_emi_generator(handles)
-if handles.config.emi_generator.program == -1
+if isempty(handles.config.emi_generator.program_list)
 	return
 end
+
+% !!! @@@ emi_generator.program
+
 
 %% USB Connection (VISA)
 
