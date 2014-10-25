@@ -22,7 +22,7 @@ function varargout = ir_setup_emi(varargin)
 
 % Edit the above text to modify the response to help ir_setup_emi
 
-% Last Modified by GUIDE v2.5 24-Oct-2014 01:03:12
+% Last Modified by GUIDE v2.5 25-Oct-2014 01:51:33
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -71,10 +71,13 @@ else
 end
 handles.config = cfg;
 
-if not(isfield(cfg,'emi_generator'));				cfg.emi_generator = struct();			end
-if not(isfield(cfg.emi_generator,'program_list'));	cfg.emi_generator.program_list = [];	end
+if not(isfield(cfg,'emi_generator'));					cfg.emi_generator = struct();				end
+if not(isfield(cfg.emi_generator,'program_list'));		cfg.emi_generator.program_list = [];		end
+if not(isfield(cfg.emi_generator,'program_index'));		cfg.emi_generator.program_index = 1;		end
+if not(isfield(cfg.emi_generator,'continue_flag'));		cfg.emi_generator.continue_flag = true;		end
 
 set(handles.emi_program_tbl, 'Data', [cfg.emi_generator.program_list; nan(1,numel(get(handles.emi_program_tbl,'ColumnWidth')))]);
+set(handles.emi_continue_flag, 'Value', cfg.emi_generator.continue_flag);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -95,6 +98,8 @@ if handles.press_ok
 	cfg.emi_generator.program_list = get(handles.emi_program_tbl, 'Data');
 	kill_ind = any(isnan(cfg.emi_generator.program_list),2);
 	cfg.emi_generator.program_list(kill_ind, :) = [];
+	cfg.emi_generator.continue_flag = get(handles.emi_continue_flag, 'Value');
+	cfg.emi_generator.program_index = 1;
 end
 
 varargout{1} = cfg;
