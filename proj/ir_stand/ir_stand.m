@@ -345,8 +345,8 @@ scatter(0,0,300,0.3+[0 0 0],'filled', 'Parent',handles.detector_lamp, 'Visible',
 set(handles.detector_lamp, 'Visible','off');
 
 % Create image processing timer
-handles.video.timer = timer('TimerFcn',@video_timer_func, 'Period',1/100, ...
-							'ExecutionMode','fixedRate');
+handles.video.timer = timer('TimerFcn',@video_timer_func, 'StopFcn',@player_timer_stop, ...
+							'Period',1/100, 'ExecutionMode','fixedRate');
 handles_video = handles.video;
 handles_video.handles = handles;
 handles_video.palette = uint8(255 * ir_colormap(handles_video.handles.work_img_orig, handles_video.config.video_device.palette));
@@ -421,17 +421,61 @@ if handles.config.acoustic_generator.sls.enable
 end
 
 % Start EMI generator
-start_emi_generator(handles);
+handles.emi_timer_handle = [];
+if ~isempty(handles.config.emi_generator.program_list)
+	if handles.config.emi_generator.continue_flag
+		handles.config.emi_generator.program_index = min(size(handles.config.emi_generator.program_list,1),max(1,handles.config.emi_generator.program_index));
+	end
+
+	start_emi_generator(handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1));
+
+	emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,2)*60;
+	if emi_delay>0 && ~isinf(emi_delay)
+		handles.emi_timer_handle = timer('TimerFcn',@emi_timer_func, 'StopFcn',@emi_timer_stop, ...
+								'ExecutionMode','singleShot', 'StartDelay',max(1,emi_delay), 'UserData',handles.figure1);
+		start(handles.emi_timer_handle);
+	end
+end
+guidata(handles.figure1, handles);
 
 
-function start_emi_generator(handles)
-if isempty(handles.config.emi_generator.program_list)
+function emi_timer_func(timer_handle, eventdata)
+
+
+function emi_timer_stop(timer_handle, eventdata)
+figure1_handle = get(timer_handle, 'UserData');
+
+if ~ishandle(figure1_handle)
+	delete(timer_handle);
+	return
+end
+handles = guidata(figure1_handle);
+if strcmp(get(handles.work_abort_btn,'Enable'),'off')
+	delete(timer_handle);
 	return
 end
 
-% !!! @@@ emi_generator.program
+handles.config.emi_generator.program_index = handles.config.emi_generator.program_index+1;
+if handles.config.emi_generator.program_index > size(handles.config.emi_generator.program_list,1)
+	handles.config.emi_generator.program_index = 1;
+end
+guidata(figure1_handle, handles);
+
+stop_emi_generator(handles);
+start_emi_generator(handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1));
+
+handles_video  = get(handles.video.timer, 'UserData');
+xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
+xml_write(fullfile(handles_video.report.path,'config.xml'), handles.config, 'ir_stand', struct('StructItem',false));
+
+emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,2)*60;
+if emi_delay>0 && ~isinf(emi_delay)
+	set(timer_handle,'StartDelay',max(1,emi_delay));
+	start(timer_handle);
+end
 
 
+function start_emi_generator(emi_generator_program)
 %% USB Connection (VISA)
 
 obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
@@ -462,7 +506,7 @@ fprintf(obj1,':OUTPut:MODulation:STATe OFF');
 fprintf(obj1,':FREQuency 66MHz');
 fprintf(obj1,':POWer -10dBm');
 
-fprintf(obj1,'*RCL 0%d,0', handles.config.emi_generator.program);
+fprintf(obj1,'*RCL 0%d,0', emi_generator_program);
 fprintf(obj1,':FREQuency:MODE LIST');
 fprintf(obj1,':OUTPut:STATe ON');
 
@@ -472,10 +516,10 @@ fclose(obj1);
 
 function stop_emi_generator(handles)
 try
-	if handles.config.emi_generator.program == -1
+	if isempty(handles.config.emi_generator.program_list)
 		return
 	end
-	
+
 	%% USB Connection (VISA)
 	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
 	% Create the VISA-USB object if it does not exist
@@ -605,7 +649,9 @@ try
 	frame_cur = frame_cur(1:end-3,1:end-3,1);
 
 	% For DEBUG ONLY
-	% save(sprintf('frame_cur_%05d.mat',handles_video.toc_frames),'frame_cur','-v6');
+	if isfield(handles_video.config,'debug_save_frames') && handles_video.config.debug_save_frames
+		save(sprintf('frame_cur_%05d.mat',handles_video.toc_frames),'frame_cur','-v6');
+	end
 
 	ax = fix(handles_video.config.video_device.axis);
 	frame_cur = double(frame_cur(ax(3)+1:ax(4), ax(1)+1:ax(2))) / double(intmax(class(frame_cur)));
