@@ -210,7 +210,9 @@ dos('taskkill /F /IM Lobanov_mark.exe 1>nul 2>&1');
 
 if isfield_ex(handles,'config.acoustic_generator.harm.enable') && handles.config.acoustic_generator.harm.enable
 	try
-		playrec('reset');
+		if playrec('isInitialised')
+			playrec('reset');
+		end
 	catch ME
 		if isfield(handles.config,'disp_debug') && handles.config.disp_debug
 			disp(ME.message);
@@ -427,9 +429,9 @@ if ~isempty(handles.config.emi_generator.program_list)
 		handles.config.emi_generator.program_index = min(size(handles.config.emi_generator.program_list,1),max(1,handles.config.emi_generator.program_index));
 	end
 
-	start_emi_generator(handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1));
+	start_emi_generator(handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1:end-1));
 
-	emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,2)*60;
+	emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,end)*60;
 	if emi_delay>0 && ~isinf(emi_delay)
 		handles.emi_timer_handle = timer('TimerFcn',@emi_timer_func, 'StopFcn',@emi_timer_stop, ...
 								'ExecutionMode','singleShot', 'StartDelay',max(1,emi_delay), 'UserData',handles.figure1);
@@ -462,20 +464,20 @@ end
 guidata(figure1_handle, handles);
 
 stop_emi_generator(handles);
-start_emi_generator(handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1));
+start_emi_generator(handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1:end-1));
 
 handles_video  = get(handles.video.timer, 'UserData');
 xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
 xml_write(fullfile(handles_video.report.path,'config.xml'), handles.config, 'ir_stand', struct('StructItem',false));
 
-emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,2)*60;
+emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,end)*60;
 if emi_delay>0 && ~isinf(emi_delay)
 	set(timer_handle,'StartDelay',max(1,emi_delay));
 	start(timer_handle);
 end
 
 
-function start_emi_generator(emi_generator_program)
+function start_emi_generator(sequence_register)
 %% USB Connection (VISA)
 
 obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
@@ -506,7 +508,7 @@ fprintf(obj1,':OUTPut:MODulation:STATe OFF');
 fprintf(obj1,':FREQuency 66MHz');
 fprintf(obj1,':POWer -10dBm');
 
-fprintf(obj1,'*RCL 0%d,0', emi_generator_program);
+fprintf(obj1,'%s',sprintf('*RCL %02d,%d', sequence_register(2), sequence_register(1)));
 fprintf(obj1,':FREQuency:MODE LIST');
 fprintf(obj1,':OUTPut:STATe ON');
 
@@ -592,10 +594,10 @@ try
 
 	set(timer_handle, 'UserData',handles_play);
 catch ME
-% 	if isfield(handles.config,'disp_debug') && handles.config.disp_debug
-% 		disp(ME.message);
-% 		disp(ME.stack(1));
-% 	end
+	if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+		disp(ME.message);
+		disp(ME.stack(1));
+	end
 end
 
 
@@ -614,10 +616,10 @@ try
 		dos(dos_str);
 	end
 catch ME
-% 	if isfield(handles.config,'disp_debug') && handles.config.disp_debug
-% 		disp(ME.message);
-% 		disp(ME.stack(1));
-% 	end
+	if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+		disp(ME.message);
+		disp(ME.stack(1));
+	end
 end
 
 function str = toc2str(toc_t, sep_ch)
