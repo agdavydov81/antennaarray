@@ -214,7 +214,7 @@ if isfield_ex(handles,'config.acoustic_generator.harm.enable') && handles.config
 			playrec('reset');
 		end
 	catch ME
-		if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+		if isfield(handles.config,'debug_messages') && handles.config.debug_messages
 			disp(ME.message);
 			disp(ME.stack(1));
 		end
@@ -241,7 +241,7 @@ if isfield(handles,'video')
 					try
 						xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
 					catch ME
-						if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+						if isfield(handles.config,'debug_messages') && handles.config.debug_messages
 							disp(ME.message);
 							disp(ME.stack(1));
 						end
@@ -295,7 +295,7 @@ if isfield(handles,'video')
 			end
 		end
 	catch ME
-		if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+		if isfield(handles.config,'debug_messages') && handles.config.debug_messages
 			disp(ME.message);
 			disp(ME.stack(1));
 		end
@@ -546,7 +546,7 @@ try
 
 	fclose(obj1);
 catch ME
-	if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
 		disp(ME.message);
 		disp(ME.stack(1));
 	end
@@ -594,7 +594,7 @@ try
 
 	set(timer_handle, 'UserData',handles_play);
 catch ME
-	if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
 		disp(ME.message);
 		disp(ME.stack(1));
 	end
@@ -616,7 +616,7 @@ try
 		dos(dos_str);
 	end
 catch ME
-	if isfield(handles.config,'disp_debug') && handles.config.disp_debug
+	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
 		disp(ME.message);
 		disp(ME.stack(1));
 	end
@@ -651,8 +651,16 @@ try
 	frame_cur = frame_cur(1:end-3,1:end-3,1);
 
 	% For DEBUG ONLY
-	if isfield(handles_video.config,'debug_save_frames') && handles_video.config.debug_save_frames
-		save(sprintf('frame_cur_%05d.mat',handles_video.toc_frames),'frame_cur','-v6');
+	if isfield(handles_video.config,'debug_saveframes') && handles_video.config.debug_saveframes && not(isempty(handles_video.config.thresholds.report_path))
+		if not(isfield(handles_video,'report'))
+			[cur.Y, cur.M, cur.D, cur.H, cur.MN, cur.S] = datevec(now);
+			handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%d.%d_%02d.%02d.%02d', mfilename, cur.Y, cur.M, cur.D, cur.H, cur.MN, round(cur.S)), filesep);
+			[mk_status, mk_message] = mkdir(fullfile(handles_video.report.path,'raw_frames'));
+			if mk_status~=1
+				error('disp:report',['Ошибка создания каталога "' fullfile(handles_video.report.path,'raw_frames') '" протокола: ' mk_message]);
+			end
+		end
+		save(fullfile(handles_video.report.path,'raw_frames',sprintf('%06d.mat',handles_video.toc_frames)),'frame_cur','-v6');
 	end
 
 	ax = fix(handles_video.config.video_device.axis);
@@ -769,9 +777,14 @@ try
 			is_signaling = (frame_cur<handles_video.stat.lo) | (frame_cur>handles_video.stat.hi);
 
 			% Median filtering
-			if handles_video.config.thresholds.median_size>1
+			if handles_video.config.thresholds.median_size_ispercent
+				median_size = round(handles_video.config.thresholds.median_size*min(frame_sz)/100);
+			else
+				median_size = handles_video.config.thresholds.median_size;
+			end
+			if median_size>1
 				is_signaling = reshape(is_signaling, frame_sz);
-				is_signaling = medfilt2(is_signaling, handles_video.config.thresholds.median_size+[0 0]);
+				is_signaling = medfilt2(is_signaling, median_size+[0 0]);
 				is_signaling = transpose(is_signaling(:));
 			end
 			frame_cur_bw_mask = repmat(reshape(is_signaling, frame_sz),[1 1 3]);
@@ -786,15 +799,24 @@ try
 			if ~isfield(handles_video,'detector')
 				handles_video.detector = struct('graphs',zeros(0,3), 'state',false, 'thresholds_on_toc',-inf);
 
+				if isfield(handles_video,'report')
+					handles_video_report_path = handles_video.report.path;
+				else
+					handles_video_report_path = nan;
+				end
 				handles_video.report = struct(	'fh',-1, 'prebuf_img',{{}}, 'prebuf_toc',zeros(0,2), ...
 												'normal_img_cnt',0, 'normal_img_toc',-inf, 'overall',{{}});
 
 				if not(isempty(handles_video.config.thresholds.report_path))
-					[cur.Y, cur.M, cur.D, cur.H, cur.MN, cur.S] = datevec(now);
-					handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%d.%d_%02d.%02d.%02d', mfilename, cur.Y, cur.M, cur.D, cur.H, cur.MN, round(cur.S)), filesep);
-					[mk_status, mk_message] = mkdir(handles_video.report.path);
-					if mk_status~=1
-						error('disp:report',['Ошибка создания каталога "' handles_video.report.path '" протокола: ' mk_message]);
+					if isnan(handles_video_report_path)
+						[cur.Y, cur.M, cur.D, cur.H, cur.MN, cur.S] = datevec(now);
+						handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%d.%d_%02d.%02d.%02d', mfilename, cur.Y, cur.M, cur.D, cur.H, cur.MN, round(cur.S)), filesep);
+						[mk_status, mk_message] = mkdir(handles_video.report.path);
+						if mk_status~=1
+							error('disp:report',['Ошибка создания каталога "' handles_video.report.path '" протокола: ' mk_message]);
+						end
+					else
+						handles_video.report.path = handles_video_report_path;
 					end
 					
 					xml_write(fullfile(handles_video.report.path,'config.xml'), handles_video.config, 'ir_stand', struct('StructItem',false));
@@ -927,7 +949,7 @@ try
 
 	drawnow();
 catch ME
-	if strcmp(ME.identifier,'disp:report') || (isfield(handles_video.config,'disp_debug') && handles_video.config.disp_debug)
+	if strcmp(ME.identifier,'disp:report') || (isfield(handles_video.config,'debug_messages') && handles_video.config.debug_messages)
 		disp(ME.message);
 		disp(ME.stack(1));
 	end

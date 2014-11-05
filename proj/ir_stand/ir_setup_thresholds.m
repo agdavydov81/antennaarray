@@ -75,7 +75,7 @@ if not(isfield(cfg,'thresholds'));
 	% Сохранено только для отладки
 	% Настоящая инициализация производится в ir_setup_thresholds_simple
 	cfg.thresholds = struct();
-	cfg.thresholds.start_delay = 15;
+	cfg.thresholds.start_delay = 3;
 	cfg.thresholds.filter_no_median = 1;
 	cfg.thresholds.filter_hp_factor = -0.97;
 	cfg.thresholds.filter_hp_initframes = 200;
@@ -84,12 +84,15 @@ if not(isfield(cfg,'thresholds'));
 	cfg.thresholds.stat_time = 15;
 	cfg.thresholds.stat_pixshift = 1;
 	cfg.thresholds.median_size = 3;
+	cfg.thresholds.median_size_ispercent = 0;
 	cfg.thresholds.report_path = '.';
 	cfg.thresholds.report_detoff_img_interval = 60;
 	cfg.thresholds.report_detoff_img_number = 1440;
 	cfg.thresholds.report_deton_img_interval = 1;
 	cfg.thresholds.report_deton_img_number = 30;
-	cfg.thresholds.report_graph_time = 300;
+	cfg.thresholds.report_graph_time = 3600;
+	cfg.debug_messages = 0;
+	cfg.debug_saveframes = 0;
 end
 
 set(handles.start_delay,				'String', num2str(cfg.thresholds.start_delay));
@@ -101,12 +104,16 @@ set(handles.stat_hi,					'String', num2str(cfg.thresholds.stat_hi));
 set(handles.stat_time,					'String', num2str(cfg.thresholds.stat_time));
 set(handles.stat_pixshift,				'String', num2str(cfg.thresholds.stat_pixshift));
 set(handles.median_size,				'String', num2str(cfg.thresholds.median_size));
+set(handles.median_size_ispercent,		'Value',  cfg.thresholds.median_size_ispercent);
 set(handles.report_path,				'String', cfg.thresholds.report_path);
 set(handles.report_detoff_img_interval,	'String', num2str(cfg.thresholds.report_detoff_img_interval));
 set(handles.report_detoff_img_number,	'String', num2str(cfg.thresholds.report_detoff_img_number));
 set(handles.report_deton_img_interval,	'String', num2str(cfg.thresholds.report_deton_img_interval));
 set(handles.report_deton_img_number,	'String', num2str(cfg.thresholds.report_deton_img_number));
 set(handles.report_graph_time,			'String', num2str(cfg.thresholds.report_graph_time));
+set(handles.debug_messages,				'Value',  cfg.debug_messages);
+set(handles.debug_saveframes,			'Value',  cfg.debug_saveframes);
+
 
 % Update handles structure
 guidata(hObject, handles);
@@ -132,13 +139,16 @@ if handles.press_ok
 	cfg.thresholds.stat_hi =					str2double(get(handles.stat_hi,'String'));
 	cfg.thresholds.stat_time =					str2double(get(handles.stat_time,'String'));
 	cfg.thresholds.stat_pixshift =				str2double(get(handles.stat_pixshift,'String'));
-	cfg.thresholds.median_size =				str2double(get(handles.median_size,	'String'));
-	cfg.thresholds.report_path =				get(handles.report_path, 'String');
+	cfg.thresholds.median_size =				str2double(get(handles.median_size,'String'));
+	cfg.thresholds.median_size_ispercent =		get(handles.median_size_ispercent,'Value');
+	cfg.thresholds.report_path =				get(handles.report_path,'String');
 	cfg.thresholds.report_detoff_img_interval=	str2double(get(handles.report_detoff_img_interval,'String'));
 	cfg.thresholds.report_detoff_img_number=	str2double(get(handles.report_detoff_img_number,'String'));
 	cfg.thresholds.report_deton_img_interval=	str2double(get(handles.report_deton_img_interval,'String'));
 	cfg.thresholds.report_deton_img_number=		str2double(get(handles.report_deton_img_number,'String'));
 	cfg.thresholds.report_graph_time =			str2double(get(handles.report_graph_time,'String'));
+	cfg.debug_messages =						get(handles.debug_messages,'Value');
+	cfg.debug_saveframes =						get(handles.debug_saveframes,'Value');
 end
 
 varargout{1} = cfg;
