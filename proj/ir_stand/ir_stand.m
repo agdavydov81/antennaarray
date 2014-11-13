@@ -72,7 +72,17 @@ guidata(hObject, handles);
 % uiwait(handles.figure1);
 
 % Show BSUIR logo
-imshow([fileparts(mfilename('fullpath')) filesep 'bsuir_logo.png'], 'Parent',handles.logo_axes);
+[logo_image, logo_map, logo_alpha] = imread(fullfile(fileparts(mfilename('fullpath')), 'bsuir_logo.png'));
+if ~isempty(logo_map)
+	logo_map = reshape(uint8(logo_map * 255), size(logo_map,1), 1, 3);
+	logo_image = cell2mat(arrayfun(@(x) logo_map(x+1,:,:), logo_image, 'UniformOutput',false));
+end
+if ~isempty(logo_alpha)
+	back_color = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_alpha) 1]);
+	logo_alpha = repmat(double(logo_alpha)/255,[1 1 3]);
+	logo_image = uint8(double(logo_image).*logo_alpha + back_color.*(1-logo_alpha));
+end
+imshow(logo_image, 'Parent',handles.logo_axes);
 
 % Position to center of screen
 old_units = get(hObject,'Units');
