@@ -14,12 +14,15 @@ if nargin<4
 	M = 3;
 end
 
-p_med = 0;
-for i = ceil(M*M/2) : M*M
-	p_med = p_med + nchoosek(M*M,i)*(p^i)*((1-p)^(M*M-i));
+if M==1
+	p_med = p;
+else
+	p_med = 0;
+	for i = ceil(M*M/2) : M*M
+		p_med = p_med + nchoosek(M*M,i)*(p^i)*((1-p)^(M*M-i));
+	end
+	p_med1 = 1 - binocdf(floor(M*M/2), M*M, p);
 end
-disp(p_med);
-p_med1 = 1 - binocdf(floor(M*M/2), M*M, p);
 
 graph = zeros(N,1);
 for n = 1:N
@@ -53,4 +56,5 @@ if nargout<1
 	hold('on');
 	plot(hx(1):hx(end),binocdf(hx(1):hx(end),numel(pp),p_med),'r--');
 	title(sprintf('mu=%f, sigma=%f, diff=%f',mu,sigma, q_rel ), 'interpreter','none');
+	legend('Simulated','Theoretical','Location','NW');
 end
