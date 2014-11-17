@@ -55,6 +55,6 @@ if nargout<1
 	grid('on');
 	hold('on');
 	plot(hx(1):hx(end),binocdf(hx(1):hx(end),numel(pp),p_med),'r--');
-	title(sprintf('mu=%f, sigma=%f, diff=%f',mu,sigma, q_rel ), 'interpreter','none');
+	title(sprintf('mu=%f; sigma=%f; Simulated(q0.9-q0.1)/Theoretical(q0.9-q0.1)=%f',mu,sigma, q_rel ), 'interpreter','none');
 	legend('Simulated','Theoretical','Location','NW');
 end
