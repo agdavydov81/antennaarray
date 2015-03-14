@@ -1,0 +1,54 @@
+#ifndef version_h__
+#define version_h__
+
+#ifdef PRECISION_SINGLE
+#define VER_PRC	" float"
+#else
+#define VER_PRC	" double"
+#endif
+
+#ifdef __INTEL_COMPILER
+#define VER_CL	" Intel"
+#define VER_FPU	" SSE2"
+
+#elif defined(_MSC_VER)
+#define VER_CL	" MS"
+#if defined(_M_X64) || defined(_M_IA64) || _M_IX86_FP==2
+#define VER_FPU	" SSE2"
+#elif _M_IX86_FP==1
+#define VER_FPU	" SSE"
+#elif _M_IX86_FP==0
+#define VER_FPU	" x87"
+#else
+#define VER_FPU	""
+#endif
+
+#elif defined(__GNUC__)
+#define VER_CL	" GCC"
+#if defined(__SSE2__)
+#define VER_FPU	" SSE2"
+#elif defined(__SSE__)
+#define VER_FPU	" SSE"
+#else
+#define VER_FPU	" x87"
+#endif
+#endif
+
+#if defined(_DEBUG) || defined(DEBUG)
+#define VER_DBG	" debug"
+#else
+#define VER_DBG	""
+#endif
+
+#ifdef HASP
+#define VER_HASP " HASP"
+#else
+#define VER_HASP ""
+#endif
+
+#define VER_NAME "@VER_NAME@"
+#define VER_NUM "@VERSION@"
+
+#define VER_STR VER_NAME " " VER_NUM VER_FPU VER_CL VER_DBG VER_HASP
+
+#endif // version_h__

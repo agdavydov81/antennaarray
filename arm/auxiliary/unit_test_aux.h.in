@@ -1,0 +1,132 @@
+#ifndef unit_test_aux_h__
+#define unit_test_aux_h__
+
+#include <cmath>
+#include <cstring>
+#include <stdexcept>
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iterator>
+#include <vector>
+#include <sndfile.hh>
+
+#define CMAKE_SOURCE_DIR	"@CMAKE_SOURCE_DIR@"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+template<class T>
+inline std::vector<T> str2vec(const char *str) {
+	std::istringstream isstr(str);
+	std::vector<T> data((std::istream_iterator<T>(isstr)), std::istream_iterator<T>());
+	return data;
+}
+
+template<class T>
+inline std::vector<T> load_vec(const char *file_name) {
+	std::ifstream fh(file_name);
+	if(!fh)
+		throw std::runtime_error(std::string("Can't open file \"")+file_name+"\".");
+	std::vector<T> data((std::istream_iterator<T>(fh)), std::istream_iterator<T>());
+	return data;
+}
+
+template<typename T>
+void save_vec(const char *file_name, const std::vector<T> &vec) {
+	std::ofstream fh(file_name);
+	if(!fh)
+		throw std::runtime_error(std::string("Can't open file \"")+file_name+"\".");
+	std::copy(vec.begin(), vec.end(), std::ostream_iterator<T>(fh, "\n"));
+}
+
+inline std::string load_txt(const char *file_name) {
+	std::ifstream fh(file_name);
+	if(!fh)
+		throw std::runtime_error(std::string("Can't open file \"")+file_name+"\".");
+	return std::string(std::istream_iterator<char>(fh >> std::noskipws),std::istream_iterator<char>());
+}
+
+struct wav_x_fs {
+	std::vector<short>	data;
+	int					fs;
+};
+inline wav_x_fs load_wav(const char *file_name) {
+	SndfileHandle file(file_name);
+	if(!file || !file.frames())
+		throw std::runtime_error(std::string("Can't open file \"")+file_name+"\".");
+
+	wav_x_fs data;
+	data.fs=file.samplerate();
+	data.data.resize((size_t)file.frames());
+	file.read(&data.data[0], data.data.size());
+	return data;
+}
+
+inline void save_wav(const wav_x_fs &data, const char *file_name) {
+	SndfileHandle file(file_name, SFM_WRITE, SF_FORMAT_WAV|SF_FORMAT_PCM_16, 1, data.fs);
+	file.write(&data.data[0], data.data.size());
+}
+
+#ifdef _MSC_VER
+	#include <intrin.h>
+	#pragma intrinsic(__rdtsc)
+	typedef unsigned __int64 uint64_t;
+#else
+	#include <stdint.h>
+	// http://en.wikipedia.org/wiki/Time_Stamp_Counter
+	__inline__ uint64_t __rdtsc(void) {
+		uint32_t lo, hi;
+		__asm__ __volatile__ (
+		"        xorl %%eax,%%eax \n"
+		"        cpuid"      // serialize
+		::: "%rax", "%rbx", "%rcx", "%rdx");
+		/* We cannot use "=A", since this would use %rax on x86_64 and return only the lower 32bits of the TSC */
+		__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+		return (uint64_t)hi << 32 | lo;
+	}
+#endif
+
+inline void UT_EnableFPUExceptions() {
+#if defined(_MSC_VER) && defined(_DEBUG)
+	//Set the x86 floating-point control word according to what
+	//exceptions you want to trap.
+	_clearfp(); //Always call _clearfp before setting the control
+	//word
+	//Because the second parameter in the following call is 0, it
+	//only returns the floating-point control word
+	unsigned int cw = _controlfp(0, 0); //Get the default control
+	//word
+	//Set the exception masks off for exceptions that you want to
+	//trap.  When a mask bit is set, the corresponding floating-point
+	//exception is //blocked from being generating.
+	cw &=~(EM_OVERFLOW|EM_UNDERFLOW|EM_ZERODIVIDE|
+		EM_DENORMAL|EM_INVALID);
+	//For any bit in the second parameter (mask) that is 1, the
+	//corresponding bit in the first parameter is used to update
+	//the control word.
+	unsigned int cwOriginal = _controlfp(cw, MCW_EM); //Set it.
+	//MCW_EM is defined in float.h.
+#endif
+}
+
+#ifdef BOOST_CHECK_CLOSE_FRACTION
+template<typename _cur_data_t_, typename _ref_data_t_>
+inline void SEQUENCES_CHECK(const std::vector<_cur_data_t_> &cur_h, const _ref_data_t_ *ref_h, double fraction) {
+	for(typename std::vector<_cur_data_t_>::const_iterator it_beg=cur_h.begin(), it_end=cur_h.end(); it_beg!=it_end; ++it_beg, ++ref_h)
+		BOOST_CHECK_CLOSE_FRACTION(*it_beg, *ref_h, fraction);
+}
+#endif
+
+#ifdef BOOST_CHECK_EQUAL
+template<class _data_t_>
+void VECTORS_CHECK_EQUAL(const std::vector<_data_t_> &ref, const std::vector<_data_t_> &test) {
+	BOOST_CHECK_EQUAL(ref.size(), test.size());
+	for(typename std::vector<_data_t_>::const_iterator it_ref=ref.begin(), ie_ref=ref.end(), it_test=test.begin(); it_ref!=ie_ref; ++it_ref, ++it_test )
+		BOOST_CHECK_EQUAL(*it_ref, *it_test);
+}
+#endif
+
+#endif // unit_test_aux_h__
