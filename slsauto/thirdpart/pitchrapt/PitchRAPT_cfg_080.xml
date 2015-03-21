@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PitchRAPT>
+	<General preproc_a="0.9" frame_step="0.01" />
+	<VAD signal_band_min="350" signal_band_max="4000" reestimation_time="300" min_db_range="40" db_range_part="0.45" min_pause="0.15" min_speech="0.2" />
+	<Tone f0_min="60" f0_max="500" threshold_ncc="0.8" threshold_powerpart="0.6" threshold_powerdb="-40" voiced_min_length="0.04" unvoiced_min_length="0.05" />
+	<DP LAG_WT="0.243" FREQ_WT="0.71" DOUBL_C="0.787" global_stat_weight="0.053" global_stat_order="100" global_stat_delay="30" /> 
+	<Log enable="true" root="" />
+</PitchRAPT>

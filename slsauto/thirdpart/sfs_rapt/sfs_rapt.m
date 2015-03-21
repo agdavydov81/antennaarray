@@ -8,7 +8,7 @@ function [f0_freq, f0_time, f0_tone]=sfs_rapt(x, fs)
 %   fs - sampling frequency
 
 %   Copyright Давыдов Андрей (andrew.aka.manik@gmail.com).
-%   Revision: 1.0.10.21
+%   Revision: 1.0.11.22
 
 	tmp_dir=tempname();
 	mkdir(tmp_dir);
@@ -19,8 +19,16 @@ function [f0_freq, f0_time, f0_tone]=sfs_rapt(x, fs)
 	tmp_bat=[tmp_dir filesep 'proc.bat'];
 
 	if nargin<2 && isa(x,'char')
-		tmp_wav = x;
-	else
+		[~, ~, snd_ext] = fileparts(x);
+		if ~strcmpi(snd_ext,'.wav') && exist('libsndfile_read','file')
+			[x, x_info] = libsndfile_read(x);
+			fs = x_info.SampleRate;
+		else
+			tmp_wav = x;
+		end
+	end
+	if isnumeric(x)
+		x(:,2:end) = [];
 		wavwrite(x,fs,16,tmp_wav);
 	end
 
