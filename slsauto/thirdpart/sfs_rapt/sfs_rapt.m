@@ -8,7 +8,7 @@ function [f0_freq, f0_time, f0_tone]=sfs_rapt(x, fs)
 %   fs - sampling frequency
 
 %   Copyright Давыдов Андрей (andrew.aka.manik@gmail.com).
-%   Revision: 1.0.11.22
+%   Revision: 1.0.13
 
 	tmp_dir=tempname();
 	mkdir(tmp_dir);
@@ -31,6 +31,14 @@ function [f0_freq, f0_time, f0_tone]=sfs_rapt(x, fs)
 		x(:,2:end) = [];
 		wavwrite(x,fs,16,tmp_wav);
 	end
+	if ~exist('fs','var')
+		if exist('libsndfile_read','file')
+			x_info = libsndfile_info(tmp_wav);
+			fs = x_info.SampleRate;
+		else
+			[~,fs] = wavread(tmp_wav);
+		end
+	end
 
 	copyfile(which('sfs_proj.sfs'), tmp_sfs);
 
@@ -46,6 +54,7 @@ function [f0_freq, f0_time, f0_tone]=sfs_rapt(x, fs)
 
 	out_txt=textread(tmp_out, '%s', 'delimiter','\n'); %#ok<REMFF1>
 	pitch_fs = str2double(regexp(out_txt{9}, ['(?<=Frame Duration : ' double_regexpr ' \()\d+(?= Hz\))'], 'match','once'));
+	pitch_fs = fs/fix(fs/pitch_fs);
 	
 	try
 		rmdir(tmp_dir,'s');
