@@ -1,11 +1,11 @@
 function slsauto_pitchraw(snd_pathname)
 	[f0_pr.freq, f0_pr.time]   = pitchrapt(snd_pathname);
 	f0_pr.freq = octave_fix(f0_pr.freq, f0_pr.time);
-	save_pitchraw(snd_pathname, f0_pr, 'pr(b+)');
+	save_pitchraw(snd_pathname, f0_pr, 'pitchrapt(bd)');
 
 	[f0_sfs.freq, f0_sfs.time] = sfs_rapt(snd_pathname);
-	f0_sfs.freq = octave_fix(medfilt1(f0_sfs.freq,5), f0_sfs.time);
-	save_pitchraw(snd_pathname, f0_sfs, 'sfs(kd)');
+%	f0_sfs.freq = octave_fix(f0_sfs.freq, f0_sfs.time);
+	save_pitchraw(snd_pathname, f0_sfs, 'sfs_rapt(k.)');
 
 	slsauto_plotpitch(snd_pathname);
 end
