@@ -3,6 +3,6 @@ function lab_write(lab_info, lab_path)
 
 	% from http://stackoverflow.com/questions/12415767/write-unicode-strings-to-a-file-in-matlab
 	fh = fopen(lab_path, 'w');
-	arrayfun(@(x) fprintf(fh,'%s %s ',x.raw_begin,x.raw_end)+fwrite(fh,unicode2native(x.string,'UTF-8'),'uint8')+fprintf(fh,'\n'), lab_info);
+	arrayfun(@(x) fprintf(fh,'%d %d ',round(x.begin*10000000),round(x.end*10000000))+fwrite(fh,unicode2native(x.string,'UTF-8'),'uint8')+fprintf(fh,'\n'), lab_info);
 	fclose(fh);
 end
