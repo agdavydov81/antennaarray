@@ -3,7 +3,7 @@ function slsauto_main()
 
 	snd_pathname = 'd:\Matlab work\kaz\snd\cut1.flac';
 
-	slsauto_pitchraw(snd_pathname);
+	slsauto_pitch_raw(snd_pathname);
 	
 %	slsauto_
 end

@@ -1,4 +1,4 @@
-function slsauto_pitch_syntagma_stat(snd_pathname, lab_pathname, pitch_pathname)
+function slsauto_pitch_syntagm_stat(snd_pathname, lab_pathname, pitch_pathname)
 	pitch_data = load(pitch_pathname);
 	pitch_data(pitch_data(:,2)==0,:) = [];
 	pitch_data(:,2) = []; % ЧОТ не нужна
@@ -33,8 +33,8 @@ function slsauto_pitch_syntagma_stat(snd_pathname, lab_pathname, pitch_pathname)
 	unvoc_meandb =power_meandb(~syntagmas_ind);
 
 	%% Отображение результатов
-	[~,snd_name] = fileparts(snd_pathname);
-	figure('Toolbar','figure', 'NumberTitle','off', 'Name',snd_name, 'Units','normalized', 'Position',[0 0 1 1]);
+	[~,snd_name,snd_ext] = fileparts(snd_pathname);
+	figure('Toolbar','figure', 'NumberTitle','off', 'Name',[snd_name snd_ext], 'Units','normalized', 'Position',[0 0 1 1]);
 
 	% Pause-Power PDF
 	axes('Units','normalized', 'Position',[0.06 0.55 0.42 0.40]);

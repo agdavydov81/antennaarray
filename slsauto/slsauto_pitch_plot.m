@@ -1,9 +1,12 @@
-function slsauto_plotpitch(snd_pathname)
+function slsauto_pitch_plot(snd_pathname)
 	list = dir([snd_pathname '.pitch_*.txt']);
 	[~,si] = sort({list.name});
 	list = list(si);
 
 	[x,x_info] = libsndfile_read(snd_pathname);
+	if ~isempty(x_info.Error)
+		error(x_info.Error);
+	end
 	x(:,2:end) = [];
 	if x_info.SampleRate~=8000
 		x = resample(x, 8000, x_info.SampleRate);
@@ -30,6 +33,7 @@ function slsauto_plotpitch(snd_pathname)
 	
 	spectrum_subplot=axes('Units','normalized', 'Position',[0.06 0.05 0.92 0.55]);
 	imagesc(X_time,X_freq,X);
+	setcolormap('hsl');
 	axis('xy');
 	axis([x_lim 0 1000]); % fs/2
 	ylabel('Spectrogram, Hz');

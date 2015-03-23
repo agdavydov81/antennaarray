@@ -1,13 +1,13 @@
-function slsauto_pitchraw(snd_pathname)
+function slsauto_pitch_raw(snd_pathname)
 	[f0_pr.freq, f0_pr.time]   = pitchrapt(snd_pathname);
 	f0_pr.freq = octave_fix(f0_pr.freq, f0_pr.time);
-	save_pitchraw(snd_pathname, f0_pr, 'pitchrapt(bd)');
+	save_pitch_raw(snd_pathname, f0_pr, 'pitchrapt(bd)');
 
 	[f0_sfs.freq, f0_sfs.time] = sfs_rapt(snd_pathname);
 %	f0_sfs.freq = octave_fix(f0_sfs.freq, f0_sfs.time);
-	save_pitchraw(snd_pathname, f0_sfs, 'sfs_rapt(k.)');
+	save_pitch_raw(snd_pathname, f0_sfs, 'sfs_rapt(k.)');
 
-	slsauto_plotpitch(snd_pathname);
+	slsauto_pitch_plot(snd_pathname);
 end
 
 function f0_freq = octave_fix(f0_freq, f0_time)
@@ -45,7 +45,7 @@ function df = calc_df(f0_freq, f0_time)
 	df(dt>=min(dt)*1.1) = 0;
 end
 
-function save_pitchraw(snd_pathname, f0, ext)
+function save_pitch_raw(snd_pathname, f0, ext)
 	save_data = [f0.time(:) f0.freq(:)];
 	save([snd_pathname '.pitch_' ext '.txt'],'save_data','-ascii');
 end

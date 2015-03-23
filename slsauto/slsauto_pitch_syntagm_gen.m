@@ -1,4 +1,4 @@
-function slsauto_pitch_syntagma_gen(snd_pathname, lab_pathname, pitch_pathname, pause_size)
+function slsauto_pitch_syntagm_gen(snd_pathname, lab_pathname, pitch_pathname, pause_size)
 	pitch_data = load(pitch_pathname);
 	pitch_data(pitch_data(:,2)==0,:) = [];
 	pitch_data(:,2) = []; % ЧОТ не нужна
