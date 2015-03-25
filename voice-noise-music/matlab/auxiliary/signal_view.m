@@ -288,11 +288,11 @@ function [region_pos, region_name]=safe_wav_regions_read(wav_file)
 	
 	try
 		txt_file=tempname();
-		dos(['"' which('WavRegionsExtractor.exe') '" "' wav_file '" "' txt_file '" >nul']);
+		[dos_status,dos_result] = dos(['"' which('WavRegionsExtractor.exe') '" "' wav_file '" "' txt_file '"']); %#ok<NASGU,ASGLU>
 		[a b region_name]=textread(txt_file,'%d%d%s', 'whitespace','\t'); %#ok<REMFF1>
 		delete(txt_file);
 		region_pos=[a+1, b];
-	catch
+	catch %#ok<CTCH>
 	end
 end
 
