@@ -1,6 +1,16 @@
 function slsauto_pitch_prosody(snd_pathname, lab_pathname, pitch_pathname, prosody_pathname)
+	if nargin<2 || isempty(lab_pathname)
+		lab_pathname = slsauto_makepath(snd_pathname, 'lab');
+	end
+	if nargin<3 || isempty(pitch_pathname)
+		pitch_pathname = slsauto_makepath(snd_pathname, 'pitch');
+	end
+	if nargin<4 || isempty(prosody_pathname)
+		prosody_pathname = slsauto_makepath(snd_pathname, 'prosody');
+	end
+
+
 	pitch_data = load(pitch_pathname);
-	pitch_data(pitch_data(:,2)==0,:) = [];
 	lab_data = lab_read(lab_pathname);
 	lab_pos = [0; sort(unique([lab_data.begin; lab_data.end])); pitch_data(end,1)+1];
 
@@ -49,13 +59,13 @@ function slsauto_pitch_prosody(snd_pathname, lab_pathname, pitch_pathname, proso
 	plot(axes_f0_norm, stat.intonogram.arg, stat.intonogram.val, 'Color','k', 'LineWidth',7);
 
 	axes('Units','normalized', 'Position',[0.06 0.10 0.42 0.40]);
-	[stat.syntagma_length.cdf,stat.syntagma_length.arg] = ecdf(syntagm_length);
+	[stat.syntagm_length.cdf,stat.syntagm_length.arg] = ecdf(syntagm_length);
 	[stat.pause_length.cdf,stat.pause_length.arg] = ecdf(pause_length);
-	plot(stat.syntagma_length.arg,stat.syntagma_length.cdf,'b.-', stat.pause_length.arg,stat.pause_length.cdf,'r.-');
+	plot(stat.syntagm_length.arg,stat.syntagm_length.cdf,'b.-', stat.pause_length.arg,stat.pause_length.cdf,'r.-');
 	grid('on');
 	xlabel('Time, sec');
 	ylabel('CDF');
-	legend({'Syntagma length','Pause length'},'Location','SE');
+	legend({'Syntagm length','Pause length'},'Location','SE');
 	
 	xml_write(prosody_pathname, stat, 'prosody');
 end

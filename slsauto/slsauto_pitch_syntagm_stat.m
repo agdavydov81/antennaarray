@@ -1,6 +1,13 @@
 function slsauto_pitch_syntagm_stat(snd_pathname, lab_pathname, pitch_pathname)
+	if nargin<2 || isempty(lab_pathname)
+		lab_pathname = slsauto_makepath(snd_pathname, 'lab');
+	end
+	if nargin<3 || isempty(pitch_pathname)
+		pitch_pathname = slsauto_makepath(snd_pathname, 'pitch');
+	end
+
+
 	pitch_data = load(pitch_pathname);
-	pitch_data(pitch_data(:,2)==0,:) = [];
 	pitch_data(:,2) = []; % ЧОТ не нужна
 	pitch_dt = diff(pitch_data);
 	frame_shift = min(pitch_dt);
@@ -42,7 +49,7 @@ function slsauto_pitch_syntagm_stat(snd_pathname, lab_pathname, pitch_pathname)
 	grid('on');
 	xlabel('Pause length (sec)');
 	ylabel('Pause mean power (db)');
-	legend({'Unvocal pause','Syntagma pause'},'Location','NE');
+	legend({'Unvocal pause','Syntagm pause'},'Location','NE');
 
 	% Pause CDF
 	axes('Units','normalized', 'Position',[0.06 0.10 0.42 0.40]);
@@ -52,7 +59,7 @@ function slsauto_pitch_syntagm_stat(snd_pathname, lab_pathname, pitch_pathname)
 	grid('on');
 	xlabel('Pause length (sec)');
 	ylabel('CDF');
-	legend({'Unvocal pause','Syntagma pause'},'Location','SE');
+	legend({'Unvocal pause','Syntagm pause'},'Location','SE');
 
 	% Power CDF
 	axes('Units','normalized', 'Position',[0.56 0.55 0.42 0.40]);
@@ -62,5 +69,5 @@ function slsauto_pitch_syntagm_stat(snd_pathname, lab_pathname, pitch_pathname)
 	grid('on');
 	xlabel('Pause mean power (db)');
 	ylabel('CDF');
-	legend({'Unvocal pause','Syntagma pause'},'Location','SE');
+	legend({'Unvocal pause','Syntagm pause'},'Location','SE');
 end

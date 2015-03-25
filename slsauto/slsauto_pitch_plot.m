@@ -57,7 +57,13 @@ function slsauto_pitch_plot(snd_pathname)
 		else
 			cur_label([1 end]) = [];
 		end
-		data((data(:,2)==0),2) = nan;
+
+		dt = diff(data(:,1));
+		voc_reg = find(dt>=min(dt)*1.1);
+		for vi = numel(voc_reg):-1:1
+			data = [data(1:voc_reg(vi),:); nan nan; data(voc_reg(vi)+1:end,:)];
+		end
+		
 		plot(data(:,1), data(:,2), cur_label, 'LineWidth',2);
 	end
 	legend({list.legend}, 'Interpreter','none', 'Location','NW');
@@ -83,7 +89,7 @@ function slsauto_pitch_plot(snd_pathname)
 	guidata(fig,data);
 end
 
-function on_zoom_pan(hObject, eventdata) %#ok<INUSD>
+function on_zoom_pan(hObject, eventdata) %#ok<*INUSD>
 %	Usage example:
 %	set(zoom,'ActionPostCallback',@on_zoom_pan);
 %	set(pan ,'ActionPostCallback',@on_zoom_pan);
@@ -131,4 +137,3 @@ function on_playstop_callback(obj, event, string_arg)
 	user_data=get(obj, 'UserData');
 	set(user_data.btn_play, 'String', 'Play view');
 end
-
