@@ -233,7 +233,7 @@ function signal_view(cfg)
 	guidata(fig,data);
 
 	%% Current estimations display
-	UpdateFrameStat(data, 0);
+	UpdateFrameStat(data, 0, false);
 	
 	if ~cfg.show_lsf
 		OnShowLSF(ui_show_lsf);
@@ -297,7 +297,11 @@ function [region_pos, region_name]=safe_wav_regions_read(wav_file)
 end
 
 
-function UpdateFrameStat(data, x_pos)
+function UpdateFrameStat(data, x_pos, is_save_xlim)
+	if nargin<3
+		is_save_xlim = true;
+	end
+
 	% Function for short-time estimations display
 
 	%% Current frame selection
@@ -360,6 +364,10 @@ function UpdateFrameStat(data, x_pos)
 		cur_a=cur_a./sqrt(cur_e_power*length(cur_frame));
 	end
 
+	if is_save_xlim
+		x_lim = xlim(stat_axes(1));
+	end
+
 	%% Current frame FFT and LPC spectrum display
 	[cur_H, cur_w]=freqz(1,cur_a,512);
 	plot(stat_axes(1),	fft_freq,max(-2000,20*log10(abs(cur_fft))),'b', ...
@@ -379,6 +387,10 @@ function UpdateFrameStat(data, x_pos)
 	hold(stat_axes(1),'off');
 
 	line([0 cfg.fs/2],cfg.roots_threshold*diff(y_lim)+y_lim(1)+[0 0], 'Parent',stat_axes(1), 'Color','c');
+	
+	if is_save_xlim
+		xlim(stat_axes(1), x_lim);
+	end
 end
 
 function OnShowStrongRoots(hObject, eventdata) %#ok<*INUSD>
@@ -445,11 +457,11 @@ function OnZoomPan(hObject, eventdata)
 
 	if eventdata.Axes==data.user_data.signal_subplot || eventdata.Axes==data.user_data.spectrum_subplot
 		x_lim=correct_range(xlim(), [0 data.user_data.player.TotalSamples/data.user_data.player.SampleRate]);
-		set(data.user_data.signal_subplot, 'XLim',x_lim, 'YLim',data.user_data.signal_lim);
-		set(data.user_data.spectrum_subplot, 'XLim',x_lim, 'YLim',[0 data.user_data.player.SampleRate/2]);
-		return;
+		set(data.user_data.signal_subplot, 'XLim',x_lim);% , 'YLim',data.user_data.signal_lim);
+		set(data.user_data.spectrum_subplot, 'XLim',x_lim);%, 'YLim',[0 data.user_data.player.SampleRate/2]);
+		return
 	end
-	
+
 	if any(eventdata.Axes==data.user_data.stat_axes)
 		x_lim=correct_range(xlim(), [0 data.user_data.player.SampleRate/2]);
 		set(eventdata.Axes, 'XLim',x_lim);
