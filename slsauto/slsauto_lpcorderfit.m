@@ -44,7 +44,7 @@ function slsauto_lpcorderfit(snd_pathname, is_8000)
 	pp = polyfit(FS(ii)/1000, LPCORDER(ii), 1);
 	ff = (min(FS(ii)):max(FS(ii)))';
 	plot3(ff, polyval(pp,ff/1000), 1000+zeros(size(ff)), 'm.-');
-	plot3(ff, polyval([1.4351 0.80916],ff/1000), 900+zeros(size(ff)), 'yd-');
+	plot3(ff, 1.5*ff/1000, 900+zeros(size(ff)), 'yd-');
 	
 	title([snd_pathname '; Band limit: ' num2str(is_8000) '; Fit polynom: ' num2str(pp)],'interpreter','none');
 end
