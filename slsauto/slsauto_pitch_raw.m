@@ -1,15 +1,15 @@
 function slsauto_pitch_raw(snd_pathname)
+	[f0_sfs.freq, f0_sfs.time] = sfs_rapt(snd_pathname);
+	[f0_sfs.freq, f0_sfs.time] = remove_zeros(f0_sfs.freq, f0_sfs.time);
+	save_pitch_raw(snd_pathname, f0_sfs, '010_sfs_rapt(k.-)');
+
 	[f0_pr.freq, f0_pr.time]   = pitchrapt(snd_pathname);
 	[f0_pr.freq, f0_pr.time]   = remove_zeros(f0_pr.freq, f0_pr.time);
 	f0_pr.freq = octave_fix(f0_pr.freq, f0_pr.time, 0.5);
 	f0_pr.freq = median_fix(f0_pr.freq, f0_pr.time, 5);
-	save_pitch_raw(snd_pathname, f0_pr, 'pitchrapt(bd-)');
+	save_pitch_raw(snd_pathname, f0_pr, '020_pitchrapt(bd-)');
 
-	[f0_sfs.freq, f0_sfs.time] = sfs_rapt(snd_pathname);
-	[f0_sfs.freq, f0_sfs.time] = remove_zeros(f0_sfs.freq, f0_sfs.time);
-	save_pitch_raw(snd_pathname, f0_sfs, 'sfs_rapt(k.-)');
-
-	slsauto_pitch_plot(snd_pathname);
+	slsauto_pitch_editor(snd_pathname);
 end
 
 function f0_freq = median_fix(f0_freq, f0_time, med_sz)
