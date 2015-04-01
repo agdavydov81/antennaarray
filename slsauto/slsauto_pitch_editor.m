@@ -45,7 +45,7 @@ function slsauto_pitch_editor(snd_pathname)
 				 'Units','normalized', 'Position',[0 0 1 1], ...
 				 'WindowButtonDownFcn',@on_mouse_down, 'KeyPressFcn',@on_key_press);
 
-	signal_subplot=axes('Units','normalized', 'Position',[0.06 0.65 0.92 0.30]);
+	subplot.signal = axes('Units','normalized', 'Position',[0.06 0.65 0.92 0.30]);
 	plot((0:size(x,1)-1)'/fs, x);
 	x_lim=[0 size(x,1)-1]/fs;
 	axis([x_lim max(abs(x))*1.1*[-1 1]]);
@@ -54,7 +54,11 @@ function slsauto_pitch_editor(snd_pathname)
 	title(snd_pathname,'Interpreter','none');
 	caret=line([0 0], ylim(), 'Color','r', 'LineWidth',2);
 	
-	spectrum_subplot=axes('Units','normalized', 'Position',[0.06 0.05 0.92 0.55]);
+	subplot.position = axes('Units','normalized', 'Position',[0.06 0.61 0.92 0.02], ...
+							'XLim',x_lim, 'XTick',[], 'YLim',[0 1], 'YTick',[]);
+	subplot.position_patch = patch('Vertices',[0 0 0; 0 1 0; x_lim(2) 1 0; x_lim(2) 0 0], 'Faces',[1 2 3; 1 3 4], 'FaceVertexCData',repmat([0 0 1],4,1), 'FaceColor','flat', 'EdgeColor','none');
+
+	subplot.spectrum = axes('Units','normalized', 'Position',[0.06 0.05 0.92 0.55]);
 	imagesc(X_time,X_freq,X);
 	setcolormap('hsl');
 	axis('xy');
@@ -93,11 +97,13 @@ function slsauto_pitch_editor(snd_pathname)
 
 	caret(end+1)=line([0 0], ylim(), 0.1+[0 0], 'Color','r', 'LineWidth',2);
 
-	ctrl_pos=get(signal_subplot,'Position');
+	ctrl_pos=get(subplot.signal,'Position');
 	btn_play=uicontrol('Parent',fig, 'Style','pushbutton', 'String','Play view', 'Units','normalized', ...
 			'Position',[ctrl_pos(1)+ctrl_pos(3)-0.075 ctrl_pos(2)+ctrl_pos(4) 0.075 0.03], 'Callback', @on_play);
-	btn_save=uicontrol('Parent',fig, 'Style','pushbutton', 'String','Save changes', 'Units','normalized', ...
+	uicontrol('Parent',fig, 'Style','pushbutton', 'String','Save changes', 'Units','normalized', ...
 			'Position',[ctrl_pos(1) ctrl_pos(2)+ctrl_pos(4) 0.075 0.03], 'Callback', @on_save);
+	uicontrol('Parent',fig, 'Style','pushbutton', 'String','Help', 'Units','normalized', ...
+			'Position',[ctrl_pos(1)+0.075 ctrl_pos(2)+ctrl_pos(4) 0.075 0.03], 'Callback', @on_help);
 
 	set(zoom,'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
 	set(pan ,'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
@@ -107,10 +113,9 @@ function slsauto_pitch_editor(snd_pathname)
 				'TimerFcn',@on_play_callback, 'UserData',struct('caret',caret, 'btn_play',btn_play), 'TimerPeriod',1/25);
 
 	fig_data = guihandles(fig);
-	fig_data.user_data = struct('player',player, 'frame_size',frame_size, 'frame_shift',frame_shift, ...
-							'signal',x, 'x_len',x_lim(2), ...
-							'signal_subplot',signal_subplot, 'spectrum_subplot',spectrum_subplot, 'btn_play',btn_play, 'btn_save',btn_save, ...
-							'f0_data',struct('data',data, 'min_dt',min(dt), 'plot',data_plot, 'pathnamme',fullfile(snd_path,list(end).name)) );
+	fig_data.user_data = struct('player',player, 'signal',x, 'x_len',x_lim(2), ...
+							'subplot',subplot, 'btn_play',btn_play, ...
+							'f0_data',struct('min_dt',min(dt), 'plot',data_plot, 'pathnamme',fullfile(snd_path,list(end).name)) );
 	guidata(fig,fig_data);
 end
 
@@ -121,21 +126,49 @@ function on_zoom_pan(hObject, eventdata) %#ok<*INUSD>
 %	zoom('xon');
 %	set(pan, 'Motion', 'horizontal');
 
-	x_lim=xlim();
-
 	fig_data = guidata(hObject);
+
+	x_lim = xlim();
+	rg = x_lim(2)-x_lim(1);
+	if isstruct(eventdata)
+		if eventdata.Axes == fig_data.user_data.subplot.position % Scroll on position axes
+			pv = get(fig_data.user_data.subplot.position_patch, 'Vertices');
+			x_lim = (pv([1 3],1) - x_lim(1))*fig_data.user_data.x_len/rg;
+		end
+	else % Some command
+		if numel(eventdata)>1 && isnan(eventdata(1)) % zoom command
+			x_lim = mean(x_lim) + [-0.5 0.5]*rg*eventdata(2);
+		else % scroll command
+			if isinf(eventdata) 
+				x_lim = [0 rg];
+				if eventdata>0
+					x_lim = x_lim+fig_data.user_data.x_len-rg;
+				end
+			else
+				x_lim = x_lim + eventdata*rg;
+			end
+		end
+	end
+
+	% Fix borders
 	if isfield(fig_data,'user_data') && isfield(fig_data.user_data,'x_len')
-		rg=x_lim(2)-x_lim(1);
+		rg = x_lim(2)-x_lim(1);
 		if x_lim(1)<0
-			x_lim=[0 rg];
+			x_lim = [0 rg];
 		end
 		if x_lim(2)>fig_data.user_data.x_len
-			x_lim=[max(0, fig_data.user_data.x_len-rg) fig_data.user_data.x_len];
+			x_lim = [max(0, fig_data.user_data.x_len-rg) fig_data.user_data.x_len];
 		end
 	end
 
 	child=get(hObject,'Children');
-	set( child( strcmp(get(child,'type'),'axes') & not(strcmp(get(child,'tag'),'legend')) ), 'XLim', x_lim);
+	set( child( strcmp(get(child,'type'),'axes') & not(strcmp(get(child,'tag'),'legend')) ), 'XLim',x_lim);
+
+	pv = get(fig_data.user_data.subplot.position_patch, 'Vertices');
+	rg = x_lim(2)-x_lim(1);
+	pv([1 2],1) = x_lim(1) + x_lim(1)*rg/fig_data.user_data.x_len;
+	pv([3 4],1) = x_lim(1) + x_lim(2)*rg/fig_data.user_data.x_len;
+	set(fig_data.user_data.subplot.position_patch, 'Vertices',pv);
 end
 
 function on_play(hObject, eventdata)
@@ -167,14 +200,14 @@ function on_mouse_down(hObject, eventdata)
 	fig_data = guidata(hObject);
 
 	mouse_pos = get(hObject, 'CurrentPoint');
-	spec_pos = get(fig_data.user_data.spectrum_subplot,'Position');
+	spec_pos = get(fig_data.user_data.subplot.spectrum,'Position');
 	if	mouse_pos(1)<spec_pos(1) || mouse_pos(1)>spec_pos(1)+spec_pos(3) || ...
 		mouse_pos(2)<spec_pos(2) || mouse_pos(2)>spec_pos(2)+spec_pos(4)
 		return
 	end
 
-	x_lim = get(fig_data.user_data.spectrum_subplot, 'XLim');
-	y_lim = get(fig_data.user_data.spectrum_subplot, 'YLim');
+	x_lim = get(fig_data.user_data.subplot.spectrum, 'XLim');
+	y_lim = get(fig_data.user_data.subplot.spectrum, 'YLim');
 	mouse_pos = [(mouse_pos(1)-spec_pos(1))*diff(x_lim)/spec_pos(3) + x_lim(1) ...
 				 (mouse_pos(2)-spec_pos(2))*diff(y_lim)/spec_pos(4) + y_lim(1)];
 
@@ -185,11 +218,11 @@ function on_mouse_down(hObject, eventdata)
 
 	action_type = [{get(hObject,'SelectionType')} get(hObject,'CurrentModifier')];
 %	disp(action_type);
-	if isequal(action_type,{'normal'})	% Left button down
+	if isequal(action_type,{'normal'})	% Left button
 		if mv<f0_data.min_dt/2
 			ydata(mi) = ydata(mi)*2;
 		end
-	elseif isequal(action_type,{'alt'})	% Right button down
+	elseif isequal(action_type,{'alt'})	% Right button
 		if mv<f0_data.min_dt/2
 			ydata(mi) = ydata(mi)/2;
 		end
@@ -197,7 +230,7 @@ function on_mouse_down(hObject, eventdata)
 		if mv<f0_data.min_dt/2
 			ydata(mi) = mouse_pos(2);
 		end
-	elseif isequal(action_type,{'extend' 'shift'}) % Shift + Left button down
+	elseif isequal(action_type,{'extend' 'shift'}) % Shift + Left button
 		if mv<f0_data.min_dt/2
 			ydata(mi) = mouse_pos(2);
 		else
@@ -205,7 +238,7 @@ function on_mouse_down(hObject, eventdata)
 			dt0 = rem(min(xdata),f0_data.min_dt);
 			mouse_pos(1) = round((mouse_pos(1)-dt0)/f0_data.min_dt)*f0_data.min_dt+dt0;
 			% Inserting new value
-			ii = find(xdata>mouse_pos(1)-f0_data.min_dt/2,1);
+			ii = min([find(xdata>mouse_pos(1)-f0_data.min_dt/2,1) numel(xdata)+1]);
 			xdata = [xdata(1:ii-1) nan mouse_pos(1) nan xdata(ii:end)];
 			ydata = [ydata(1:ii-1) nan mouse_pos(2) nan ydata(ii:end)];
 			% Merge NAN values
@@ -218,7 +251,7 @@ function on_mouse_down(hObject, eventdata)
 			ydata(ii) = [];
 			set(f0_data.plot, 'XData',xdata);
 		end
-	elseif isequal(action_type,{'alt' 'control'}) % Ctrl + Left button down
+	elseif isequal(action_type,{'alt' 'control'}) % Ctrl + Left button
 		if mv<f0_data.min_dt/2
 			xdata(mi) = nan;
 			ydata(mi) = nan;
@@ -235,36 +268,32 @@ function on_mouse_down(hObject, eventdata)
 end
 
 function on_key_press(hObject, eventdata)
-%{
-	shift_steps=0;
+	shift_steps = [];
 	switch eventdata.Key
+		case 'f1'
+			on_help(hObject);
 		case 'space'
-			OnPlaySignal(hObject);
-		case 'leftarrow'
-			shift_steps=-1;
-		case 'rightarrow'
-			shift_steps=1;
-		case 'pageup'
-			shift_steps=-10;
-		case 'pagedown'
-			shift_steps=10;
-		case 'home'
-			shift_steps=-inf;
-		case 'end'
-			shift_steps=inf;
+			on_play(hObject);
+		case {'leftarrow' 'z'}
+			shift_steps = -0.25;
+		case {'rightarrow' 'x'}
+			shift_steps = 0.25;
+		case {'pageup' 's'}
+			shift_steps = 0.9;
+		case {'pagedown' 'a'}
+			shift_steps = -0.9;
+		case {'home' 'q'}
+			shift_steps = -inf;
+		case {'end' 'w'}
+			shift_steps = inf;
+		case 'uparrow'
+			shift_steps = [nan 1/1.6180339887498948482]; 
+		case 'downarrow'
+			shift_steps = [nan 1.6180339887498948482];
 	end
-	if any(strcmp(eventdata.Modifier,'shift'))
-		shift_steps=shift_steps*5;
+	if ~isempty(shift_steps)
+		on_zoom_pan(hObject,shift_steps);
 	end
-	if any(strcmp(eventdata.Modifier,'control'))
-		shift_steps=shift_steps*20;
-	end
-	if shift_steps
-		data = guidata(hObject);
-		stat_caret_x=get(data.user_data.stat_caret(1), 'XData');
-		UpdateFrameStat(data, mean(stat_caret_x([2 3]))+data.user_data.frame_shift*shift_steps/data.user_data.player.SampleRate);
-	end
-%}
 end
 
 function on_save(hObject, eventdata)
@@ -289,4 +318,26 @@ function on_save(hObject, eventdata)
 		save_arg{end+1} = '-ascii';
 	end
 	save(save_arg{:});
+end
+
+function on_help(hObject, eventdata)
+	helpdlg({	'Mouse hotkeys:'
+				'   LeftButton -            Double F0 estimation at this position'
+				'   RightButton -         Half F0 estimation at this position'
+				'   DoubleClick -         Set F0 estimation at this position'
+				'   Shift + LeftButton - Add/Set F0 estimation at this position'
+				'   Ctrl + LeftButton -   Delete F0 estimation at this position'
+				''
+				'Keyboard hotkeys:'
+				'   F1 -                        Display this help'
+				'   Space -                  Play signal in the view'
+				'   Z or LeftArrow -      Scroll to the Left  on 25% of the view'
+				'   X or RightArrow -   Scroll to the Right on 25% of the view'
+				'   A or PageDown -   Scroll to the Left  on 90% of the view'
+				'   S or PageUp -        Scroll to the Right on 90% of the view'
+				'   Q or Home -           Scroll to the Beginning of the signal'
+				'   W or End -             Scroll to the End of the signal'
+				'   UpArrow -               ZoomIn'
+				'   DownArrow -          ZoomOut'
+				},'Keys help');
 end
