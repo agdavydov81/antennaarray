@@ -13,7 +13,7 @@ function slsauto_pitch_editor(snd_pathname)
 	if isempty(list)
 		error(['Can''t find any pitch file for sound file ''' snd_pathname '''.']);
 	end
-	if nargin<1
+	if numel(list)>1
 		[dlg_sel,dlg_ok] = listdlg('Name','Pitch select', 'PromptString','Select a pitch data file:', 'ListSize',[300 300], ...
 								'SelectionMode','single', 'ListString',{list.name}, 'InitialValue',numel(list));
 		if ~dlg_ok
@@ -226,10 +226,6 @@ function on_mouse_down(hObject, eventdata)
 		if mv<f0_data.min_dt/2
 			ydata(mi) = ydata(mi)/2;
 		end
-	elseif isequal(action_type,{'open'})% Left or Right double-click
-		if mv<f0_data.min_dt/2
-			ydata(mi) = mouse_pos(2);
-		end
 	elseif isequal(action_type,{'extend' 'shift'}) % Shift + Left button
 		if mv<f0_data.min_dt/2
 			ydata(mi) = mouse_pos(2);
@@ -324,7 +320,6 @@ function on_help(hObject, eventdata)
 	helpdlg({	'Mouse hotkeys:'
 				'   LeftButton -            Double F0 estimation at this position'
 				'   RightButton -         Half F0 estimation at this position'
-				'   DoubleClick -         Set F0 estimation at this position'
 				'   Shift + LeftButton - Add/Set F0 estimation at this position'
 				'   Ctrl + LeftButton -   Delete F0 estimation at this position'
 				''
