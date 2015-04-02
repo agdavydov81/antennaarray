@@ -14,13 +14,12 @@ function slsauto_pitch_editor(snd_pathname)
 		error(['Can''t find any pitch file for sound file ''' snd_pathname '''.']);
 	end
 	if numel(list)>1
-		[dlg_sel,dlg_ok] = listdlg('Name','Pitch select', 'PromptString','Select a pitch data file:', 'ListSize',[300 300], ...
-								'SelectionMode','single', 'ListString',{list.name}, 'InitialValue',numel(list));
+		[dlg_sel,dlg_ok] = listdlg('Name','Pitch select', 'PromptString','Select (multiple) pitch data files:', 'ListSize',[300 300], ...
+								'SelectionMode','multiple', 'ListString',{list.name}, 'InitialValue',numel(list));
 		if ~dlg_ok
 			return
 		end
-		list = [list; list(dlg_sel)];
-		list(dlg_sel) = [];
+		list = list(dlg_sel);
 	end
 
 	[x,x_info] = libsndfile_read(snd_pathname);
@@ -198,13 +197,16 @@ end
 
 function on_mouse_down(hObject, eventdata)
 	fig_data = guidata(hObject);
-
+	
 	mouse_pos = get(hObject, 'CurrentPoint');
-	spec_pos = get(fig_data.user_data.subplot.spectrum,'Position');
+	spec_pos = get(fig_data.user_data.subplot.spectrum, 'Position');
 	if	mouse_pos(1)<spec_pos(1) || mouse_pos(1)>spec_pos(1)+spec_pos(3) || ...
 		mouse_pos(2)<spec_pos(2) || mouse_pos(2)>spec_pos(2)+spec_pos(4)
 		return
 	end
+
+	scr_sz = get(0,'ScreenSize');
+	pix_mouse_pos = round(mouse_pos.*scr_sz([3 4]));
 
 	x_lim = get(fig_data.user_data.subplot.spectrum, 'XLim');
 	y_lim = get(fig_data.user_data.subplot.spectrum, 'YLim');
@@ -214,21 +216,28 @@ function on_mouse_down(hObject, eventdata)
 	f0_data = fig_data.user_data.f0_data;
 	xdata = get(f0_data.plot, 'XData');
 	ydata = get(f0_data.plot, 'YData');
-	[mv,mi] = min(abs(xdata-mouse_pos(1)));
+	[time_mv,time_mi] = min(abs(xdata-mouse_pos(1)));
 
+	spec_pos = get(fig_data.user_data.subplot.spectrum, 'Position');
+	pix_xdata = ((xdata-x_lim(1))*spec_pos(3)/(x_lim(2)-x_lim(1))+spec_pos(1)) * scr_sz(3);
+	pix_ydata = ((ydata-y_lim(1))*spec_pos(4)/(y_lim(2)-y_lim(1))+spec_pos(2)) * scr_sz(4);
+	pix_dist = pdist2([pix_xdata(:) pix_ydata(:)],pix_mouse_pos);
+	[pix_mv,pix_mi] = min(pix_dist);
+	pix_radius = 10;
+	
 	action_type = [{get(hObject,'SelectionType')} get(hObject,'CurrentModifier')];
 %	disp(action_type);
 	if isequal(action_type,{'normal'})	% Left button
-		if mv<f0_data.min_dt/2
-			ydata(mi) = ydata(mi)*2;
+		if pix_mv<pix_radius
+			ydata(pix_mi) = ydata(pix_mi)*2;
 		end
 	elseif isequal(action_type,{'alt'})	% Right button
-		if mv<f0_data.min_dt/2
-			ydata(mi) = ydata(mi)/2;
+		if pix_mv<pix_radius
+			ydata(pix_mi) = ydata(pix_mi)/2;
 		end
 	elseif isequal(action_type,{'extend' 'shift'}) % Shift + Left button
-		if mv<f0_data.min_dt/2
-			ydata(mi) = mouse_pos(2);
+		if time_mv<f0_data.min_dt/2
+			ydata(time_mi) = mouse_pos(2);
 		else
 			% Rounding position to grid
 			dt0 = rem(min(xdata),f0_data.min_dt);
@@ -248,9 +257,9 @@ function on_mouse_down(hObject, eventdata)
 			set(f0_data.plot, 'XData',xdata);
 		end
 	elseif isequal(action_type,{'alt' 'control'}) % Ctrl + Left button
-		if mv<f0_data.min_dt/2
-			xdata(mi) = nan;
-			ydata(mi) = nan;
+		if pix_mv<pix_radius
+			xdata(pix_mi) = nan;
+			ydata(pix_mi) = nan;
 			ii = [isnan(xdata(1:end-1)) & isnan(xdata(2:end)), false]; % Merge NAN values
 			xdata(ii) = [];
 			ydata(ii) = [];
