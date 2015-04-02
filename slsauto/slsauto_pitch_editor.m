@@ -312,7 +312,7 @@ function on_save(hObject, eventdata)
 	data_x = get(f0_data.plot, 'XData');
 	data_y = get(f0_data.plot, 'YData');
 	data = [data_x(:) data_y(:)];
-	data(any(isnan(data),2),:) = [];
+	data(any(isnan(data),2),:) = []; %#ok<NASGU>
 	save_arg = {rep_pathname, 'data'};
 	if strcmpi(rep_ext,'.txt')
 		save_arg{end+1} = '-ascii';
