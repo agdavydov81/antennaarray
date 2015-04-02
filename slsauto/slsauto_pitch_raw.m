@@ -1,33 +1,49 @@
 function slsauto_pitch_raw(snd_pathname)
 %	[f0_sfs.freq, f0_sfs.time] = sfs_rapt(snd_pathname);
-%	[f0_sfs.freq, f0_sfs.time] = remove_zeros(f0_sfs.freq, f0_sfs.time);
+%	f0_sfs = remove_zeros(f0_sfs);
 %	save_pitch_raw(snd_pathname, f0_sfs, '010_sfs_rapt(k.-)');
 
 	[f0_pr.freq, f0_pr.time]   = pitchrapt(snd_pathname);
-	[f0_pr.freq, f0_pr.time]   = remove_zeros(f0_pr.freq, f0_pr.time);
+	f0_pr = remove_zeros(f0_pr);
+	save_pitch_raw(snd_pathname, f0_pr, '020_pitchrapt(bd-)');
 	f0_pr.freq = octave_fix(f0_pr.freq, f0_pr.time, 0.5);
 	f0_pr.freq = median_fix(f0_pr.freq, f0_pr.time, 5);
-	save_pitch_raw(snd_pathname, f0_pr, '020_pitchrapt(bd-)');
+	save_pitch_raw(snd_pathname, f0_pr, '021_pitchrapt(bd-)');
 
 	[x, x_info] = libsndfile_read(snd_pathname);
 	[f0_irapt.freq, f0_irapt.time] = irapt(x, x_info.SampleRate, 'irapt2');
+	f0_irapt = remove_zeros(f0_irapt);
 	f0_irapt.freq = f0_irapt.freq(:);
 	f0_irapt.time = f0_irapt.time(:);
-	f0_irapt = voiced_fix(f0_irapt, f0_pr, 0.020);
-	f0_irapt.freq = octave_fix(f0_irapt.freq, f0_irapt.time, 0.5);
 	save_pitch_raw(snd_pathname, f0_irapt, '030_irapt(ko-)');
+	f0_irapt = irapt_voiced_fix(f0_irapt, 8, 0.041);
+	f0_irapt.freq = octave_fix(f0_irapt.freq, f0_irapt.time, 0.5);
+	save_pitch_raw(snd_pathname, f0_irapt, '031_irapt(ko-)');
 
 	slsauto_pitch_editor(snd_pathname);
 end
 
-function f0_irapt = voiced_fix(f0_irapt, f0_pr, enlarge_size)
-%	irapt_dt = min(diff(f0_irapt.time));
-	pr_dt    = min(diff(f0_pr.time));
-	
-	irapt_isvoiced = arrayfun(@(x) any(abs(f0_pr.time-x)<pr_dt+enlarge_size), f0_irapt.time);
+function f0_irapt = irapt_voiced_fix(f0_irapt, lodf2dt_max, voc_sz_min)
+	dt = diff(f0_irapt.time);
+	logdf = diff(log2(f0_irapt.freq));
+	frame_shift = min(dt);
 
-	f0_irapt.time(~irapt_isvoiced) = [];
-	f0_irapt.freq(~irapt_isvoiced) = [];
+	ii = abs(logdf/frame_shift)>=lodf2dt_max;
+	ii(dt>frame_shift*1.5) = false;
+	ii = any([[ii; false] [false; ii]],2);
+	f0_irapt.time(ii) = [];
+	f0_irapt.freq(ii) = [];
+
+	ii = false(size(f0_irapt.time));
+	dt = diff(f0_irapt.time);
+	voc_reg = [0; find(dt>=frame_shift*1.5); numel(f0_irapt.time)];
+	for vi = 1:numel(voc_reg)-1
+		if f0_irapt.time(voc_reg(vi+1)) - f0_irapt.time(voc_reg(vi)+1) < voc_sz_min
+			ii(voc_reg(vi)+1:voc_reg(vi+1)) = true;
+		end
+	end
+	f0_irapt.time(ii) = [];
+	f0_irapt.freq(ii) = [];
 end
 
 function f0_freq = median_fix(f0_freq, f0_time, med_sz)
@@ -42,7 +58,7 @@ end
 
 function f0_freq = octave_fix(f0_freq, f0_time, octave_threshold)
 	dt = diff(f0_time);
-	voc_reg = [0; find(dt>=min(dt)*1.1); numel(f0_time)];
+	voc_reg = [0; find(dt>=min(dt)*1.5); numel(f0_time)];
 
 	while true
 		df = calc_df(f0_freq, f0_time);
@@ -80,8 +96,8 @@ function save_pitch_raw(snd_pathname, f0, ext)
 	save([snd_pathname '.pitch_' ext '.txt'],'save_data','-ascii');
 end
 
-function [f0_freq, f0_time] = remove_zeros(f0_freq, f0_time)
-	ind = f0_freq>0;
-	f0_freq = f0_freq(ind);
-	f0_time = f0_time(ind);
+function f0 = remove_zeros(f0)
+	ind = f0.freq>0;
+	f0.freq = f0.freq(ind);
+	f0.time = f0.time(ind);
 end
