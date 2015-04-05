@@ -1,28 +1,41 @@
-function slsauto_pitch_editor(snd_pathname)
+function slsauto_pitch_editor(cfg)
 	if nargin<1
 		[dlg_name,dlg_path] = uigetfile({'*.wav;*.flac;*.ogg','Sound files';'*.*','All files'},'Select input sound file');
 		if dlg_name==0
 			return
 		end
-		snd_pathname = fullfile(dlg_path,dlg_name);
+		cfg.snd_pathname = fullfile(dlg_path,dlg_name);
 	end
-
-	list = dir([snd_pathname '.pitch_*.txt']);
-	[~,si] = sort({list.name});
-	list = list(si);
-	if isempty(list)
-		error(['Can''t find any pitch file for sound file ''' snd_pathname '''.']);
+	if ischar(cfg)
+		cfg.snd_pathname = cfg;
 	end
-	if numel(list)>1
-		[dlg_sel,dlg_ok] = listdlg('Name','Pitch select', 'PromptString','Select (multiple) pitch data files:', 'ListSize',[300 300], ...
-								'SelectionMode','multiple', 'ListString',{list.name}, 'InitialValue',numel(list));
-		if ~dlg_ok
-			return
+	[snd_path,snd_name,snd_ext] = fileparts(cfg.snd_pathname);
+	snd_nameext = [snd_name snd_ext];
+	
+	[pitch_pathname, is_auto] = slsauto_getpath(cfg,'pitch');
+	if is_auto
+		list = dir([cfg.snd_pathname '.pitch_*.txt']);
+		[~,si] = sort({list.name});
+		list = list(si);
+		if isempty(list)
+			error(['Can''t find any pitch file for sound file ''' cfg.snd_pathname '''.']);
 		end
-		list = list(dlg_sel);
+		if numel(list)>1
+			[dlg_sel,dlg_ok] = listdlg('Name','Pitch select', 'PromptString','Select (multiple) pitch data files:', 'ListSize',[300 300], ...
+									'SelectionMode','multiple', 'ListString',{list.name}, 'InitialValue',numel(list));
+			if ~dlg_ok
+				return
+			end
+			list = list(dlg_sel);
+		end
+		for li = 1:numel(list)
+			list(li).name = fullfile(snd_path, list(li).name);
+		end
+	else
+		list.name = pitch_pathname;
 	end
 
-	[x,x_info] = libsndfile_read(snd_pathname);
+	[x,x_info] = libsndfile_read(cfg.snd_pathname);
 	if ~isempty(x_info.Error)
 		error(x_info.Error);
 	end
@@ -39,8 +52,7 @@ function slsauto_pitch_editor(snd_pathname)
 	X=10*log10(X.*conj(X));
 	X_time=X_time(:);
 
-	[snd_path,snd_name,snd_ext] = fileparts(snd_pathname);
-	fig = figure('ToolBar','figure', 'NumberTitle','off', 'Name',[snd_name snd_ext], ...
+	fig = figure('ToolBar','figure', 'NumberTitle','off', 'Name',snd_nameext, ...
 				 'Units','normalized', 'Position',[0 0 1 1], ...
 				 'WindowButtonDownFcn',@on_mouse_down, 'KeyPressFcn',@on_key_press);
 
@@ -50,7 +62,7 @@ function slsauto_pitch_editor(snd_pathname)
 	axis([x_lim max(abs(x))*1.1*[-1 1]]);
 	grid('on');
 	ylabel('Oscillogram');
-	title(snd_pathname,'Interpreter','none');
+	title(cfg.snd_pathname,'Interpreter','none');
 	caret=line([0 0], ylim(), 'Color','r', 'LineWidth',2);
 	
 	subplot.position = axes('Units','normalized', 'Position',[0.06 0.61 0.92 0.02], ...
@@ -68,11 +80,18 @@ function slsauto_pitch_editor(snd_pathname)
 	hold('on');
 
 	for li = 1:numel(list)
-		data = load(fullfile(snd_path,list(li).name));
-		cur_name = list(li).name;
-		cur_name(1:numel([snd_name snd_ext])) = [];
-		cur_name(1:numel('.pitch_')) = [];
-		cur_name(end-numel('.txt')+1:end) = [];
+		data = load(list(li).name);
+
+		[~,cur_name] = fileparts(list(li).name);
+		if strncmpi(cur_name,snd_nameext,numel(snd_nameext))
+			cur_name(1:numel(snd_nameext)) = [];
+
+			pitch_prefix = '.pitch_';
+			if strncmpi(cur_name,pitch_prefix,numel(pitch_prefix))
+				cur_name(1:numel(pitch_prefix)) = [];
+			end
+		end
+
 		cur_label = regexp(cur_name,'\(.*\)$','match','once');
 		cur_name(end-numel(cur_label)+1:end) = [];
 		list(li).legend = cur_name;
