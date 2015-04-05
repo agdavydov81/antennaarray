@@ -1,20 +1,9 @@
-function slsauto_pitch_prosody(snd_pathname, lab_pathname, pitch_pathname, prosody_pathname)
-	if nargin<2 || isempty(lab_pathname)
-		lab_pathname = slsauto_makepath(snd_pathname, 'lab');
-	end
-	if nargin<3 || isempty(pitch_pathname)
-		pitch_pathname = slsauto_makepath(snd_pathname, 'pitch');
-	end
-	if nargin<4 || isempty(prosody_pathname)
-		prosody_pathname = slsauto_makepath(snd_pathname, 'prosody');
-	end
-
-
-	pitch_data = load(pitch_pathname);
-	lab_data = lab_read(lab_pathname);
+function slsauto_pitch_prosody(cfg)
+	pitch_data = load(slsauto_getpath(cfg,'pitch'));
+	lab_data = lab_read(slsauto_getpath(cfg,'lab'));
 	lab_pos = [0; sort(unique([lab_data.begin; lab_data.end])); pitch_data(end,1)+1];
 
-	[~,snd_name,snd_ext] = fileparts(snd_pathname);
+	[~,snd_name,snd_ext] = fileparts(cfg.snd_pathname);
 	figure('Toolbar','figure', 'NumberTitle','off', 'Name',[snd_name snd_ext], 'Units','normalized', 'Position',[0 0 1 1]);
 	axes_f0_unnorm = axes('Units','normalized', 'Position',[0.06 0.55 0.42 0.40]);
 	hold('on');
@@ -67,5 +56,5 @@ function slsauto_pitch_prosody(snd_pathname, lab_pathname, pitch_pathname, proso
 	ylabel('CDF');
 	legend({'Syntagm length','Pause length'},'Location','SE');
 	
-	xml_write(prosody_pathname, stat, 'prosody');
+	xml_write(slsauto_getpath(cfg,'prosody'), stat, 'prosody');
 end

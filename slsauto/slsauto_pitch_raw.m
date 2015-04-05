@@ -1,26 +1,26 @@
-function slsauto_pitch_raw(snd_pathname)
-%	[f0_sfs.freq, f0_sfs.time] = sfs_rapt(snd_pathname);
+function slsauto_pitch_raw(cfg)
+%	[f0_sfs.freq, f0_sfs.time] = sfs_rapt(cfg.snd_pathname);
 %	f0_sfs = remove_zeros(f0_sfs);
-%	save_pitch_raw(snd_pathname, f0_sfs, '010_sfs_rapt(k.-)');
+%	save_pitch_raw(cfg.snd_pathname, f0_sfs, '010_sfs_rapt(k.-)');
 
-	[f0_pr.freq, f0_pr.time]   = pitchrapt(snd_pathname);
+	[f0_pr.freq, f0_pr.time]   = pitchrapt(cfg.snd_pathname);
 	f0_pr = remove_zeros(f0_pr);
-	save_pitch_raw(snd_pathname, f0_pr, '020_pitchrapt(bd-)');
+	save_pitch_raw(cfg.snd_pathname, f0_pr, '020_pitchrapt(bd-)');
 	f0_pr.freq = octave_fix(f0_pr.freq, f0_pr.time, 0.5);
 	f0_pr.freq = median_fix(f0_pr.freq, f0_pr.time, 5);
-	save_pitch_raw(snd_pathname, f0_pr, '021_pitchrapt(bd-)');
+	save_pitch_raw(cfg.snd_pathname, f0_pr, '021_pitchrapt(bd-)');
 
-	[x, x_info] = libsndfile_read(snd_pathname);
+	[x, x_info] = libsndfile_read(cfg.snd_pathname);
 	[f0_irapt.freq, f0_irapt.time] = irapt(x, x_info.SampleRate, 'irapt2');
 	f0_irapt = remove_zeros(f0_irapt);
 	f0_irapt.freq = f0_irapt.freq(:);
 	f0_irapt.time = f0_irapt.time(:);
-	save_pitch_raw(snd_pathname, f0_irapt, '030_irapt(ko-)');
+	save_pitch_raw(cfg.snd_pathname, f0_irapt, '030_irapt(ko-)');
 	f0_irapt = irapt_voiced_fix(f0_irapt, 8, 0.041);
 	f0_irapt.freq = octave_fix(f0_irapt.freq, f0_irapt.time, 0.5);
-	save_pitch_raw(snd_pathname, f0_irapt, '031_irapt(ko-)');
+	save_pitch_raw(cfg.snd_pathname, f0_irapt, '031_irapt(ko-)');
 
-	slsauto_pitch_editor(snd_pathname);
+	slsauto_pitch_editor(cfg.snd_pathname);
 end
 
 function f0_irapt = irapt_voiced_fix(f0_irapt, lodf2dt_max, voc_sz_min)
@@ -91,9 +91,9 @@ function df = calc_df(f0_freq, f0_time)
 	df(dt>=min(dt)*1.1) = 0;
 end
 
-function save_pitch_raw(snd_pathname, f0, ext)
+function save_pitch_raw(cfg.snd_pathname, f0, ext)
 	save_data = [f0.time(:) f0.freq(:)]; %#ok<NASGU>
-	save([snd_pathname '.pitch_' ext '.txt'],'save_data','-ascii');
+	save([cfg.snd_pathname '.pitch_' ext '.txt'],'save_data','-ascii');
 end
 
 function f0 = remove_zeros(f0)

@@ -1,20 +1,12 @@
-function slsauto_pitch_syntagm_stat(snd_pathname, lab_pathname, pitch_pathname)
-	if nargin<2 || isempty(lab_pathname)
-		lab_pathname = slsauto_makepath(snd_pathname, 'lab');
-	end
-	if nargin<3 || isempty(pitch_pathname)
-		pitch_pathname = slsauto_makepath(snd_pathname, 'pitch');
-	end
-
-
-	pitch_data = load(pitch_pathname);
+function slsauto_pitch_syntagm_stat(cfg)
+	pitch_data = load(slsauto_getpath(cfg,'pitch'));
 	pitch_data(:,2) = []; % ЧОТ не нужна
 	pitch_dt = diff(pitch_data);
 	frame_shift = min(pitch_dt);
 	ind = pitch_dt>frame_shift*1.1;
 	unvoc_begend = [pitch_data([ind; false]) pitch_data([false; ind])]; % Границы невокализованных участков
 
-	lab_data = lab_read(lab_pathname);
+	lab_data = lab_read(slsauto_getpath(cfg,'lab'));
 
 	%% Вычисление статистики по длительности пауз
 	syntagmas_ind = false(size(unvoc_begend,1),1);
@@ -28,7 +20,7 @@ function slsauto_pitch_syntagm_stat(snd_pathname, lab_pathname, pitch_pathname)
 	unvoc_dt(syntagmas_ind) = [];
 	
 	%% Вычисление статистики по средней мощности пауз
-	[x,x_info] = libsndfile_read(snd_pathname);
+	[x,x_info] = libsndfile_read(cfg.snd_pathname);
 	x(:,2:end) = [];
 	power_meandb = zeros(size(unvoc_begend,1),1);
 	for ri = 1:size(unvoc_begend,1)
@@ -40,7 +32,7 @@ function slsauto_pitch_syntagm_stat(snd_pathname, lab_pathname, pitch_pathname)
 	unvoc_meandb =power_meandb(~syntagmas_ind);
 
 	%% Отображение результатов
-	[~,snd_name,snd_ext] = fileparts(snd_pathname);
+	[~,snd_name,snd_ext] = fileparts(cfg.snd_pathname);
 	figure('Toolbar','figure', 'NumberTitle','off', 'Name',[snd_name snd_ext], 'Units','normalized', 'Position',[0 0 1 1]);
 
 	% Pause-Power PDF
