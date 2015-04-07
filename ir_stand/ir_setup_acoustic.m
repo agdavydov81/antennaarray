@@ -22,7 +22,7 @@ function varargout = ir_setup_acoustic(varargin)
 
 % Edit the above text to modify the response to help ir_setup_acoustic
 
-% Last Modified by GUIDE v2.5 27-Sep-2013 17:47:59
+% Last Modified by GUIDE v2.5 07-Apr-2015 06:14:12
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -80,7 +80,7 @@ if not(isfield(cfg.acoustic_generator.harm,'freq_start'));	cfg.acoustic_generato
 if not(isfield(cfg.acoustic_generator.harm,'freq_finish'));	cfg.acoustic_generator.harm.freq_finish = 8000;	end
 if not(isfield(cfg.acoustic_generator.harm,'scan_time'));	cfg.acoustic_generator.harm.scan_time = 10;		end
 if not(isfield(cfg.acoustic_generator.harm,'scan_type'));	cfg.acoustic_generator.harm.scan_type = 'log';	end
-if not(isfield(cfg.acoustic_generator.harm,'amplitude'));	cfg.acoustic_generator.harm.amplitude = 0.95;	end
+if not(isfield(cfg.acoustic_generator,'volume'));			cfg.acoustic_generator.volume = 0.95;			end
 cfg.acoustic_generator.harm.enable = ~cfg.acoustic_generator.sls.enable;
 
 set(handles.get_sls_chkbtn,		 'Value',cfg.acoustic_generator.sls.enable);
@@ -88,7 +88,10 @@ set(handles.get_harm_chkbtn,	 'Value',cfg.acoustic_generator.harm.enable);
 set(handles.harm_freq_start_ed,  'String',num2str(cfg.acoustic_generator.harm.freq_start));
 set(handles.harm_freq_finish_ed, 'String',num2str(cfg.acoustic_generator.harm.freq_finish));
 set(handles.harm_scan_time_ed,   'String',num2str(cfg.acoustic_generator.harm.scan_time));
-set(handles.harm_amplitude_ed,   'String',num2str(cfg.acoustic_generator.harm.amplitude));
+
+set(handles.volume_slider,		 'Value',cfg.acoustic_generator.volume);
+volume_slider_Callback(handles.volume_slider, [], handles);
+
 switch cfg.acoustic_generator.harm.scan_type
 	case 'lin'
 		set(handles.harm_scan_lin, 'Value',1);
@@ -119,7 +122,9 @@ if handles.press_ok
 	cfg.acoustic_generator.harm.freq_start =  str2double(get(handles.harm_freq_start_ed,  'String'));
 	cfg.acoustic_generator.harm.freq_finish = str2double(get(handles.harm_freq_finish_ed, 'String'));
 	cfg.acoustic_generator.harm.scan_time =   str2double(get(handles.harm_scan_time_ed,   'String'));
-	cfg.acoustic_generator.harm.amplitude =   str2double(get(handles.harm_amplitude_ed,   'String'));
+
+	cfg.acoustic_generator.volume =		 get(handles.volume_slider,'Value');
+
 	if get(handles.harm_scan_log, 'Value')
 		cfg.acoustic_generator.harm.scan_type = 'log';
 	else
@@ -167,7 +172,6 @@ set(handles.harm_freq_finish_ed, 'Enable',is_enable);
 set(handles.harm_scan_time_ed,   'Enable',is_enable);
 set(handles.harm_scan_lin,		 'Enable',is_enable);
 set(handles.harm_scan_log,		 'Enable',is_enable);
-set(handles.harm_amplitude_ed,	 'Enable',is_enable);
 
 
 % --- Executes on button press in ok_btn.
@@ -224,3 +228,17 @@ if any(is_key_esc_ret)
 	guidata(hObject, handles);
 	uiresume(handles.figure1);
 end
+
+
+% --- Executes on slider movement.
+function volume_slider_Callback(hObject, eventdata, handles)
+% hObject    handle to volume_slider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+cur_vol = get(hObject,'Value');
+set(handles.volume_text, 'String',sprintf('Громкость акустического сигнала: %.0f%%',cur_vol*100));
+dos_str = ['"' fullfile(fileparts(mfilename('fullpath')), 'sls', 'nircmd', 'nircmdc.exe') '" setsysvolume ' sprintf('%.0f',cur_vol*65535)];
+[dos_status,dos_result] = dos(dos_str);

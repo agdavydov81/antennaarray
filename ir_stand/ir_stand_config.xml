@@ -14,9 +14,9 @@
          <freq_start>100</freq_start>
          <freq_finish>8000</freq_finish>
          <scan_time>10</scan_time>
-         <amplitude>0.95</amplitude>
          <scan_type>log</scan_type>
       </harm>
+      <volume>0.580128</volume>
    </acoustic_generator>
    <video_device>
       <name>Logitech B910 HD Webcam</name>

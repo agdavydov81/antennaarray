@@ -22,7 +22,7 @@ function varargout = ir_stand(varargin)
 
 % Edit the above text to modify the response to help ir_stand
 
-% Last Modified by GUIDE v2.5 06-Oct-2013 16:18:51
+% Last Modified by GUIDE v2.5 07-Apr-2015 06:10:05
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -123,6 +123,7 @@ varargout{1} = handles.output;
 
 check_config(handles);
 
+
 function check_config(handles)
 cfg = handles.config;
 is_ok = true;
@@ -148,6 +149,11 @@ if is_ok
 	set(handles.work_start_btn, 'Enable','on');
 else
 	set(handles.work_start_btn, 'Enable','off');
+end
+
+if isfield_ex(handles,'config.acoustic_generator.volume')
+	set(handles.volume_slider, 'Value',handles.config.acoustic_generator.volume);
+	volume_slider_Callback(handles.volume_slider, [], handles);
 end
 
 
@@ -596,7 +602,7 @@ try
 		f_mod = rem(f_mod,1);
 		handles_play.timer.f_mod_last = f_mod(end);
 
-		cur_x = harm_cfg.amplitude*cos(2*pi*f_mod);
+		cur_x = 0.99*cos(2*pi*f_mod);
 
 		% Play generated sound
 		handles_play.buffs = [handles_play.buffs playrec('play', cur_x, 1)];
@@ -699,7 +705,7 @@ try
 	%% Time stamp displaying
 	toc_t = toc(handles_video.tic_id);
 	handles_video.toc_frames = handles_video.toc_frames+1;
-	set(handles_video.handles.work_timer, 'String', [toc2str(toc_t,':') sprintf(' (%d)', handles_video.toc_frames)]);
+	set(handles_video.handles.work_timer, 'String', [toc2str(toc_t,':') sprintf('\n(%d)', handles_video.toc_frames)]);
 
 	%% Image processing cycle
 	switch handles_video.work_stage
@@ -990,3 +996,17 @@ work_abort_btn_Callback(hObject, eventdata, handles)
 
 % Hint: delete(hObject) closes the figure
 delete(hObject);
+
+
+% --- Executes on slider movement.
+function volume_slider_Callback(hObject, eventdata, handles)
+% hObject    handle to volume_slider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+cur_vol = get(hObject,'Value');
+set(handles.volume_text, 'String',sprintf('Громкость акустического сигнала: %.0f%%',cur_vol*100));
+dos_str = ['"' fullfile(fileparts(mfilename('fullpath')), 'sls', 'nircmd', 'nircmdc.exe') '" setsysvolume ' sprintf('%.0f',cur_vol*65535)];
+[dos_status,dos_result] = dos(dos_str);
