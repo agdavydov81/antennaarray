@@ -1,4 +1,4 @@
-function slsauto_parameterization(cfg)
+function slsauto_lpc_analyse(cfg)
 	% Загрузка звукового файла
 	[x,x_info] = libsndfile_read(cfg.snd_pathname);
 	if ~isempty(x_info.Error)
@@ -7,57 +7,44 @@ function slsauto_parameterization(cfg)
 	x = x(:,1);
 	x = single(x);
 	fs = x_info.SampleRate;
-	
+
 	%% Выравнивание ЧОТ - получение монотонной речи
 	% Разделение на ЧОТ и огибающую
-	[lpc_e lpc_lsf_ind lpc_lsf] = lpc_analyse(x, fs, 0.020, 0.001);
-	
-	% Передискретизация ошибки предсказания в 2 раза, что бы избежать
-	% наложения спектров при интерполяции
-	lpc_e = resample(lpc_e,2,1);
-	fs = fs*2;
+	[lpc_e lpc_lsf_ind lpc_lsf] = lpc_analyse_signal(x, fs, 0.020, 0.001);
 
 	% Загрузка и подготовка данных ЧОТ
 	pitch_data = load(slsauto_getpath(cfg,'pitch'));
-	pitch_data(:,2) = median(pitch_data(:,2))./pitch_data(:,2);
+	pitch_data(:,2) = pitch_data(:,2)/median(pitch_data(:,2));
+	resample_factor = ceil(1/min(pitch_data(:,2))+0.5);
 	pitch_data = [pitch_data(1,:); pitch_data; pitch_data(end,:)];
 	pitch_data(1,1) = 0;
 	pitch_data(end,1) = size(lpc_e,1)/fs+10;
 
-	% Формирование новой временной шкалы с выравненной ЧОТ
-	t_pos = 0;
-	t_end = (size(lpc_e,1)-1)/fs;
-	t_line = nan(round(size(lpc_e,1)*1.3),1);
-	t_ind = 1;
-	while t_pos<t_end
-		t_line(t_ind) = t_pos;
-		t_pos = t_pos + interp1q(pitch_data(:,1),pitch_data(:,2),t_pos)/fs;
-		t_ind = t_ind + 1;
-	end
-	t_line(isnan(t_line)) = [];
-	mono_time = t_line(1:2:end);
-	save(slsauto_getpath(cfg,'mono_time'),'mono_time','-ascii');
+	% Передискретизация ошибки предсказания в 2 раза, что бы избежать
+	% наложения спектров при интерполяции
+	lpc_e = resample(lpc_e,resample_factor,1);
+	fs = fs*resample_factor;
 
-	% Интерполяция ошибки предсказанитя для выравнивания кривой ЧОТ
-	lpc_e = interp1q((0:size(lpc_e,1)-1)'/fs, lpc_e, t_line);
+	% Формирование новой временной шкалы с выравненной ЧОТ
+	pitch_interp = interp1q(pitch_data(:,1), pitch_data(:,2), (0:size(lpc_e,1)-1)'/fs);
+	lpc_e_t = cumsum(pitch_interp)/fs;
+	lpc_e_t = [0; lpc_e_t(1:end-1)];
 
 	% Передискретизация ошибки предсказания на исходную ЧОТ
-	lpc_e = resample(lpc_e,1,2);
-	fs = fs/2;
+	lpc_e = resample(lpc_e,1,resample_factor);
+	fs = fs/resample_factor;
+	lpc_e_t = lpc_e_t(1:resample_factor:end);
+	assert(size(lpc_e_t,1) == size(lpc_e,1));
+	lpc_lsf_t = lpc_e_t(lpc_lsf_ind);
 
-	% Синхронизация спектральных параметров и выравненной по ЧОТ ошибки предсказания
-	lpc_lsf = interp1q((lpc_lsf_ind-1)/fs, lpc_lsf, mono_time);
-	assert(size(lpc_lsf,1) == size(lpc_e,1));
-	
-	% Сохранение параметров для будущего синтеза
-	save(slsauto_getpath(cfg,'mono_lpc'),'lpc_e','lpc_lsf_ind','lpc_lsf');
+	% Сохранение параметров для будущего синтеза с параметрами выравненной ЧОТ
+	save(slsauto_getpath(cfg,'lpc'),'lpc_e','lpc_e_t','lpc_lsf','lpc_lsf_t');
 
-	% Синтез нового сигнала
-	y = lpc_synth(lpc_e, lpc_pos, lpc_lsf);
-	wavwrite(y,fs,'tmp_y.wav');
+	% Пример интерполяции ошибки предсказания для выравнивания кривой ЧОТ
+% 	wavwrite(25*spline(lpc_e_t,lpc_e,(0:1/fs:lpc_e_t(end))'), fs, 'tmp_lpc_e_mono.wav');
 end
 
-function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse(x, fs, frame_size, frame_shift, lpc_order)
+function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, frame_shift, lpc_order)
 	x_size =      size(x,1);
 	frame_size =  round(frame_size*fs);
 	frame_shift = max(1,round(frame_shift*fs));
@@ -98,16 +85,4 @@ function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse(x, fs, frame_size, frame_sh
 	end
 
 	lpc_e = cell2mat(lpc_e);
-end
-
-function y = lpc_synth(e, a, b)
-	y = zeros(size(e));
-	if isempty(e)
-		return
-	end
-
-	[~,Z] = filter(b(1,:),a(1,:),0);
-	for ii = 1:size(e,1)
-		[y(ii),Z] = filter(b(ii,:),a(ii,:),e(ii),Z);
-	end
 end

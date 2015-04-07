@@ -19,10 +19,8 @@ function [file_pathname is_auto] = slsauto_getpath(cfg, filetype)
 			file_pathname = fullfile(snd_path, list(end).name);
 		case 'prosody'
 			file_pathname = [cfg.snd_pathname '.prosody.xml'];
-		case 'mono_time'
-			file_pathname = [cfg.snd_pathname '.mono_time.txt'];
-		case 'mono_lpc'
-			file_pathname = [cfg.snd_pathname '.mono_lpc.mat'];
+		case 'lpc'
+			file_pathname = [cfg.snd_pathname '.lpc.mat'];
 		otherwise
 			error('Unsupported auto type identification.');
 	end
