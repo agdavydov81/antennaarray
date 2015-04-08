@@ -1010,3 +1010,5 @@ cur_vol = get(hObject,'Value');
 set(handles.volume_text, 'String',sprintf('Громкость акустического сигнала: %.0f%%',cur_vol*100));
 dos_str = ['"' fullfile(fileparts(mfilename('fullpath')), 'sls', 'nircmd', 'nircmdc.exe') '" setsysvolume ' sprintf('%.0f',cur_vol*65535)];
 [dos_status,dos_result] = dos(dos_str);
+handles.config.acoustic_generator.volume = cur_vol;
+guidata(hObject, handles);
