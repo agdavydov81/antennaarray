@@ -5,7 +5,6 @@ function slsauto_lpc_analyse(cfg)
 		error(x_info.Error);
 	end
 	x = x(:,1);
-	x = single(x);
 	fs = x_info.SampleRate;
 
 	%% Выравнивание ЧОТ - получение монотонной речи
@@ -15,33 +14,18 @@ function slsauto_lpc_analyse(cfg)
 	% Загрузка и подготовка данных ЧОТ
 	pitch_data = load(slsauto_getpath(cfg,'pitch'));
 	pitch_data(:,2) = pitch_data(:,2)/median(pitch_data(:,2));
-	resample_factor = ceil(1/min(pitch_data(:,2))+0.5);
 	pitch_data = [pitch_data(1,:); pitch_data; pitch_data(end,:)];
-	pitch_data(1,1) = 0;
+	pitch_data(1,1) = -1;
 	pitch_data(end,1) = size(lpc_e,1)/fs+10;
-
-	% Передискретизация ошибки предсказания в 2 раза, что бы избежать
-	% наложения спектров при интерполяции
-	lpc_e = resample(lpc_e,resample_factor,1);
-	fs = fs*resample_factor;
 
 	% Формирование новой временной шкалы с выравненной ЧОТ
 	pitch_interp = interp1q(pitch_data(:,1), pitch_data(:,2), (0:size(lpc_e,1)-1)'/fs);
 	lpc_e_t = cumsum(pitch_interp)/fs;
 	lpc_e_t = [0; lpc_e_t(1:end-1)];
-
-	% Передискретизация ошибки предсказания на исходную ЧОТ
-	lpc_e = resample(lpc_e,1,resample_factor);
-	fs = fs/resample_factor;
-	lpc_e_t = lpc_e_t(1:resample_factor:end);
-	assert(size(lpc_e_t,1) == size(lpc_e,1));
 	lpc_lsf_t = lpc_e_t(lpc_lsf_ind);
 
 	% Сохранение параметров для будущего синтеза с параметрами выравненной ЧОТ
-	save(slsauto_getpath(cfg,'lpc'),'lpc_e','lpc_e_t','lpc_lsf','lpc_lsf_t');
-
-	% Пример интерполяции ошибки предсказания для выравнивания кривой ЧОТ
-% 	wavwrite(25*spline(lpc_e_t,lpc_e,(0:1/fs:lpc_e_t(end))'), fs, 'tmp_lpc_e_mono.wav');
+	save(slsauto_getpath(cfg,'lpc'),'fs','lpc_e','lpc_e_t','lpc_lsf','lpc_lsf_t');
 end
 
 function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, frame_shift, lpc_order)
@@ -62,8 +46,8 @@ function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, f
 	lpc_ind = (1+frame_shift2:frame_shift:x_size)';
 
 	lpc_e = cell(size(lpc_ind));
-	lpc_lsf = zeros(size(lpc_ind,1),lpc_order,'single');
-	lpc_b = zeros(size(lpc_ind),'single');
+	lpc_lsf = zeros(size(lpc_ind,1),lpc_order);
+	lpc_b = zeros(size(lpc_ind));
 
 	cur_win = hann(frame_size);
 
