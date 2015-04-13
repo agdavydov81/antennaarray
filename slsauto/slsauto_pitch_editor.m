@@ -7,7 +7,7 @@ function slsauto_pitch_editor(cfg)
 		cfg.snd_pathname = fullfile(dlg_path,dlg_name);
 	end
 	if ischar(cfg)
-		cfg.snd_pathname = cfg;
+		cfg = struct('snd_pathname',cfg);
 	end
 	[snd_path,snd_name,snd_ext] = fileparts(cfg.snd_pathname);
 	snd_nameext = [snd_name snd_ext];
@@ -133,7 +133,7 @@ function slsauto_pitch_editor(cfg)
 	fig_data = guihandles(fig);
 	fig_data.user_data = struct('player',player, 'signal',x, 'x_len',x_lim(2), ...
 							'subplot',subplot, 'btn_play',btn_play, ...
-							'f0_data',struct('min_dt',min(dt), 'plot',data_plot, 'pathnamme',fullfile(snd_path,list(end).name)) );
+							'f0_data',struct('min_dt',min(dt), 'plot',data_plot, 'pathnamme',list(end).name) );
 	guidata(fig,fig_data);
 end
 

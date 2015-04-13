@@ -1,5 +1,5 @@
 function slsauto_pitch_prosody(cfg)
-	pitch_data = load(slsauto_getpath(cfg,'pitch'));
+	pitch_data = load(slsauto_getpath(cfg,'pitch_uv'));
 	lab_data = lab_read(slsauto_getpath(cfg,'lab'));
 	lab_pos = [0; sort(unique([lab_data.begin; lab_data.end])); pitch_data(end,1)+1];
 

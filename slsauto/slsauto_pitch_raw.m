@@ -11,10 +11,8 @@ function slsauto_pitch_raw(cfg)
 	save_pitch_raw(cfg.snd_pathname, f0_pr, '021_pitchrapt(bd-)');
 
 	[x, x_info] = libsndfile_read(cfg.snd_pathname);
-	[f0_irapt.freq, f0_irapt.time] = irapt(x, x_info.SampleRate, 'irapt2');
+	[f0_irapt.freq, f0_irapt.time, f0_irapt.isvocal] = irapt(x, x_info.SampleRate, 'irapt2');
 	f0_irapt = remove_zeros(f0_irapt);
-	f0_irapt.freq = f0_irapt.freq(:);
-	f0_irapt.time = f0_irapt.time(:);
 	save_pitch_raw(cfg.snd_pathname, f0_irapt, '030_irapt(ko-)');
 	f0_irapt = irapt_voiced_fix(f0_irapt, 8, 0.041);
 	f0_irapt.freq = octave_fix(f0_irapt.freq, f0_irapt.time, 0.5);
@@ -33,6 +31,7 @@ function f0_irapt = irapt_voiced_fix(f0_irapt, lodf2dt_max, voc_sz_min)
 	ii = any([[ii; false] [false; ii]],2);
 	f0_irapt.time(ii) = [];
 	f0_irapt.freq(ii) = [];
+	f0_irapt.isvocal(ii) = [];
 
 	ii = false(size(f0_irapt.time));
 	dt = diff(f0_irapt.time);
@@ -44,6 +43,7 @@ function f0_irapt = irapt_voiced_fix(f0_irapt, lodf2dt_max, voc_sz_min)
 	end
 	f0_irapt.time(ii) = [];
 	f0_irapt.freq(ii) = [];
+	f0_irapt.isvocal(ii) = [];
 end
 
 function f0_freq = median_fix(f0_freq, f0_time, med_sz)
@@ -91,13 +91,19 @@ function df = calc_df(f0_freq, f0_time)
 	df(dt>=min(dt)*1.1) = 0;
 end
 
-function save_pitch_raw(cfg.snd_pathname, f0, ext)
-	save_data = [f0.time(:) f0.freq(:)]; %#ok<NASGU>
-	save([cfg.snd_pathname '.pitch_' ext '.txt'],'save_data','-ascii');
+function save_pitch_raw(snd_pathname, f0, ext)
+	save_data = [f0.time(:) f0.freq(:)];
+%	if isfield(f0,'isvocal')
+%		save_data = [save_data f0.isvocal]; %#ok<NASGU>
+%	end
+	save([snd_pathname '.pitch_' ext '.txt'],'save_data','-ascii');
 end
 
 function f0 = remove_zeros(f0)
 	ind = f0.freq>0;
 	f0.freq = f0.freq(ind);
 	f0.time = f0.time(ind);
+	if isfield(f0,'isvocal')
+		f0.isvocal = f0.isvocal(ind);
+	end
 end
