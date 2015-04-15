@@ -18,7 +18,7 @@ function slsauto_pitch_syntagm_gen(cfg, pause_size, pause_meandb)
 	unvoc_begend( diff(unvoc_begend,[],2)<pause_size, : ) = [];
 
 	% Ограничение по средней мощности пауз
-	[x,x_info] = libsndfile_read(cfg.snd_pathname);
+	[x,x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
 	x(:,2:end) = [];
 	power_meandb = zeros(size(unvoc_begend,1),1);
 	for ri = 1:size(unvoc_begend,1)

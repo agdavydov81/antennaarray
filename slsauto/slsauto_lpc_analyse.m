@@ -1,6 +1,6 @@
 function slsauto_lpc_analyse(cfg)
 	% Загрузка звукового файла
-	[x,x_info] = libsndfile_read(cfg.snd_pathname);
+	[x,x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
 	if ~isempty(x_info.Error)
 		error(x_info.Error);
 	end
@@ -9,7 +9,7 @@ function slsauto_lpc_analyse(cfg)
 
 	%% Выравнивание ЧОТ - получение монотонной речи
 	% Разделение на ЧОТ и огибающую
-	[lpc_e lpc_lsf_ind lpc_lsf] = lpc_analyse_signal(x, fs, 0.020, 0.001);
+	[lpc_e lpc_lsf_ind lpc_lsf] = lpc_analyse_signal(x, fs, 0.020, 0.001); %#ok<*NASGU>
 
 	% Загрузка и подготовка данных ЧОТ
 	pitch_data = load(slsauto_getpath(cfg,'pitch'));
@@ -25,7 +25,7 @@ function slsauto_lpc_analyse(cfg)
 	lpc_lsf_t = lpc_e_t(lpc_lsf_ind);
 
 	% Сохранение параметров для будущего синтеза с параметрами выравненной ЧОТ
-	save(slsauto_getpath(cfg,'lpc'),'fs','lpc_e','lpc_e_t','lpc_lsf','lpc_lsf_t');
+	save(slsauto_getpath(cfg,'lpc'),'fs','lpc_e','lpc_e_t','lpc_lsf','lpc_lsf_t','lpc_lsf_ind');
 end
 
 function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, frame_shift, lpc_order)
@@ -54,7 +54,7 @@ function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, f
 	parfor i=1:size(lpc_e,1) % parfor
 		cur_rg = lpc_ind(i) + [0 frame_size-1] - frame_size2;
 		cur_rgx = min(x_size,max(1,cur_rg));
-		cur_x = double([zeros(cur_rgx(1)-cur_rg(1),1); x(cur_rgx(1):cur_rgx(2)); zeros(cur_rg(2)-cur_rgx(2),1)]);
+		cur_x = [zeros(cur_rgx(1)-cur_rg(1),1); x(cur_rgx(1):cur_rgx(2)); zeros(cur_rg(2)-cur_rgx(2),1)]; %#ok<PFBNS>
 
 		[cur_a, cur_ep] = lpc(cur_x.*cur_win, lpc_order);
 		if isnan(cur_ep)

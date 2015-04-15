@@ -9,16 +9,16 @@ function slsauto_pitch_editor(cfg)
 	if ischar(cfg)
 		cfg = struct('snd_pathname',cfg);
 	end
-	[snd_path,snd_name,snd_ext] = fileparts(cfg.snd_pathname);
+	[snd_path,snd_name,snd_ext] = fileparts(slsauto_getpath(cfg,'snd'));
 	snd_nameext = [snd_name snd_ext];
 	
 	[pitch_pathname, is_auto] = slsauto_getpath(cfg,'pitch');
 	if is_auto
-		list = dir([cfg.snd_pathname '.pitch_*.txt']);
+		list = dir([slsauto_getpath(cfg,'snd') '.pitch_*.txt']);
 		[~,si] = sort({list.name});
 		list = list(si);
 		if isempty(list)
-			error(['Can''t find any pitch file for sound file ''' cfg.snd_pathname '''.']);
+			error(['Can''t find any pitch file for sound file ''' slsauto_getpath(cfg,'snd') '''.']);
 		end
 		if numel(list)>1
 			[dlg_sel,dlg_ok] = listdlg('Name','Pitch select', 'PromptString','Select (multiple) pitch data files:', 'ListSize',[300 300], ...
@@ -35,7 +35,7 @@ function slsauto_pitch_editor(cfg)
 		list.name = pitch_pathname;
 	end
 
-	[x,x_info] = libsndfile_read(cfg.snd_pathname);
+	[x,x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
 	if ~isempty(x_info.Error)
 		error(x_info.Error);
 	end
@@ -62,7 +62,7 @@ function slsauto_pitch_editor(cfg)
 	axis([x_lim max(abs(x))*1.1*[-1 1]]);
 	grid('on');
 	ylabel('Oscillogram');
-	title(cfg.snd_pathname,'Interpreter','none');
+	title(slsauto_getpath(cfg,'snd'),'Interpreter','none');
 	caret=line([0 0], ylim(), 'Color','r', 'LineWidth',2);
 	
 	subplot.position = axes('Units','normalized', 'Position',[0.06 0.61 0.92 0.02], ...

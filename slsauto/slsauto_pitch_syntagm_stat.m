@@ -20,7 +20,7 @@ function slsauto_pitch_syntagm_stat(cfg)
 	unvoc_dt(syntagmas_ind) = [];
 	
 	%% Вычисление статистики по средней мощности пауз
-	[x,x_info] = libsndfile_read(cfg.snd_pathname);
+	[x,x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
 	x(:,2:end) = [];
 	power_meandb = zeros(size(unvoc_begend,1),1);
 	for ri = 1:size(unvoc_begend,1)
@@ -32,7 +32,7 @@ function slsauto_pitch_syntagm_stat(cfg)
 	unvoc_meandb =power_meandb(~syntagmas_ind);
 
 	%% Отображение результатов
-	[~,snd_name,snd_ext] = fileparts(cfg.snd_pathname);
+	[~,snd_name,snd_ext] = fileparts(slsauto_getpath(cfg,'snd'));
 	figure('Toolbar','figure', 'NumberTitle','off', 'Name',[snd_name snd_ext], 'Units','normalized', 'Position',[0 0 1 1]);
 
 	% Pause-Power PDF

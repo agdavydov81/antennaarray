@@ -1,7 +1,32 @@
-function slsauto_lpc_synth(cfg)
-	cache = load(slsauto_getpath(cfg,'lpc'));
-	y = lpc_synth(cache.fs, cache.lpc_e, cache.lpc_e_t, cache.lpc_lsf, cache.lpc_lsf_t);
-	wavwrite(y, cache.fs, 'tmp.wav');
+function slsauto_lpc_synth(cfg, synth_t, border_type)
+	if nargin<3
+		border_type = 'v'; % 'v' - split to V+U regions; 'u' - split to U+V regions; 'vu' or 'uv' - split to U and V regions
+	end
+
+	%% Загрузка данных
+	lpc_cache = load(slsauto_getpath(cfg,'lpc'));
+	pitch_uv = load(slsauto_getpath(cfg,'pitch_uv'));
+	lab = lab_read(slsauto_getpath(cfg,'lab'));
+	syntagm_pos = [round([lab.begin lab.end]*lpc_cache.fs)+1 0 size(lpc_cache.lpc_e,1)];
+	syntagm_pos = sort(unique(syntagm_pos));
+	prosody = xml_read(slsauto_getpath(cfg,'prosody'));
+
+	regions.start = [];
+
+	%% Основной цикл синтеза речеподобных сигналов
+	synth_y = zeros(0,1);
+	while size(synth_y,1)/lpc_cache.fs < synth_t
+		%% Синтез очередной синтагмы
+		cur_y = randn(1000,1);
+		
+		
+		synth_y = [synth_y; cur_y];
+	end
+	
+	wavwrite(synth_y, lpc_cache.fs, slsauto_getpath(cfg,'synth'));
+
+%	y = lpc_synth(lpc_cache.fs, lpc_cache.lpc_e, lpc_cache.lpc_e_t, lpc_cache.lpc_lsf, lpc_cache.lpc_lsf_t);
+%	wavwrite(y, lpc_cache.fs, 'tmp.wav');
 end
 
 function y = lpc_synth(fs, e, e_t, lsf, lsf_t)

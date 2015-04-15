@@ -3,7 +3,7 @@ function slsauto_pitch_prosody(cfg)
 	lab_data = lab_read(slsauto_getpath(cfg,'lab'));
 	lab_pos = [0; sort(unique([lab_data.begin; lab_data.end])); pitch_data(end,1)+1];
 
-	[~,snd_name,snd_ext] = fileparts(cfg.snd_pathname);
+	[~,snd_name,snd_ext] = fileparts(slsauto_getpath(cfg,'snd'));
 	figure('Toolbar','figure', 'NumberTitle','off', 'Name',[snd_name snd_ext], 'Units','normalized', 'Position',[0 0 1 1]);
 	axes_f0_unnorm = axes('Units','normalized', 'Position',[0.06 0.55 0.42 0.40]);
 	hold('on');
