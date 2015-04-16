@@ -117,11 +117,11 @@ function slsauto_pitch_editor(cfg)
 
 	ctrl_pos=get(subplot.signal,'Position');
 	btn_play=uicontrol('Parent',fig, 'Style','pushbutton', 'String','Play view', 'Units','normalized', ...
-			'Position',[ctrl_pos(1)+ctrl_pos(3)-0.075 ctrl_pos(2)+ctrl_pos(4) 0.075 0.03], 'Callback', @on_play);
+			'Position',[ctrl_pos(1)+ctrl_pos(3)-0.075 ctrl_pos(2)+ctrl_pos(4) 0.075 0.03], 'Callback', @on_play, 'KeyPressFcn',@on_key_press);
 	uicontrol('Parent',fig, 'Style','pushbutton', 'String','Save changes', 'Units','normalized', ...
-			'Position',[ctrl_pos(1) ctrl_pos(2)+ctrl_pos(4) 0.075 0.03], 'Callback', @on_save);
+			'Position',[ctrl_pos(1) ctrl_pos(2)+ctrl_pos(4) 0.075 0.03], 'Callback', @on_save, 'KeyPressFcn',@on_key_press);
 	uicontrol('Parent',fig, 'Style','pushbutton', 'String','Help', 'Units','normalized', ...
-			'Position',[ctrl_pos(1)+0.075 ctrl_pos(2)+ctrl_pos(4) 0.075 0.03], 'Callback', @on_help);
+			'Position',[ctrl_pos(1)+0.075 ctrl_pos(2)+ctrl_pos(4) 0.075 0.03], 'Callback', @on_help, 'KeyPressFcn',@on_key_press);
 
 	set(zoom,'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
 	set(pan ,'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
@@ -131,7 +131,7 @@ function slsauto_pitch_editor(cfg)
 				'TimerFcn',@on_play_callback, 'UserData',struct('caret',caret, 'btn_play',btn_play), 'TimerPeriod',1/25);
 
 	fig_data = guihandles(fig);
-	fig_data.user_data = struct('player',player, 'signal',x, 'x_len',x_lim(2), ...
+	fig_data.user_data = struct('figure',fig, 'player',player, 'signal',x, 'x_len',x_lim(2), ...
 							'subplot',subplot, 'btn_play',btn_play, ...
 							'f0_data',struct('min_dt',min(dt), 'plot',data_plot, 'pathnamme',list(end).name) );
 	guidata(fig,fig_data);
@@ -192,7 +192,7 @@ end
 function on_play(hObject, eventdata)
 	fig_data = guidata(hObject);
 	if not(isplaying(fig_data.user_data.player))
-		x_lim=min(fig_data.user_data.player.TotalSamples,max(1,round( xlim()*fig_data.user_data.player.SampleRate+1 )));
+		x_lim=min(fig_data.user_data.player.TotalSamples,max(1,round( xlim(fig_data.user_data.subplot.signal)*fig_data.user_data.player.SampleRate+1 )));
 		play(fig_data.user_data.player, x_lim);
 		set(fig_data.user_data.btn_play, 'String', 'Stop playing');
 	else
@@ -292,12 +292,13 @@ function on_mouse_down(hObject, eventdata)
 end
 
 function on_key_press(hObject, eventdata)
+	fig_data = guidata(hObject);
 	shift_steps = [];
 	switch eventdata.Key
 		case 'f1'
-			on_help(hObject);
+			on_help(fig_data.user_data.figure);
 		case 'space'
-			on_play(hObject);
+			on_play(fig_data.user_data.figure);
 		case {'leftarrow' 'z'}
 			shift_steps = -0.25;
 		case {'rightarrow' 'x'}
@@ -316,7 +317,7 @@ function on_key_press(hObject, eventdata)
 			shift_steps = [nan 1.6180339887498948482];
 	end
 	if ~isempty(shift_steps)
-		on_zoom_pan(hObject,shift_steps);
+		on_zoom_pan(fig_data.user_data.figure,shift_steps);
 	end
 end
 
