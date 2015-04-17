@@ -1,4 +1,4 @@
-function slsauto_lpc_analyse(cfg)
+function slsauto_lpc_analyse(cfg, frame_size, frame_shift)
 	% Загрузка звукового файла
 	[x,x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
 	if ~isempty(x_info.Error)
@@ -6,10 +6,17 @@ function slsauto_lpc_analyse(cfg)
 	end
 	x = x(:,1);
 	fs = x_info.SampleRate;
+	
+	if nargin<2 || isempty(frame_size)
+		frame_size = 0.020;
+	end
+	if nargin<3 || isempty(frame_shift)
+		frame_shift = 0.001;
+	end
 
 	%% Выравнивание ЧОТ - получение монотонной речи
 	% Разделение на ЧОТ и огибающую
-	[lpc_e lpc_lsf_ind lpc_lsf] = lpc_analyse_signal(x, fs, 0.020, 0.001); %#ok<*NASGU>
+	[lpc_e lpc_lsf_ind lpc_lsf] = lpc_analyse_signal(x, fs, frame_size, frame_shift); %#ok<*NASGU>
 
 	% Загрузка и подготовка данных ЧОТ
 	pitch_data = load(slsauto_getpath(cfg,'pitch'));
