@@ -1,6 +1,6 @@
 function slsauto_pitch_vu2lab(cfg, peak_neigh_t)
 	if nargin<2
-		peak_neigh_t = 0.050;
+		peak_neigh_t = 0.040;
 	end
 
 	[x,x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
