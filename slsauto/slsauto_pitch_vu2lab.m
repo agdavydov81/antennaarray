@@ -1,8 +1,11 @@
-function slsauto_pitch_vu2lab(cfg, peak_neigh_t, reg_size_t)
+function slsauto_pitch_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 	if nargin<2
 		peak_neigh_t = 0.040;
 	end
 	if nargin<3
+		peak_neigh_val = 0.5;
+	end
+	if nargin<4
 		reg_size_t = 0.080;
 	end
 
@@ -15,9 +18,9 @@ function slsauto_pitch_vu2lab(cfg, peak_neigh_t, reg_size_t)
 	ord2 = fix(numel(b)/2);
 	power.diff = filter(b,1,[power.obs; zeros(ord2,1)]);
 	power.diff(1:ord2) = [];
-	power.max_ind = find_local_extremums(power.diff, @max, round(power_fs*0.030));
+	power.max_ind = find_local_max(power.diff, round(power_fs*0.030), peak_neigh_val);
 	power.max_t = power.time(power.max_ind);
-	power.min_ind = find_local_extremums(power.diff, @min, round(power_fs*0.030));
+	power.min_ind = find_local_max(-power.diff, round(power_fs*0.030), peak_neigh_val);
 	power.min_t = power.time(power.min_ind);
 
 	pitch_vu = load(slsauto_getpath(cfg,'pitch_vu'));
@@ -101,15 +104,15 @@ function [obs_power, obs_time] = obs_power(x, fs, frame_size, frame_shift)
 	obs_power = 10*log10(obs_power + 1e-100);
 end
 
-function extr = find_local_extremums(x, extr_fn, extr_neigh)
+function extr = find_local_max(x, extr_neigh, extr_val)
 	extr = zeros(max(10,round(numel(x)/(2*extr_neigh))),1);
 	extr_ind = 0;
 	i = 1;
 	while i<=numel(x)
 		rgn = min(numel(x),max(1,[i-extr_neigh, i+extr_neigh]));
-		[~,mi] = feval(extr_fn, x(rgn(1):rgn(2)));
+		[~,mi] = max(x(rgn(1):rgn(2)));
 		ref_pos = mi+rgn(1)-1;
-		if i==ref_pos
+		if i==ref_pos && x(i)>=extr_val
 			extr_ind = extr_ind+1;
 			extr(extr_ind) = i;
 		end
