@@ -14,4 +14,7 @@ function lab_info = lab_read(lab_path)
 	lab_info = cellfun(@(x) struct(	'begin',str2double(x{1})/10000000, ...
 									'end',	str2double(x{2})/10000000, ...
 									'string',x{3}), lab_info(:));
+	if isempty(lab_info)
+		lab_info = struct('begin',0,'end',0,'string',{});
+	end
 end
