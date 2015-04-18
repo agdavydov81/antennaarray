@@ -27,23 +27,29 @@ function slsauto_pitch_vu2lab(cfg, peak_neigh_t)
 	pitch_dt = diff(pitch_vu(:,1));
 	voc_reg = [0; find(pitch_dt>=min(pitch_dt)*1.5); size(pitch_vu,1)];
 	lab_vu(2*(numel(voc_reg)-1),1) = struct('begin',0,'end',0,'string','');
+	kill_ind = false(size(lab_vu));
 	for vi = 1:numel(voc_reg)-1
-		% V-U border enhancement: find nearead power_max_t
-		peak_t = pitch_vu(voc_reg(vi)+1,1);
-		[mv,mi] = min(abs(peak_t - power_max_t));
+		% V-U border position enhancement: find nearead power_max_t
+		[mv,mi] = min(abs(pitch_vu(voc_reg(vi)+1,1) - power_max_t));
 		if mv < peak_neigh_t
-			peak_t = power_max_t(mi);
+			lab_vu(vi*2-1) = struct('begin',power_max_t(mi), 'end',power_max_t(mi), 'string','#pitch_V');
+		else
+			kill_ind(vi*2-1) = true;
 		end
-		lab_vu(vi*2-1) = struct('begin',peak_t, 'end',peak_t, 'string','#pitch_V');
-		
-		% U-V border enhancement: find nearead power_min_t
-		peak_t = pitch_vu(voc_reg(vi+1),1);
-		[mv,mi] = min(abs(peak_t - power_min_t));
+
+		% U-V border position enhancement: find nearead power_min_t
+		[mv,mi] = min(abs(pitch_vu(voc_reg(vi+1),1) - power_min_t));
 		if mv < peak_neigh_t
-			peak_t = power_min_t(mi);
+			lab_vu(vi*2) = struct('begin',power_min_t(mi), 'end',power_min_t(mi), 'string','#pitch_U');
+		else
+			kill_ind(vi*2) = true;
 		end
-		lab_vu(vi*2  ) = struct('begin',peak_t, 'end',peak_t, 'string','#pitch_U');
 	end
+	lab_vu(kill_ind) = [];
+
+	% Fix order mismatch
+	ii = diff([lab_vu.begin])<0;
+	lab_vu(any([ii false; false ii],1)) = [];
 
 	lab_write([lab; lab_vu], slsauto_getpath(cfg,'lab'));
 	
