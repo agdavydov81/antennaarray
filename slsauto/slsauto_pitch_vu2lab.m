@@ -1,6 +1,9 @@
-function slsauto_pitch_vu2lab(cfg, peak_neigh_t)
+function slsauto_pitch_vu2lab(cfg, peak_neigh_t, reg_size_t)
 	if nargin<2
-		peak_neigh_t = 0.050;
+		peak_neigh_t = 0.040;
+	end
+	if nargin<3
+		reg_size_t = 0.080;
 	end
 
 	[x,x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
@@ -44,7 +47,7 @@ function slsauto_pitch_vu2lab(cfg, peak_neigh_t)
 	% Fix order mismatch and remove short regions
 	while true
 		[mv,mi] = min(diff([lab_vu.begin]));
-		if isempty(mv) || mv>=peak_neigh_t
+		if isempty(mi) || mv>=reg_size_t
 			break
 		end
 		[~,mii]=min(abs([peak_val(lab_vu(mi),power) peak_val(lab_vu(mi+1),power)]));
