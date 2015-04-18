@@ -17,7 +17,7 @@ function [file_pathname is_auto] = slsauto_getpath(cfg, filetype)
 				error('Can''t deduce pitch file name for sound file ''%s''.',cfg.snd_pathname);
 			end
 			file_pathname = fullfile(snd_path, list(end).name);
-		case 'pitch_uv'
+		case 'pitch_vu'
 			list = dir([cfg.snd_pathname '.pitch_*_pitchrapt*.txt']);
 			if isempty(list)
 				file_pathname = slsauto_getpath(cfg, 'pitch');
