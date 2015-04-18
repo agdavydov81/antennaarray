@@ -1,6 +1,6 @@
 function slsauto_pitch_vu2lab(cfg, peak_neigh_t)
 	if nargin<2
-		peak_neigh_t = 0.040;
+		peak_neigh_t = 0.050;
 	end
 
 	[x,x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
@@ -12,9 +12,46 @@ function slsauto_pitch_vu2lab(cfg, peak_neigh_t)
 	ord2 = fix(numel(b)/2);
 	power.diff = filter(b,1,[power.obs; zeros(ord2,1)]);
 	power.diff(1:ord2) = [];
-	power_max_t = power.time(find_local_extremums(power.diff, @max, round(power_fs*0.030)));
-	power_min_t = power.time(find_local_extremums(power.diff, @min, round(power_fs*0.030)));
+	power.max_ind = find_local_extremums(power.diff, @max, round(power_fs*0.030));
+	power.max_t = power.time(power.max_ind);
+	power.min_ind = find_local_extremums(power.diff, @min, round(power_fs*0.030));
+	power.min_t = power.time(power.min_ind);
 
+	pitch_vu = load(slsauto_getpath(cfg,'pitch_vu'));
+	pitch_dt = diff(pitch_vu(:,1));
+	voc_reg = [0; find(pitch_dt>=min(pitch_dt)*1.5); size(pitch_vu,1)];
+	lab_vu(2*(numel(voc_reg)-1),1) = struct('begin',0,'end',0,'string','');
+	kill_ind = false(size(lab_vu));
+	for vi = 1:numel(voc_reg)-1
+		% V-U border position enhancement: find nearead power.max_t
+		[mv,mi] = min(abs(pitch_vu(voc_reg(vi)+1,1) - power.max_t));
+		if mv < peak_neigh_t
+			lab_vu(vi*2-1) = struct('begin',power.max_t(mi), 'end',power.max_t(mi), 'string','#pitch_V');
+		else
+			kill_ind(vi*2-1) = true;
+		end
+
+		% U-V border position enhancement: find nearead power.min_t
+		[mv,mi] = min(abs(pitch_vu(voc_reg(vi+1),1) - power.min_t));
+		if mv < peak_neigh_t
+			lab_vu(vi*2) = struct('begin',power.min_t(mi), 'end',power.min_t(mi), 'string','#pitch_U');
+		else
+			kill_ind(vi*2) = true;
+		end
+	end
+	lab_vu(kill_ind) = [];
+
+	% Fix order mismatch and remove short regions
+	while true
+		[mv,mi] = min(diff([lab_vu.begin]));
+		if isempty(mv) || mv>=peak_neigh_t
+			break
+		end
+		[~,mii]=min(abs([peak_val(lab_vu(mi),power) peak_val(lab_vu(mi+1),power)]));
+		lab_vu(mi+mii-1) = [];
+	end
+
+	% Save results
 	if ~exist(slsauto_getpath(cfg,'lab'),'file')
 		lab = struct('begin',[],'end',[],'string',{});
 	else
@@ -23,37 +60,20 @@ function slsauto_pitch_vu2lab(cfg, peak_neigh_t)
 	lab(strcmp('#pitch_U',{lab.string})) = [];
 	lab(strcmp('#pitch_V',{lab.string})) = [];
 
-	pitch_vu = load(slsauto_getpath(cfg,'pitch_vu'));
-	pitch_dt = diff(pitch_vu(:,1));
-	voc_reg = [0; find(pitch_dt>=min(pitch_dt)*1.5); size(pitch_vu,1)];
-	lab_vu(2*(numel(voc_reg)-1),1) = struct('begin',0,'end',0,'string','');
-	kill_ind = false(size(lab_vu));
-	for vi = 1:numel(voc_reg)-1
-		% V-U border position enhancement: find nearead power_max_t
-		[mv,mi] = min(abs(pitch_vu(voc_reg(vi)+1,1) - power_max_t));
-		if mv < peak_neigh_t
-			lab_vu(vi*2-1) = struct('begin',power_max_t(mi), 'end',power_max_t(mi), 'string','#pitch_V');
-		else
-			kill_ind(vi*2-1) = true;
-		end
-
-		% U-V border position enhancement: find nearead power_min_t
-		[mv,mi] = min(abs(pitch_vu(voc_reg(vi+1),1) - power_min_t));
-		if mv < peak_neigh_t
-			lab_vu(vi*2) = struct('begin',power_min_t(mi), 'end',power_min_t(mi), 'string','#pitch_U');
-		else
-			kill_ind(vi*2) = true;
-		end
-	end
-	lab_vu(kill_ind) = [];
-
-	% Fix order mismatch
-	ii = diff([lab_vu.begin])<0;
-	lab_vu(any([ii false; false ii],1)) = [];
-
 	lab_write([lab; lab_vu], slsauto_getpath(cfg,'lab'));
 	
 %	plot_data(cfg, x,fs, power, pitch_vu);
+end
+
+function val = peak_val(lab, power)
+	if strcmp(lab.string,'#pitch_V')
+		obs = power.max_t;
+		ind = power.max_ind;
+	else
+		obs = power.min_t;
+		ind = power.min_ind;
+	end
+	val = power.diff(ind(obs==lab.begin));
 end
 
 function [obs_power, obs_time] = obs_power(x, fs, frame_size, frame_shift)
