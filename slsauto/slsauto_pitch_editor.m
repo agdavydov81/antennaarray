@@ -140,9 +140,8 @@ end
 function on_zoom_pan(hObject, eventdata) %#ok<*INUSD>
 %	Usage example:
 %	set(zoom,'ActionPostCallback',@on_zoom_pan);
-%	set(pan ,'ActionPostCallback',@on_zoom_pan);
+%	set(pan ,'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
 %	zoom('xon');
-%	set(pan, 'Motion', 'horizontal');
 
 	fig_data = guidata(hObject);
 
@@ -153,19 +152,8 @@ function on_zoom_pan(hObject, eventdata) %#ok<*INUSD>
 			pv = get(fig_data.user_data.subplot.position_patch, 'Vertices');
 			x_lim = (pv([1 3],1) - x_lim(1))*fig_data.user_data.x_len/rg;
 		end
-	else % Some command
-		if numel(eventdata)>1 && isnan(eventdata(1)) % zoom command
-			x_lim = mean(x_lim) + [-0.5 0.5]*rg*eventdata(2);
-		else % scroll command
-			if isinf(eventdata) 
-				x_lim = [0 rg];
-				if eventdata>0
-					x_lim = x_lim+fig_data.user_data.x_len-rg;
-				end
-			else
-				x_lim = x_lim + eventdata*rg;
-			end
-		end
+	else
+		x_lim = eventdata;
 	end
 
 	% Fix borders
@@ -218,12 +206,29 @@ function on_mouse_down(hObject, eventdata)
 	fig_data = guidata(hObject);
 	
 	mouse_pos = get(hObject, 'CurrentPoint');
-	spec_pos = get(fig_data.user_data.subplot.spectrum, 'Position');
-	if	mouse_pos(1)<spec_pos(1) || mouse_pos(1)>spec_pos(1)+spec_pos(3) || ...
-		mouse_pos(2)<spec_pos(2) || mouse_pos(2)>spec_pos(2)+spec_pos(4)
-		return
+	posn_pos = get(fig_data.user_data.subplot.position, 'Position');
+	if	mouse_pos(1)>=posn_pos(1) && mouse_pos(1)<=posn_pos(1)+posn_pos(3) && ...
+		mouse_pos(2)>=posn_pos(2) && mouse_pos(2)<=posn_pos(2)+posn_pos(4)
+			on_mouse_down_position(hObject, fig_data, mouse_pos, posn_pos);
 	end
 
+	spec_pos = get(fig_data.user_data.subplot.spectrum, 'Position');
+	if	mouse_pos(1)>=spec_pos(1) && mouse_pos(1)<=spec_pos(1)+spec_pos(3) && ...
+		mouse_pos(2)>=spec_pos(2) && mouse_pos(2)<=spec_pos(2)+spec_pos(4)
+			on_mouse_down_spectrum(hObject, fig_data, mouse_pos, spec_pos);
+	end
+end
+
+function on_mouse_down_position(hObject, fig_data, mouse_pos, posn_pos) %#ok<*INUSL>
+	x_lim = get(fig_data.user_data.subplot.position, 'XLim');
+	rg = x_lim(2)-x_lim(1);
+
+	x_lim = fig_data.user_data.x_len*(mouse_pos(1)-posn_pos(1))/posn_pos(3) + [-0.5 0.5]*rg;
+
+	on_zoom_pan(fig_data.user_data.figure,x_lim);
+end
+
+function on_mouse_down_spectrum(hObject, fig_data, mouse_pos, spec_pos)
 	scr_sz = get(0,'ScreenSize');
 	pix_mouse_pos = round(mouse_pos.*scr_sz([3 4]));
 
@@ -293,32 +298,33 @@ end
 
 function on_key_press(hObject, eventdata)
 	fig_data = guidata(hObject);
-	shift_steps = [];
+	x_lim = get(fig_data.user_data.subplot.signal, 'XLim');
+	rg = x_lim(2)-x_lim(1);
 	switch eventdata.Key
 		case 'f1'
 			on_help(fig_data.user_data.figure);
+			return
 		case 'space'
 			on_play(fig_data.user_data.figure);
+			return
 		case {'leftarrow' 'z'}
-			shift_steps = -0.25;
+			x_lim = x_lim - rg*0.25;
 		case {'rightarrow' 'x'}
-			shift_steps = 0.25;
-		case {'pageup' 's'}
-			shift_steps = 0.9;
-		case {'pagedown' 'a'}
-			shift_steps = -0.9;
+			x_lim = x_lim + rg*0.25;
+		case {'pageup' 'a'}
+			x_lim = x_lim - rg*0.90;
+		case {'pagedown' 's'}
+			x_lim = x_lim + rg*0.90;
 		case {'home' 'q'}
-			shift_steps = -inf;
+			x_lim = [0 rg];
 		case {'end' 'w'}
-			shift_steps = inf;
+			x_lim = fig_data.user_data.x_len + [-rg 0];
 		case 'uparrow'
-			shift_steps = [nan 1/1.6180339887498948482]; 
+			x_lim = mean(x_lim) + 1/1.6180339887498948482*[-0.5 0.5]*rg;
 		case 'downarrow'
-			shift_steps = [nan 1.6180339887498948482];
+			x_lim = mean(x_lim) +   1.6180339887498948482*[-0.5 0.5]*rg;
 	end
-	if ~isempty(shift_steps)
-		on_zoom_pan(fig_data.user_data.figure,shift_steps);
-	end
+	on_zoom_pan(fig_data.user_data.figure,x_lim);
 end
 
 function on_save(hObject, eventdata)
