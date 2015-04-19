@@ -29,25 +29,25 @@ function slsauto_pitch_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 	lab_vu(2*(numel(voc_reg)-1),1) = struct('begin',0,'end',0,'string','');
 	kill_ind = false(size(lab_vu));
 	for vi = 1:numel(voc_reg)-1
-		% V-U border position enhancement: find nearead power.max_t
+		% Уточнение границы V-U: поиск ближайшего локального максимума в power.max_t
 		[mv,mi] = min(abs(pitch_vu(voc_reg(vi)+1,1) - power.max_t));
 		if mv < peak_neigh_t
-			lab_vu(vi*2-1) = struct('begin',power.max_t(mi), 'end',power.max_t(mi), 'string','#pitch_V');
+			lab_vu(vi*2-1) = struct('begin',power.max_t(mi), 'end',power.max_t(mi), 'string','#pitch_v');
 		else
 			kill_ind(vi*2-1) = true;
 		end
 
-		% U-V border position enhancement: find nearead power.min_t
+		% Уточнение границы U-V: поиск ближайшего локального минимума в power.min_t
 		[mv,mi] = min(abs(pitch_vu(voc_reg(vi+1),1) - power.min_t));
 		if mv < peak_neigh_t
-			lab_vu(vi*2) = struct('begin',power.min_t(mi), 'end',power.min_t(mi), 'string','#pitch_U');
+			lab_vu(vi*2) = struct('begin',power.min_t(mi), 'end',power.min_t(mi), 'string','#pitch_u');
 		else
 			kill_ind(vi*2) = true;
 		end
 	end
 	lab_vu(kill_ind) = [];
 
-	% Fix order mismatch and remove short regions
+	% Правка ошибок в последовательности и объединение коротких участков
 	while true
 		[mv,mi] = min(diff([lab_vu.begin]));
 		if isempty(mi) || mv>=reg_size_t
@@ -57,14 +57,14 @@ function slsauto_pitch_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 		lab_vu(mi+mii-1) = [];
 	end
 
-	% Save results
+	% Сохранение результатов
 	if ~exist(slsauto_getpath(cfg,'lab'),'file')
 		lab = struct('begin',[],'end',[],'string',{});
 	else
 		lab = lab_read(slsauto_getpath(cfg,'lab'));
 	end
-	lab(strcmp('#pitch_U',{lab.string})) = [];
-	lab(strcmp('#pitch_V',{lab.string})) = [];
+	lab(strcmp('#pitch_v',{lab.string})) = [];
+	lab(strcmp('#pitch_u',{lab.string})) = [];
 
 	lab_write([lab; lab_vu], slsauto_getpath(cfg,'lab'));
 	
