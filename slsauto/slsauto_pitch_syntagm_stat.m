@@ -7,6 +7,7 @@ function slsauto_pitch_syntagm_stat(cfg)
 	unvoc_begend = [pitch_data([ind; false]) pitch_data([false; ind])]; % √раницы невокализованных участков
 
 	lab_data = lab_read(slsauto_getpath(cfg,'lab'));
+	lab_data = lab_data(strcmp('#syntagm',{lab_data.string}));
 
 	%% ¬ычисление статистики по длительности пауз
 	syntagmas_ind = false(size(unvoc_begend,1),1);
