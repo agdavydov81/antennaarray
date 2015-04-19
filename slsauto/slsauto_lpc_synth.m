@@ -2,74 +2,72 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 	if nargin<3
 		border_type = 'v'; % 'v' - split to V+U regions; 'u' - split to U+V regions; 'vu' or 'uv' - split to U and V regions
 	end
+	border_type = lower(border_type);
 
 	%% Загрузка данных
 	lpc_cache = load(slsauto_getpath(cfg,'lpc'));
-
-	pitch_vu = load(slsauto_getpath(cfg,'pitch_vu'));
-	pitch_dt = diff(pitch_vu(:,1));
-	vocal_ind = [0; find(pitch_dt>=min(pitch_dt)*1.5); size(pitch_vu,1)];
-	vocal_pos = [pitch_vu(vocal_ind(1:end-1)+1,1) pitch_vu(vocal_ind(2:end),1)];
-	vocal_pos = round(vocal_pos*lpc_cache.fs)+1;
-
 	lab = lab_read(slsauto_getpath(cfg,'lab'));
-	syntagm_pos = [round([lab.begin lab.end]*lpc_cache.fs)+1 0 size(lpc_cache.lpc_e,1)];
+	prosody = xml_read(slsauto_getpath(cfg,'prosody'));
+
+	% Поиск границ синтагм
+	ii = strcmp('#syntagm',{lab.string});
+	syntagm_pos = [round([lab(ii).begin]'*lpc_cache.fs)+1; 0; size(lpc_cache.lpc_e,1)];
 	syntagm_pos = sort(unique(syntagm_pos));
 
-	prosody = xml_read(slsauto_getpath(cfg,'prosody'));
-	
-	[x,x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
-	fs = x_info.SampleRate;
-	[power.obs power.time] = obs_power(x, fs, 0.020, 0.001);
-	
-	figure('Units','normalized', 'Position',[0 0 1 1]);
-	x_lim = [0 (size(x,1)-1)/fs];
-	subplot(4,1,1);
-	plot((0:size(x,1)-1)/fs,x);
-	axis([x_lim [-1 1]*1.1*max(abs(x))]);
-	grid('on');
-	subplot(4,1,2);
-	plot(pitch_vu(:,1), pitch_vu(:,2), 'b.');
-	xlim(x_lim);
-	grid('on');
-	subplot(4,1,3);
-	plot(power.time, power.obs);
-	xlim(x_lim);
-	grid('on');
-	subplot(4,1,4);
-	hold('on');
-	p_fs = 1/min(diff(power.time));
-	b = conv( fir1(round(p_fs*0.5), 33*2/p_fs), [1 -1]);
-	ord2 = fix(numel(b)/2);
-	power.obs = filter(b,1,[power.obs; zeros(ord2,1)]);
-	power.obs(1:ord2) = [];
-	plot(power.time, power.obs);
-	xlim(x_lim);
-	grid('on');
-	
- 	set(pan ,'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
- 	set(zoom,'ActionPostCallback',@on_zoom_pan);
- 	zoom('xon');
+	% Поиск границ элементов синтеза
+	ii = false(size(lab));
+	for bi = 1:numel(border_type)
+		ii = ii | strcmp(['#pitch_' border_type(bi)],{lab.string}');
+	end
+	block_pos = sort(unique( round([lab(ii).begin]'*lpc_cache.fs)+1 ));
 
+	% Формирование списков начальных, промежуточных и конечных элементов синтеза
+	regions = struct('start',zeros(0,2), 'middle',zeros(0,2), 'finish',zeros(0,2));
 	for si = 1:numel(syntagm_pos)-1
+		cur_syntagm = [syntagm_pos(si) syntagm_pos(si+1)];
+		cur_block   = block_pos( cur_syntagm(1)<block_pos & block_pos<cur_syntagm(2) );
+		regions.start(end+1,:)  = [cur_syntagm(1)+1 cur_block(1)];
+		regions.finish(end+1,:) = [cur_block(end)+1 cur_syntagm(2)];
+		regions.middle = [regions.middle; [cur_block(1:end-1)+1 cur_block(2:end)]];
 	end
 
-%	regions.start = [];
-%{
 	%% Основной цикл синтеза речеподобных сигналов
 	synth_y = zeros(0,1);
 	while size(synth_y,1)/lpc_cache.fs < synth_t
 		%% Синтез очередной синтагмы
-		cur_y = randn(1000,1);
+		cur_length = interp1q(prosody.syntagm_length.cdf, prosody.syntagm_length.arg, rand()) + ...
+					 interp1q(prosody.pause_length.cdf, prosody.pause_length.arg, 0.5);
+
+		reg_list = [get_region(lpc_cache, regions.start (randi(size(regions.start, 1)),:)); ...
+					get_region(lpc_cache, regions.finish(randi(size(regions.finish,1)),:))];
+
+		while sum(arrayfun(@(x) diff(x.lpc_e_t([1 end])), reg_list)) < cur_length*0.9
+			reg_list = [reg_list(1:end-1); get_region(lpc_cache, regions.middle(randi(size(regions.middle,1)),:)); reg_list(end)];
+		end
 		
-		
-		synth_y = [synth_y; cur_y];
+		time_val = 0;
+		for ri = 1:numel(reg_list)
+			reg_list(ri).lpc_lsf_t = reg_list(ri).lpc_lsf_t - reg_list(ri).lpc_e_t(1) + time_val;
+			reg_list(ri).lpc_e_t = reg_list(ri).lpc_e_t - reg_list(ri).lpc_e_t(1) + time_val;
+			time_val = reg_list(ri).lpc_e_t(end)*2-reg_list(ri).lpc_e_t(end-1);
+		end
+
+		cur_y = lpc_synth(lpc_cache.fs, vertcat(reg_list.lpc_e), vertcat(reg_list.lpc_e_t), vertcat(reg_list.lpc_lsf), vertcat(reg_list.lpc_lsf_t));
+
+		synth_y = [synth_y; cur_y]; %#ok<AGROW>
 	end
-	
+
 	wavwrite(synth_y, lpc_cache.fs, slsauto_getpath(cfg,'synth'));
-%}
+
 %	y = lpc_synth(lpc_cache.fs, lpc_cache.lpc_e, lpc_cache.lpc_e_t, lpc_cache.lpc_lsf, lpc_cache.lpc_lsf_t);
 %	wavwrite(y, lpc_cache.fs, 'tmp.wav');
+end
+
+function cur_reg = get_region(lpc_cache, ind)
+	cur_reg = struct('lpc_e',lpc_cache.lpc_e(ind(1):ind(2)), 'lpc_e_t',lpc_cache.lpc_e_t(ind(1):ind(2)));
+	ind_lsf = cur_reg.lpc_e_t(1)<=lpc_cache.lpc_lsf_t & lpc_cache.lpc_lsf_t<=cur_reg.lpc_e_t(end);
+	cur_reg.lpc_lsf = lpc_cache.lpc_lsf(ind_lsf,:);
+	cur_reg.lpc_lsf_t = lpc_cache.lpc_lsf_t(ind_lsf,:);
 end
 
 function y = lpc_synth(fs, e, e_t, lsf, lsf_t)
