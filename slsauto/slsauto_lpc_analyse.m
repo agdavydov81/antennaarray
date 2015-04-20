@@ -40,7 +40,7 @@ function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, f
 	frame_size =  round(frame_size*fs);
 	frame_shift = max(1,round(frame_shift*fs));
 	if nargin<5
-		lpc_order = round(1.5*fs/1000);
+		lpc_order = round(1.5*fs/2000)*2; % Использование четного порядка модели предсказания позволяет значительно ускорить lsf2poly
 	end
 
 	frame_size2 =  fix(frame_size/2);
