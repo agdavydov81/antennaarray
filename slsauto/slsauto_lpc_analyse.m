@@ -16,7 +16,7 @@ function slsauto_lpc_analyse(cfg, frame_size, frame_shift)
 
 	%% Выравнивание ЧОТ - получение монотонной речи
 	% Разделение на ЧОТ и огибающую
-	[lpc_e lpc_lsf_ind lpc_lsf] = lpc_analyse_signal(x, fs, frame_size, frame_shift); %#ok<*NASGU>
+	[lpc_e lpc_lsf_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, frame_shift); %#ok<*NASGU,*ASGLU>
 
 	% Загрузка и подготовка данных ЧОТ
 	pitch_data = load(slsauto_getpath(cfg,'pitch'));
@@ -32,15 +32,18 @@ function slsauto_lpc_analyse(cfg, frame_size, frame_shift)
 	lpc_lsf_t = lpc_e_t(lpc_lsf_ind);
 
 	% Сохранение параметров для будущего синтеза с параметрами выравненной ЧОТ
-	save(slsauto_getpath(cfg,'lpc'),'fs','lpc_e','lpc_e_t','lpc_lsf','lpc_lsf_t','lpc_lsf_ind');
+	save(slsauto_getpath(cfg,'lpc'),'fs','lpc_e','lpc_e_t','lpc_lsf','lpc_lsf_t','lpc_lsf_ind','lpc_b');
 end
 
-function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, frame_shift, lpc_order)
+function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, frame_shift, lpc_order, is_power_norm)
 	x_size =      size(x,1);
 	frame_size =  round(frame_size*fs);
 	frame_shift = max(1,round(frame_shift*fs));
 	if nargin<5
 		lpc_order = round(1.5*fs/2000)*2; % Использование четного порядка модели предсказания позволяет значительно ускорить lsf2poly
+	end
+	if nargin<6
+		is_power_norm = true;
 	end
 
 	frame_size2 =  fix(frame_size/2);
@@ -68,9 +71,13 @@ function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, f
 			cur_a = [1 zeros(1,lpc_order)];
 			cur_ep = 0;
 		end
+
 		lpc_lsf(i,:) = poly2lsf(cur_a);
 		lpc_b(i) = sqrt(cur_ep);
 
+		if is_power_norm
+			cur_a = cur_a/sqrt(cur_ep);
+		end
 		cur_e = filter(cur_a, 1, cur_x(frame_size2-frame_shift2-lpc_order+1 : frame_size2+frame_shift-frame_shift2));
 		lpc_e{i} = cur_e(lpc_order+1:end);
 	end
