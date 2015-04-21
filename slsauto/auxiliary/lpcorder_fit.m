@@ -1,4 +1,4 @@
-function slsauto_lpcorderfit(snd_pathname, is_8000)
+function lpcorder_fit(snd_pathname, is_8000)
 	if nargin<1 || isempty(snd_pathname)
 		snd_pathname = 'White noise';
 		fs_orig = 40000;
