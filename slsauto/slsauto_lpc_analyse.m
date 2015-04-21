@@ -56,8 +56,17 @@ function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, f
 	lpc_ind = (1+frame_shift2:frame_shift:x_size)';
 
 	lpc_e = cell(size(lpc_ind));
-	lpc_lsf = zeros(size(lpc_ind,1),lpc_order);
-	lpc_b = zeros(size(lpc_ind));
+
+	is_calc_lsf = false;
+	if nargout>=3
+		lpc_lsf = zeros(size(lpc_ind,1),lpc_order);
+		is_calc_lsf = true;
+	end
+	is_calc_b = false;
+	if nargout>=4
+		lpc_b = zeros(size(lpc_ind));
+		is_calc_b = true;
+	end
 
 	cur_win = hann(frame_size);
 
@@ -72,8 +81,12 @@ function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, f
 			cur_ep = 0;
 		end
 
-		lpc_lsf(i,:) = poly2lsf(cur_a);
-		lpc_b(i) = sqrt(cur_ep);
+		if is_calc_lsf
+			lpc_lsf(i,:) = poly2lsf(cur_a);
+		end
+		if is_calc_b
+			lpc_b(i) = sqrt(cur_ep);
+		end
 
 		if is_power_norm
 			cur_a = cur_a/sqrt(cur_ep);
