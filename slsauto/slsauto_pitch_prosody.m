@@ -1,7 +1,9 @@
 function slsauto_pitch_prosody(cfg)
 	pitch_data = load(slsauto_getpath(cfg,'pitch_vu'));
 	lab_data = lab_read(slsauto_getpath(cfg,'lab'));
-	lab_pos = [0; sort(unique([lab_data.begin; lab_data.end])); pitch_data(end,1)+1];
+	lab_data = lab_data(strcmp('#syntagm',{lab_data.string}));
+	lab_pos = [0; sort(unique([lab_data.begin]')); pitch_data(end,1)+1];
+	f0_median = median(pitch_data(:,2));
 
 	[~,snd_name,snd_ext] = fileparts(slsauto_getpath(cfg,'snd'));
 	figure('Toolbar','figure', 'NumberTitle','off', 'Name',[snd_name snd_ext], 'Units','normalized', 'Position',[0 0 1 1]);
@@ -14,7 +16,7 @@ function slsauto_pitch_prosody(cfg)
 	hold('on');
 	grid('on');
 	xlabel('Normalized length');
-	ylabel('F0, Hz');
+	ylabel('Normalized F0');
 
 	pal = lines();
 	syntagm_length = nan(size(lab_pos));
@@ -31,8 +33,8 @@ function slsauto_pitch_prosody(cfg)
 
 		cur_color = pal(randi(size(pal,1)),:);
 		plot(axes_f0_unnorm, cur_f0(:,1), cur_f0(:,2), '.', 'Color',cur_color);
-		plot(axes_f0_norm, cur_f0(:,1)/cur_f0(end,1), cur_f0(:,2), '.', 'Color',cur_color);
-		stat.intonogram.val{li} = interp1(cur_f0(:,1)/cur_f0(end,1), cur_f0(:,2), stat.intonogram.arg);
+		plot(axes_f0_norm, cur_f0(:,1)/cur_f0(end,1), cur_f0(:,2)/f0_median, '.', 'Color',cur_color);
+		stat.intonogram.val{li} = interp1(cur_f0(:,1)/cur_f0(end,1), cur_f0(:,2)/f0_median, stat.intonogram.arg);
 
 		syntagm_length(li) = cur_f0(end,1);
 		
@@ -45,6 +47,7 @@ function slsauto_pitch_prosody(cfg)
 	pause_length(isnan(pause_length)) = [];
 	
 	stat.intonogram.val = medfilt1(median(cell2mat(stat.intonogram.val),1),11);
+	stat.intonogram.f0_median = f0_median;
 	plot(axes_f0_norm, stat.intonogram.arg, stat.intonogram.val, 'Color','k', 'LineWidth',7);
 
 	axes('Units','normalized', 'Position',[0.06 0.10 0.42 0.40]);
