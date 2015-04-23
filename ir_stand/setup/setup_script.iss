@@ -20,7 +20,7 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={pf}\BSUIR\{#MyAppName}
-DefaultGroupName={#MyAppName}
+DefaultGroupName=BSUIR\{#MyAppName}
 AllowNoIcons=yes
 OutputDir=.
 OutputBaseFilename={#MyAppName}_setup_{#MyAppVersion}
@@ -43,11 +43,13 @@ Source: "..\bsuir_logo.png"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\ir_stand_description.doc"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\sls\*"; DestDir: "{app}\sls"; Flags: ignoreversion recursesubdirs
 Source: "..\xml_io_tools\*"; DestDir: "{app}\xml_io_tools"; Flags: ignoreversion recursesubdirs
+Source: "bsuir_logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\bsuir_logo.ico"
+Name: "{group}\Краткое описание алгоритма и настройки программы {#MyAppName}"; Filename: "{app}\ir_stand_description.doc"
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\bsuir_logo.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: shellexec postinstall skipifsilent
