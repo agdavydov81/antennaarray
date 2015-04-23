@@ -47,9 +47,9 @@ Source: "bsuir_logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\bsuir_logo.ico"
+Name: "{group}\{#MyAppName}"; Filename: "matlab.exe"; WorkingDir: "{app}"; IconFilename: "{app}\bsuir_logo.ico"; IconIndex: 0; Parameters: "-nodisplay -nosplash -nodesktop -r ""uiwait(ir_stand);exit"""
 Name: "{group}\Краткое описание алгоритма и настройки программы {#MyAppName}"; Filename: "{app}\ir_stand_description.doc"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\bsuir_logo.ico"; Tasks: desktopicon
+Name: "{commondesktop}\{#MyAppName}"; Filename: "matlab.exe"; WorkingDir: "{app}"; IconFilename: "{app}\bsuir_logo.ico"; IconIndex: 0; Parameters: "-nodisplay -nosplash -nodesktop -r ""uiwait(ir_stand);exit"""; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: shellexec postinstall skipifsilent
+Filename: "matlab.exe"; Parameters: "-nodisplay -nosplash -nodesktop -r ""uiwait(ir_stand());exit"""; WorkingDir: "{app}"; Flags: postinstall skipifsilent; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"
