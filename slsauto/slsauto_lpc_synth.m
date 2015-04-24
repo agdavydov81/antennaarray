@@ -45,8 +45,6 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 	synth_y = zeros(0,1);
 	while size(synth_y,1)/lpc_cache.fs < synth_t
 		%% Синтез очередной синтагмы
-		synth_n = synth_n+1;
-		
 		% Определение требуемой длительности
 		cur_length = interp1q(prosody.syntagm_length.cdf, prosody.syntagm_length.arg, rand()) + ...
 					 interp1q(prosody.pause_length.cdf, prosody.pause_length.arg, 0.5);
