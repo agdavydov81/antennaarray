@@ -21,6 +21,7 @@ function slsauto_pitch_prosody(cfg)
 	pal = lines();
 	syntagm_length = nan(size(lab_pos));
 	pause_length   = nan(size(lab_pos));
+	f0_norm_rms    = nan(size(lab_pos));
 	stat.intonogram.arg = linspace(0,1,101);
 	stat.intonogram.val = cell(size(lab_pos));
 	for li = 1:numel(lab_pos)-1
@@ -34,7 +35,9 @@ function slsauto_pitch_prosody(cfg)
 		cur_color = pal(randi(size(pal,1)),:);
 		plot(axes_f0_unnorm, cur_f0(:,1), cur_f0(:,2), '.', 'Color',cur_color);
 		plot(axes_f0_norm, cur_f0(:,1)/cur_f0(end,1), cur_f0(:,2)/f0_median, '.', 'Color',cur_color);
-		stat.intonogram.val{li} = interp1(cur_f0(:,1)/cur_f0(end,1), cur_f0(:,2)/f0_median, stat.intonogram.arg);
+		cur_f0(:,2) = cur_f0(:,2)/f0_median;
+		f0_norm_rms(li) = std(cur_f0(:,2));
+		stat.intonogram.val{li} = interp1(cur_f0(:,1)/cur_f0(end,1), cur_f0(:,2), stat.intonogram.arg);
 
 		syntagm_length(li) = cur_f0(end,1);
 		
@@ -45,8 +48,13 @@ function slsauto_pitch_prosody(cfg)
 	end
 	syntagm_length(isnan(syntagm_length)) = [];
 	pause_length(isnan(pause_length)) = [];
-	
+	f0_norm_rms(isnan(f0_norm_rms)) = [];
+
+	stat.intonogram.arg = stat.intonogram.arg(:);
+
 	stat.intonogram.val = medfilt1(median(cell2mat(stat.intonogram.val),1),11);
+	stat.intonogram.val = (stat.intonogram.val(:)-1)*median(f0_norm_rms)/std(stat.intonogram.val)+1;
+
 	stat.intonogram.f0_median = f0_median;
 	plot(axes_f0_norm, stat.intonogram.arg, stat.intonogram.val, 'Color','k', 'LineWidth',7);
 
@@ -58,6 +66,6 @@ function slsauto_pitch_prosody(cfg)
 	xlabel('Time, sec');
 	ylabel('CDF');
 	legend({'Syntagm length','Pause length'},'Location','SE');
-	
+
 	xml_write(slsauto_getpath(cfg,'prosody'), stat, 'prosody');
 end

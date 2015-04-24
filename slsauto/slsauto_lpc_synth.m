@@ -8,6 +8,7 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 	lpc_cache = load(slsauto_getpath(cfg,'lpc'));
 	lab = lab_read(slsauto_getpath(cfg,'lab'));
 	prosody = xml_read(slsauto_getpath(cfg,'prosody'));
+	pitch_vu = load(slsauto_getpath(cfg,'pitch_vu'));
 
 	% Поиск границ синтагм
 	ii = strcmp('#syntagm',{lab.string});
@@ -30,7 +31,7 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 		regions.finish(end+1,:) = [cur_block(end)+1 cur_syntagm(2)];
 		regions.middle = [regions.middle; [cur_block(1:end-1)+1 cur_block(2:end)]];
 	end
-	
+
 	% КИХ НЧ фильтр Гаусса для сглаживания треков LSF на стыках блоков синтеза
 	lsf_fs = lpc_cache.fs / (lpc_cache.lpc_lsf_ind(2)-lpc_cache.lpc_lsf_ind(1));
 	lsf_fc = 20*2/lsf_fs;
@@ -44,6 +45,8 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 	synth_y = zeros(0,1);
 	while size(synth_y,1)/lpc_cache.fs < synth_t
 		%% Синтез очередной синтагмы
+		synth_n = synth_n+1;
+		
 		% Определение требуемой длительности
 		cur_length = interp1q(prosody.syntagm_length.cdf, prosody.syntagm_length.arg, rand()) + ...
 					 interp1q(prosody.pause_length.cdf, prosody.pause_length.arg, 0.5);
@@ -57,11 +60,16 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 		end
 
 		% Формирование единой шкалы времени у смежных регионов синтеза
-		time_val = 0;
+		e_t_val = 0;
+		e_ind_val = 1;
+		lsf_ind_val  = 1;
 		for ri = 1:numel(reg_list)
-			reg_list(ri).lpc_lsf_t = reg_list(ri).lpc_lsf_t - reg_list(ri).lpc_e_t(1) + time_val;
-			reg_list(ri).lpc_e_t = reg_list(ri).lpc_e_t - reg_list(ri).lpc_e_t(1) + time_val;
-			time_val = reg_list(ri).lpc_e_t(end)*2-reg_list(ri).lpc_e_t(end-1);
+			reg_list(ri).lpc_e_t = reg_list(ri).lpc_e_t - reg_list(ri).lpc_e_t(1) + e_t_val;
+			e_t_val = reg_list(ri).lpc_e_t(end)*2-reg_list(ri).lpc_e_t(end-1);
+			reg_list(ri).lpc_e_ind_lin = reg_list(ri).lpc_e_ind - reg_list(ri).lpc_e_ind(1) + e_ind_val;
+			e_ind_val = e_ind_val + diff(reg_list(ri).lpc_e_ind) + 1;
+			reg_list(ri).lpc_lsf_ind = reg_list(ri).lpc_lsf_ind - reg_list(ri).lpc_e_ind(1) + lsf_ind_val;
+			lsf_ind_val = lsf_ind_val + size(reg_list(ri).lpc_e,1);
 		end
 
 		% Сглаживание переходов параметров на стыках регионов синтеза
@@ -83,8 +91,29 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 			end
 		end
 
+		% Формирование контура ЧОТ
+		cur_lpc_e_t = vertcat(reg_list.lpc_e_t);
+		v_beg = find((reg_list(1).lpc_e_ind(1)-1)/lpc_cache.fs<=pitch_vu(:,1) & pitch_vu(:,1)<=(reg_list(1).lpc_e_ind(2)-1)/lpc_cache.fs,1);
+		if isempty(v_beg)
+			v_beg = size(reg_list(1).lpc_e,1);
+		else
+			v_beg = round(pitch_vu(v_beg,1)*lpc_cache.fs)+1 - reg_list(1).lpc_e_ind(1) + reg_list(1).lpc_e_ind_lin(1);
+		end
+		v_end = find((reg_list(end).lpc_e_ind(1)-1)/lpc_cache.fs<=pitch_vu(:,1) & pitch_vu(:,1)<=(reg_list(end).lpc_e_ind(2)-1)/lpc_cache.fs,1,'last');
+		if isempty(v_beg)
+			v_end = size(cur_lpc_e_t,1)-size(reg_list(end).lpc_e_t,1);
+		else
+			v_end = round(pitch_vu(v_end,1)*lpc_cache.fs)+1 - reg_list(end).lpc_e_ind(1) + reg_list(end).lpc_e_ind_lin(1);
+		end
+		if v_end-v_beg>lpc_cache.fs
+			cur_lpc_e_dt =	diff(cur_lpc_e_t) .* ...
+							interp1q([0; v_beg; v_beg+prosody.intonogram.arg*(v_end-v_beg); v_end; size(cur_lpc_e_t,1)], ...
+									 [1; 1; 1./(1*(prosody.intonogram.val-1)+1); 1; 1], (0:size(cur_lpc_e_t,1)-2)' );
+			cur_lpc_e_t = cumsum([cur_lpc_e_t(1); cur_lpc_e_dt]);
+		end
+
 		% Синтез
-		cur_y = lpc_synth(lpc_cache.fs, vertcat(reg_list.lpc_e), vertcat(reg_list.lpc_e_t), vertcat(reg_list.lpc_lsf), vertcat(reg_list.lpc_lsf_t), vertcat(reg_list.lpc_b));
+		cur_y = lpc_synth(lpc_cache.fs, vertcat(reg_list.lpc_e), cur_lpc_e_t, vertcat(reg_list.lpc_lsf), vertcat(reg_list.lpc_lsf_ind), vertcat(reg_list.lpc_b));
 
 		synth_y = [synth_y; cur_y]; %#ok<AGROW>
 	end
@@ -103,14 +132,16 @@ function y = filter_fir_nodelay(b,x)
 end
 
 function cur_reg = get_region(lpc_cache, ind)
-	cur_reg = struct('lpc_e',lpc_cache.lpc_e(ind(1):ind(2)), 'lpc_e_t',lpc_cache.lpc_e_t(ind(1):ind(2)));
-	ind_lsf = cur_reg.lpc_e_t(1)<=lpc_cache.lpc_lsf_t & lpc_cache.lpc_lsf_t<=cur_reg.lpc_e_t(end);
+	cur_reg = struct('lpc_e_ind',ind, 'lpc_e',lpc_cache.lpc_e(ind(1):ind(2)), 'lpc_e_t',lpc_cache.lpc_e_t(ind(1):ind(2)));
+	ind_lsf = ind(1)<=lpc_cache.lpc_lsf_ind & lpc_cache.lpc_lsf_ind<=ind(2);
 	cur_reg.lpc_lsf = lpc_cache.lpc_lsf(ind_lsf,:);
-	cur_reg.lpc_lsf_t = lpc_cache.lpc_lsf_t(ind_lsf,:);
+	cur_reg.lpc_lsf_ind = lpc_cache.lpc_lsf_ind(ind_lsf,:);
 	cur_reg.lpc_b = lpc_cache.lpc_b(ind_lsf);
 end
 
-function y = lpc_synth(fs, e, e_t, lsf, lsf_t, b)
+function y = lpc_synth(fs, e, e_t, lsf, lsf_ind, b)
+	lsf_t = e_t(lsf_ind);
+
 	resample_factor = ceil(1/(fs*min(diff(e_t)))+0.5);
 
 	% Передискретизация ошибки предсказания вверх, что бы избежать

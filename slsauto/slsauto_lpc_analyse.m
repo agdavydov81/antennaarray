@@ -29,10 +29,10 @@ function slsauto_lpc_analyse(cfg, frame_size, frame_shift)
 	pitch_interp = interp1q(pitch_data(:,1), pitch_data(:,2), (0:size(lpc_e,1)-1)'/fs);
 	lpc_e_t = cumsum(pitch_interp)/fs;
 	lpc_e_t = [0; lpc_e_t(1:end-1)];
-	lpc_lsf_t = lpc_e_t(lpc_lsf_ind);
+%	lpc_lsf_t = lpc_e_t(lpc_lsf_ind);
 
 	% Сохранение параметров для будущего синтеза с параметрами выравненной ЧОТ
-	save(slsauto_getpath(cfg,'lpc'),'fs','lpc_e','lpc_e_t','lpc_lsf','lpc_lsf_t','lpc_lsf_ind','lpc_b');
+	save(slsauto_getpath(cfg,'lpc'),'fs','lpc_e','lpc_e_t','lpc_lsf','lpc_lsf_ind','lpc_b');
 end
 
 function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, frame_shift, lpc_order, is_power_norm)
