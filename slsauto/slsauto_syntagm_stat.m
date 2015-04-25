@@ -1,5 +1,5 @@
-function slsauto_pitch_syntagm_stat(cfg)
-	pitch_data = load(slsauto_getpath(cfg,'pitch'));
+function slsauto_syntagm_stat(cfg)
+	pitch_data = load(slsauto_getpath(cfg,'pitch_vu'));
 	pitch_data(:,2) = []; % ЧОТ не нужна
 	pitch_dt = diff(pitch_data);
 	frame_shift = min(pitch_dt);

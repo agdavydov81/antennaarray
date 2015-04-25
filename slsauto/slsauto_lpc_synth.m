@@ -103,7 +103,7 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 		else
 			v_end = round(pitch_vu(v_end,1)*lpc_cache.fs)+1 - reg_list(end).lpc_e_ind(1) + reg_list(end).lpc_e_ind_lin(1);
 		end
-		if v_end-v_beg>lpc_cache.fs
+		if v_end-v_beg>=lpc_cache.fs/2
 			cur_lpc_e_dt =	diff(cur_lpc_e_t) .* ...
 							interp1q([0; v_beg; v_beg+prosody.intonogram.arg*(v_end-v_beg); v_end; size(cur_lpc_e_t,1)], ...
 									 [1; 1; 1./(1*(prosody.intonogram.val-1)+1); 1; 1], (0:size(cur_lpc_e_t,1)-2)' );
@@ -116,7 +116,11 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 		synth_y = [synth_y; cur_y]; %#ok<AGROW>
 	end
 
-	wavwrite(synth_y, lpc_cache.fs, slsauto_getpath(cfg,'synth'));
+	wav_filename = slsauto_getpath(cfg,'synth');
+	if exist(wav_filename,'file')
+		movefile(wav_filename, [wav_filename '.bak']);
+	end
+	wavwrite(synth_y, lpc_cache.fs, wav_filename);
 
 %	y = lpc_synth(lpc_cache.fs, lpc_cache.lpc_e, lpc_cache.lpc_e_t, lpc_cache.lpc_lsf, lpc_cache.lpc_lsf_t);
 %	wavwrite(y, lpc_cache.fs, 'tmp.wav');

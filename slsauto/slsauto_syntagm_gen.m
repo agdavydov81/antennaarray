@@ -1,4 +1,4 @@
-function slsauto_pitch_syntagm_gen(cfg, pause_size, pause_meandb)
+function slsauto_syntagm_gen(cfg, pause_size, pause_meandb)
 	if nargin<2 || isempty(pause_size)
 		pause_size = 0.5;
 	end
@@ -30,5 +30,10 @@ function slsauto_pitch_syntagm_gen(cfg, pause_size, pause_meandb)
 	
 	lab_pos = mean(unvoc_begend,2);
 	lab_info = struct('begin',num2cell(lab_pos), 'end',num2cell(lab_pos), 'string',repmat({'#syntagm'},size(lab_pos)));
-	lab_write(lab_info, slsauto_getpath(cfg,'lab'));
+
+	lab_filename = slsauto_getpath(cfg,'lab');
+	if exist(lab_filename,'file')
+		movefile(lab_filename, [lab_filename '.bak']);
+	end
+	lab_write(lab_info, lab_filename);
 end

@@ -4,15 +4,15 @@ function slsauto_pitch_editor(cfg)
 		if dlg_name==0
 			return
 		end
-		cfg.snd_pathname = fullfile(dlg_path,dlg_name);
+		cfg.snd_filename = fullfile(dlg_path,dlg_name);
 	end
 	if ischar(cfg)
-		cfg = struct('snd_pathname',cfg);
+		cfg = struct('snd_filename',cfg);
 	end
 	[snd_path,snd_name,snd_ext] = fileparts(slsauto_getpath(cfg,'snd'));
 	snd_nameext = [snd_name snd_ext];
 	
-	[pitch_pathname, is_auto] = slsauto_getpath(cfg,'pitch');
+	[pitch_filename, is_auto] = slsauto_getpath(cfg,'pitch');
 	if is_auto
 		list = dir([slsauto_getpath(cfg,'snd') '.pitch_*.txt']);
 		[~,si] = sort({list.name});
@@ -32,7 +32,7 @@ function slsauto_pitch_editor(cfg)
 			list(li).name = fullfile(snd_path, list(li).name);
 		end
 	else
-		list.name = pitch_pathname;
+		list.name = pitch_filename;
 	end
 
 	[x,x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
@@ -337,14 +337,14 @@ function on_save(hObject, eventdata)
 	if dlg_name==0
 		return
 	end
-	rep_pathname = fullfile(dlg_path, dlg_name);
-	[~,~,rep_ext] = fileparts(rep_pathname);
+	rep_filename = fullfile(dlg_path, dlg_name);
+	[~,~,rep_ext] = fileparts(rep_filename);
 
 	data_x = get(f0_data.plot, 'XData');
 	data_y = get(f0_data.plot, 'YData');
 	data = [data_x(:) data_y(:)];
 	data(any(isnan(data),2),:) = []; %#ok<NASGU>
-	save_arg = {rep_pathname, 'data'};
+	save_arg = {rep_filename, 'data'};
 	if strcmpi(rep_ext,'.txt')
 		save_arg{end+1} = '-ascii';
 	end

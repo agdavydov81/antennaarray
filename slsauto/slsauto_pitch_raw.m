@@ -91,12 +91,16 @@ function df = calc_df(f0_freq, f0_time)
 	df(dt>=min(dt)*1.1) = 0;
 end
 
-function save_pitch_raw(snd_pathname, f0, ext)
+function save_pitch_raw(snd_filename, f0, ext)
 	save_data = [f0.time(:) f0.freq(:)]; %#ok<NASGU>
 %	if isfield(f0,'isvocal')
 %		save_data = [save_data f0.isvocal];
 %	end
-	save([snd_pathname '.pitch_' ext '.txt'],'save_data','-ascii');
+	out_filename = [snd_filename '.pitch_' ext '.txt'];
+	if exist(out_filename,'file')
+		movefile(out_filename,[out_filename '.bak']);
+	end
+	save(out_filename,'save_data','-ascii');
 end
 
 function f0 = remove_zeros(f0)

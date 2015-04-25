@@ -1,12 +1,12 @@
-function [f0_freq, f0_time, f0_tone] = pitchrapt(x_or_pathname, fs)
+function [f0_freq, f0_time, f0_tone] = pitchrapt(x_or_filename, fs)
 	tmp_dir = tempname();
 	mkdir(tmp_dir);
 
-	if (nargin<2 || isempty(fs)) && ischar(x_or_pathname)
-		[x, x_info] = libsndfile_read(x_or_pathname);
+	if (nargin<2 || isempty(fs)) && ischar(x_or_filename)
+		[x, x_info] = libsndfile_read(x_or_filename);
 		fs = x_info.SampleRate;
 	else
-		x = x_or_pathname;
+		x = x_or_filename;
 	end
 	x(:,2:end) = [];
 	if fs~=8000

@@ -32,7 +32,11 @@ function slsauto_lpc_analyse(cfg, frame_size, frame_shift)
 %	lpc_lsf_t = lpc_e_t(lpc_lsf_ind);
 
 	% Сохранение параметров для будущего синтеза с параметрами выравненной ЧОТ
-	save(slsauto_getpath(cfg,'lpc'),'fs','lpc_e','lpc_e_t','lpc_lsf','lpc_lsf_ind','lpc_b');
+	lpc_filename = slsauto_getpath(cfg,'lpc');
+	if exist(lpc_filename,'file')
+		movefile(lpc_filename,[lpc_filename '.bak']);
+	end
+	save(lpc_filename,'fs','lpc_e','lpc_e_t','lpc_lsf','lpc_lsf_ind','lpc_b');
 end
 
 function [lpc_e lpc_ind lpc_lsf lpc_b] = lpc_analyse_signal(x, fs, frame_size, frame_shift, lpc_order, is_power_norm)

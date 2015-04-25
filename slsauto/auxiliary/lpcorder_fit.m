@@ -1,10 +1,10 @@
-function lpcorder_fit(snd_pathname, is_8000)
-	if nargin<1 || isempty(snd_pathname)
-		snd_pathname = 'White noise';
+function lpcorder_fit(snd_filename, is_8000)
+	if nargin<1 || isempty(snd_filename)
+		snd_filename = 'White noise';
 		fs_orig = 40000;
 		x_orig = randn(fs_orig,1);
 	else
-		[x_orig,fs_orig] = libsndfile_read(snd_pathname);
+		[x_orig,fs_orig] = libsndfile_read(snd_filename);
 		fs_orig = fs_orig.SampleRate;
 	end
 	if nargin<2
@@ -25,7 +25,7 @@ function lpcorder_fit(snd_pathname, is_8000)
 	end
 	mf = abs(mf-mf(1));
 
-	[~,snd_name,snd_ext] = fileparts(snd_pathname);
+	[~,snd_name,snd_ext] = fileparts(snd_filename);
 	figure('NumberTitle','off', 'Name',[snd_name snd_ext], 'Units','normalized', 'Position',[0 0 1 1]);
 	surf(FS,LPCORDER,mf);
 	view([0 90]);
@@ -46,7 +46,7 @@ function lpcorder_fit(snd_pathname, is_8000)
 	plot3(ff, polyval(pp,ff/1000), 1000+zeros(size(ff)), 'm.-');
 	plot3(ff, 1.5*ff/1000, 900+zeros(size(ff)), 'yd-');
 	
-	title([snd_pathname '; Band limit: ' num2str(is_8000) '; Fit polynom: ' num2str(pp)],'interpreter','none');
+	title([snd_filename '; Band limit: ' num2str(is_8000) '; Fit polynom: ' num2str(pp)],'interpreter','none');
 end
 
 function mf = get_medianlsffreq(x,fs,lpc_order,lsf_ind)

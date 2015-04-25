@@ -1,4 +1,4 @@
-function slsauto_pitch_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
+function slsauto_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 	if nargin<2
 		peak_neigh_t = 0.040;
 	end
@@ -66,7 +66,11 @@ function slsauto_pitch_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 	lab(strcmp('#pitch_v',{lab.string})) = [];
 	lab(strcmp('#pitch_u',{lab.string})) = [];
 
-	lab_write([lab; lab_vu], slsauto_getpath(cfg,'lab'));
+	lab_filename = slsauto_getpath(cfg,'lab');
+	if exist(lab_filename,'file')
+		movefile(lab_filename, [lab_filename '.bak']);
+	end
+	lab_write([lab; lab_vu], lab_filename);
 	
 %	plot_data(cfg, x,fs, power, pitch_vu);
 end

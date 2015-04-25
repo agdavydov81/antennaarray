@@ -1,13 +1,13 @@
-function slsauto_pitch_irapt_stat(ir0_pathname, ir1_pathname)
+function slsauto_pitch_irapt_stat(ir0_filename, ir1_filename)
 	if nargin<1
-		ir0_pathname = 'kaz\snd\cut.flac.pitch_021_pitchrapt(bd-).txt';
+		ir0_filename = 'kaz\snd\cut.flac.pitch_021_pitchrapt(bd-).txt';
 	end
 	if nargin<2
-		ir1_pathname = 'kaz\snd\cut.flac.pitch_030_irapt(ko-).txt';
+		ir1_filename = 'kaz\snd\cut.flac.pitch_030_irapt(ko-).txt';
 	end
 
-	ir0_stat = df_td_stat(load(ir0_pathname));
-	ir1_stat = df_td_stat(load(ir1_pathname));
+	ir0_stat = df_td_stat(load(ir0_filename));
+	ir1_stat = df_td_stat(load(ir1_filename));
 	
 	hx = sort(unique([ir0_stat.hx; ir1_stat.hx]));
 	ir0_stat.hy = interp1q([hx(1); ir0_stat.hx; hx(end)], [0; ir0_stat.hy; 1], hx);
@@ -16,7 +16,7 @@ function slsauto_pitch_irapt_stat(ir0_pathname, ir1_pathname)
 	figure('Units','normalized', 'Position',[0 0 1 1]);
 	plot(hx,1-ir0_stat.hy,'b', hx,ir1_stat.hy,'r', hx,(1-ir1_stat.hy)-(1-ir0_stat.hy),'m');
 	grid('on');
-	legend({ir0_pathname ir1_pathname},'Interpreter','none','Location','NE');
+	legend({ir0_filename ir1_filename},'Interpreter','none','Location','NE');
 	set(pan, 'Motion','horizontal');
 	zoom('xon');
 end

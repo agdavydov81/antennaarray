@@ -1,4 +1,4 @@
-function slsauto_pitch_prosody(cfg)
+function slsauto_prosody(cfg)
 	pitch_data = load(slsauto_getpath(cfg,'pitch_vu'));
 	lab_data = lab_read(slsauto_getpath(cfg,'lab'));
 	lab_data = lab_data(strcmp('#syntagm',{lab_data.string}));
@@ -67,5 +67,9 @@ function slsauto_pitch_prosody(cfg)
 	ylabel('CDF');
 	legend({'Syntagm length','Pause length'},'Location','SE');
 
-	xml_write(slsauto_getpath(cfg,'prosody'), stat, 'prosody');
+	xml_filename = slsauto_getpath(cfg,'prosody');
+	if exist(xml_filename,'file')
+		movefile(xml_filename, [xml_filename '.bak']);
+	end
+	xml_write(xml_filename, stat, 'prosody');
 end
