@@ -126,13 +126,6 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 %	wavwrite(y, lpc_cache.fs, 'tmp.wav');
 end
 
-function y = filter_fir_nodelay(b,x)
-	n = numel(b);
-	n2 = fix(n/2);
-	y = filter(b,1,[repmat(x(1,:),n-1,1); x; repmat(x(end,:),n2,1)]);
-	y(1:n2+n-1,:) = [];
-end
-
 function cur_reg = get_region(lpc_cache, ind)
 	cur_reg = struct('lpc_e_ind',ind, 'lpc_e',lpc_cache.lpc_e(ind(1):ind(2)), 'lpc_e_t',lpc_cache.lpc_e_t(ind(1):ind(2)));
 	ind_lsf = ind(1)<=lpc_cache.lpc_lsf_ind & lpc_cache.lpc_lsf_ind<=ind(2);
