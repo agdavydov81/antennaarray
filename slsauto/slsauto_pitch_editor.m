@@ -4,10 +4,7 @@ function slsauto_pitch_editor(cfg)
 		if dlg_name==0
 			return
 		end
-		cfg.snd_filename = fullfile(dlg_path,dlg_name);
-	end
-	if ischar(cfg)
-		cfg = struct('snd_filename',cfg);
+		cfg = fullfile(dlg_path,dlg_name);
 	end
 	[snd_path,snd_name,snd_ext] = fileparts(slsauto_getpath(cfg,'snd'));
 	snd_nameext = [snd_name snd_ext];

@@ -1,4 +1,8 @@
 function [file_filename is_auto] = slsauto_getpath(cfg, filetype)
+	if ischar(cfg)
+		cfg = struct('snd_filename',cfg);
+	end
+
 	if isfield(cfg, [filetype '_filename'])
 		file_filename = cfg.([filetype '_filename']);
 		is_auto = false;
