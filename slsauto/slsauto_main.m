@@ -158,6 +158,7 @@ dlg_out = inputdlg(	handles.gtxt.translate({'The minimum length of a pause (s)' 
 if isempty(dlg_out)
 	return
 end
+pause(0.2);
 dlg_out = cellfun(@str2double, dlg_out, 'UniformOutput',false);
 slsauto_syntagm_gen(struct('snd_filename',get(handles.snd_filename_edit,'String')), dlg_out{:});
 
@@ -177,10 +178,11 @@ function vu2lab_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 dlg_out = inputdlg(	handles.gtxt.translate({'The neighborhood for the nearest local maximum search (s)' ...
 							'The local maximum minimum value' 'The segmentation minimum block size (s)'}), ...
-					handles.gtxt.translate('Input function parameters'), 1, {'0.029' '0.5' '0.080'}, 'on');
+					handles.gtxt.translate('Input function parameters'), 1, {'0.029' '1.5' '0.080'}, 'on');
 if isempty(dlg_out)
 	return
 end
+pause(0.2);
 dlg_out = cellfun(@str2double, dlg_out, 'UniformOutput',false);
 slsauto_vu2lab(struct('snd_filename',get(handles.snd_filename_edit,'String')), dlg_out{:});
 
@@ -195,6 +197,7 @@ dlg_out = inputdlg(	handles.gtxt.translate({'Frame size (s)' 'Frame shift (s)'})
 if isempty(dlg_out)
 	return
 end
+pause(0.2);
 dlg_out = cellfun(@str2double, dlg_out, 'UniformOutput',false);
 try
 	if matlabpool('size')==0
@@ -224,4 +227,5 @@ dlg_out = inputdlg(	handles.gtxt.translate({'The output file length (s)' 'Type o
 if isempty(dlg_out)
 	return
 end
+pause(0.2);
 slsauto_lpc_synth(struct('snd_filename',get(handles.snd_filename_edit,'String')), str2double(dlg_out{1}), dlg_out{2});

@@ -3,7 +3,7 @@ function slsauto_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 		peak_neigh_t = 0.029;
 	end
 	if nargin<3
-		peak_neigh_val = 0.5;
+		peak_neigh_val = 1.5;
 	end
 	if nargin<4
 		reg_size_t = 0.080;
@@ -19,14 +19,14 @@ function slsauto_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 
 	[lab_data.lab_vu pitch_vu] = split_pitch_vu(cfg, alg, power); % Начальная сегментация
 
-	[lab_data.lab_syntagm lab_data.lab_lpc lpc] = split_lpc_b(cfg, alg, pitch_vu, lab_data.lab_vu); % Cегментация по коэффициенту усиления линейного предсказания
+	[lab_data.lab_syntagm lab_data.lab_lpc lpc] = split_lpc_b(cfg, alg, power, pitch_vu, lab_data.lab_vu); % Cегментация по коэффициенту усиления линейного предсказания
 
 	save_lab(cfg, [lab_data.lab_vu; lab_data.lab_lpc]); % Сохранение результатов
 
-	plot_data(cfg, x,fs, power, pitch_vu, lpc, lab_data);
+	plot_data(cfg, alg, x,fs, power, pitch_vu, lpc, lab_data);
 end
 
-function [lab_syntagm lab_lpc lpc] = split_lpc_b(cfg, alg, pitch_vu, lab_vu)
+function [lab_syntagm lab_lpc lpc] = split_lpc_b(cfg, alg, power, pitch_vu, lab_vu)
 	load(slsauto_getpath(cfg,'lpc'));
 	lpc.b = 20*log10(lpc_b);
 
@@ -39,40 +39,36 @@ function [lab_syntagm lab_lpc lpc] = split_lpc_b(cfg, alg, pitch_vu, lab_vu)
 	gauss_b =  gaussfilter(100/(lpc.fs/2));
 	gauss_bd = conv(gauss_b, [1 -1]*2);
 	lpc.b = filter_fir_nodelay(gauss_bd, lpc.b);
-	
-	lpc.max_ind = find_local_max(lpc.b, round(lpc.fs*alg.peak_neigh_t*0.75), alg.peak_neigh_val);
+
+	lpc.b = zscore(lpc.b);
+
+	lpc.max_ind = find_local_max(lpc.b,  round(lpc.fs*alg.peak_neigh_t*0.75), alg.peak_neigh_val);
 	lpc.min_ind = find_local_max(-lpc.b, round(lpc.fs*alg.peak_neigh_t*0.75), alg.peak_neigh_val);
-	extr_t =  [lpc.time(lpc.max_ind) lpc.b(lpc.max_ind); lpc.time(lpc.min_ind) -lpc.b(lpc.min_ind)];
+
+	extr_t = [        lpc.time(lpc.max_ind)     lpc.b(lpc.max_ind);			lpc.time(lpc.min_ind) -lpc.b(lpc.min_ind)];
+	extr_t = [extr_t; power.time(power.max_ind) power.diff(power.max_ind);	power.time(power.min_ind) -power.diff(power.min_ind)];
+
 	[~,si] = sort(extr_t(:,2),'descend');
 	extr_t =  extr_t(si, 1);
 
 	lab_syntagm = lab_read(slsauto_getpath(cfg,'lab'));
 	lab_syntagm = lab_syntagm(strcmp('#syntagm',{lab_syntagm.string}));
-	lab_syntagm_t = [0 [lab_syntagm.begin] lpc.time(end)]';
-	
+	lab_syntagm_t = [lab_syntagm.begin]';
+
 	pitch_vu_t = pitch_vu(:,1);
-	pitch_num  = round( alg.peak_neigh_t / min(diff(pitch_vu_t)) );
+	pitch_ind = arrayfun(@(x) find(pitch_vu_t<x,1,'last'), lab_syntagm_t);
+	pause_reg_t = [-100 pitch_vu_t(1); pitch_vu_t(pitch_ind) pitch_vu_t(pitch_ind+1); pitch_vu_t(end) lpc.time(end)+100];
+	pause_reg_t(:,1) = pause_reg_t(:,1) + alg.peak_neigh_t*2;
+	pause_reg_t(:,2) = pause_reg_t(:,2) - alg.peak_neigh_t*2;
+	extr_t(arrayfun(@(x) any(pause_reg_t(:,1)<x & x<pause_reg_t(:,2)), extr_t)) = [];
 
-	lab_lpc = lab_vu;
-	lab_lpc(1:end) = [];
+	extr_t = [[lab_vu.begin]'; extr_t];
+	extr_t_ind = arrayfun(@(x) find(abs(extr_t-x)<alg.peak_neigh_t,1), extr_t);
+	extr_t(extr_t_ind<(1:numel(extr_t))') = nan;
+	extr_t(1:numel(lab_vu)) = nan;
+	extr_t(isnan(extr_t)) = [];
 
-	while ~isempty(extr_t)
-		lab = [lab_vu; lab_lpc];
-		lab_t = [lab.begin]';
-		extr_t( arrayfun(@(x) any(abs(lab_t-x)<alg.peak_neigh_t), extr_t(:,1)), :) = [];
-
-		syn_t_rg = [lab_syntagm_t(1:end-1)  lab_t(arrayfun(@(x) find(x<lab_t,1), lab_syntagm_t(1:end-1)))];
-		syn_t_rg( arrayfun(@(x,y) sum(x<pitch_vu_t & pitch_vu_t<y)>=pitch_num, syn_t_rg(:,1),syn_t_rg(:,2)), :) = [];
-		extr_t( arrayfun(@(x) any(syn_t_rg(:,1)<x & x<syn_t_rg(:,2)), extr_t) ) = [];
-
-		syn_t_rg = [lab_t(arrayfun(@(x) find(x>lab_t,1,'last'), lab_syntagm_t(2:end))) lab_syntagm_t(2:end)];
-		syn_t_rg( arrayfun(@(x,y) sum(x<pitch_vu_t & pitch_vu_t<y)>=pitch_num, syn_t_rg(:,1),syn_t_rg(:,2)), :) = [];
-		extr_t( arrayfun(@(x) any(syn_t_rg(:,1)<x & x<syn_t_rg(:,2)), extr_t) ) = [];
-
-		if ~isempty(extr_t)
-			lab_lpc(end+1,1) = struct('begin',extr_t(1), 'end',extr_t(1), 'string','#seg_a'); %#ok<AGROW>
-		end
-	end
+	lab_lpc = struct('begin',num2cell(extr_t), 'end',num2cell(extr_t), 'string',repmat({'#seg_a'},size(extr_t)));
 end
 
 function [lab_vu pitch_vu] = split_pitch_vu(cfg, alg, power)
@@ -143,6 +139,9 @@ function power = calc_power_obs(cfg, alg, x, fs)
 	power_fs = 1/min(diff(power.time));
 	b = conv( fir1(round(power_fs/2), [10 100]*2/power_fs), [1 -1]);
 	power.diff = filter_fir_nodelay(b, power.obs);
+	
+	power.diff = zscore(power.diff);
+
 	power.max_ind = find_local_max(power.diff, round(power_fs*alg.peak_neigh_t*0.75), alg.peak_neigh_val);
 	power.max_t = power.time(power.max_ind);
 	power.min_ind = find_local_max(-power.diff, round(power_fs*alg.peak_neigh_t*0.75), alg.peak_neigh_val);
@@ -192,7 +191,7 @@ function extr = find_local_max(x, extr_neigh, extr_val)
 	extr(extr_ind+1:end) = [];
 end
 
-function plot_data(cfg, x,fs, power, pitch_vu, lpc, lab_data)
+function plot_data(cfg, alg, x,fs, power, pitch_vu, lpc, lab_data)
 	fig = figure('NumberTitle','off', 'Name',slsauto_getpath(cfg,'snd'), 'Units','normalized', 'Position',[0 0 1 1]);
 	
 	x_lim = [0 (size(x,1)-1)/fs];
@@ -214,7 +213,8 @@ function plot_data(cfg, x,fs, power, pitch_vu, lpc, lab_data)
 	hold('on');
 	plot(lpc.time, lpc.b, 'r');
 	legend({'power.diff' 'lpc.b'}, 'Interpreter','none', 'Location','NE');
-	
+	plot([x_lim nan x_lim], alg.peak_neigh_val*[1 1 nan -1 -1], 'm--');
+
 	plot_lab(fig, lab_data);
 
 	set(pan ,'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
