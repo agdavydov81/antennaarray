@@ -8,21 +8,33 @@ function slsauto_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 	if nargin<4
 		reg_size_t = 0.080;
 	end
+	alg.peak_neigh_t = peak_neigh_t;
+	alg.peak_neigh_val = peak_neigh_val;
+	alg.reg_size_t = reg_size_t;
 
 	[x,x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
 	fs = x_info.SampleRate;
 	[power.obs power.time] = obs_power(x, fs, 0.020, 0.001);
-	
+
+	power.noise_lvl = mean(quantile(power.obs, [0.03 0.97]));
+	power.obs(power.obs<power.noise_lvl) = power.noise_lvl;
+
 	power_fs = 1/min(diff(power.time));
-	b = conv( fir1(round(power_fs*0.5), 33*2/power_fs), [1 -1]);
-	ord2 = fix(numel(b)/2);
-	power.diff = filter(b,1,[power.obs; zeros(ord2,1)]);
-	power.diff(1:ord2) = [];
-	power.max_ind = find_local_max(power.diff, round(power_fs*0.030), peak_neigh_val);
+	b = conv( fir1(round(power_fs/2), [10 100]*2/power_fs), [1 -1]);
+	power.diff = filter_fir_nodelay(b, power.obs);
+	power.max_ind = find_local_max(power.diff, round(power_fs*0.030), alg.peak_neigh_val);
 	power.max_t = power.time(power.max_ind);
-	power.min_ind = find_local_max(-power.diff, round(power_fs*0.030), peak_neigh_val);
+	power.min_ind = find_local_max(-power.diff, round(power_fs*0.030), alg.peak_neigh_val);
 	power.min_t = power.time(power.min_ind);
 
+	[lab_vu pitch_vu] = split_pitch_vu(cfg, alg, power); % Начальная сегментация
+
+	save_lab(cfg, lab_vu); % Сохранение результатов
+
+	plot_data(cfg, x,fs, power, pitch_vu, lab_vu);
+end
+
+function [lab_vu pitch_vu] = split_pitch_vu(cfg, alg, power)
 	pitch_vu = load(slsauto_getpath(cfg,'pitch_vu'));
 	pitch_dt = diff(pitch_vu(:,1));
 	voc_reg = [0; find(pitch_dt>=min(pitch_dt)*1.5); size(pitch_vu,1)];
@@ -31,7 +43,7 @@ function slsauto_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 	for vi = 1:numel(voc_reg)-1
 		% Уточнение границы V-U: поиск ближайшего локального максимума в power.max_t
 		[mv,mi] = min(abs(pitch_vu(voc_reg(vi)+1,1) - power.max_t));
-		if mv < peak_neigh_t
+		if mv < alg.peak_neigh_t
 			lab_vu(vi*2-1) = struct('begin',power.max_t(mi), 'end',power.max_t(mi), 'string','#pitch_v');
 		else
 			kill_ind(vi*2-1) = true;
@@ -39,7 +51,7 @@ function slsauto_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 
 		% Уточнение границы U-V: поиск ближайшего локального минимума в power.min_t
 		[mv,mi] = min(abs(pitch_vu(voc_reg(vi+1),1) - power.min_t));
-		if mv < peak_neigh_t
+		if mv < alg.peak_neigh_t
 			lab_vu(vi*2) = struct('begin',power.min_t(mi), 'end',power.min_t(mi), 'string','#pitch_u');
 		else
 			kill_ind(vi*2) = true;
@@ -50,14 +62,15 @@ function slsauto_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 	% Правка ошибок в последовательности и объединение коротких участков
 	while true
 		[mv,mi] = min(diff([lab_vu.begin]));
-		if isempty(mi) || mv>=reg_size_t
+		if isempty(mi) || mv>=alg.reg_size_t
 			break
 		end
 		[~,mii]=min(abs([peak_val(lab_vu(mi),power) peak_val(lab_vu(mi+1),power)]));
 		lab_vu(mi+mii-1) = [];
 	end
+end
 
-	% Сохранение результатов
+function save_lab(cfg, lab_vu)
 	if ~exist(slsauto_getpath(cfg,'lab'),'file')
 		lab = struct('begin',[],'end',[],'string',{});
 	else
@@ -71,8 +84,6 @@ function slsauto_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 		movefile(lab_filename, [lab_filename '.bak']);
 	end
 	lab_write([lab; lab_vu], lab_filename);
-	
-%	plot_data(cfg, x,fs, power, pitch_vu);
 end
 
 function val = peak_val(lab, power)
@@ -129,27 +140,38 @@ function extr = find_local_max(x, extr_neigh, extr_val)
 	extr(extr_ind+1:end) = [];
 end
 
-function plot_data(cfg, x,fs, power, pitch_vu)
-	[~,snd_name] = fileparts(slsauto_getpath(cfg,'snd'));
-	fig = figure('NumberTitle','off', 'Name',snd_name, 'Units','normalized', 'Position',[0 0 1 1]);
+function plot_data(cfg, x,fs, power, pitch_vu, lab)
+	fig = figure('NumberTitle','off', 'Name',slsauto_getpath(cfg,'snd'), 'Units','normalized', 'Position',[0 0 1 1]);
 	
 	x_lim = [0 (size(x,1)-1)/fs];
 	
+	lab_x =	[[lab.begin]; [lab.begin]; nan(1,numel(lab))];
+	lab_x = lab_x(:);
+
 	subplot(3,1,1);
 	plot((0:size(x,1)-1)/fs, x);
 	axis([x_lim 1.1*[-1 1]*max(abs(x))]);
 	grid('on');
+	hold('on');
+	lab_y = repmat([ylim nan]', numel(lab), 1);
+	plot(lab_x, lab_y, 'r');
 
 	subplot(3,1,2);
 	plot(pitch_vu(:,1), pitch_vu(:,2), 'b.');
 	xlim(x_lim);
 	grid('on');
+	hold('on');
+	lab_y = repmat([ylim nan]', numel(lab), 1);
+	plot(lab_x, lab_y, 'r');
 
 	subplot(3,1,3);
 	plot(power.time, power.diff);
 	xlim(x_lim);
 	grid('on');
-	
+	hold('on');
+	lab_y = repmat([ylim nan]', numel(lab), 1);
+	plot(lab_x, lab_y, 'r');
+
 	set(pan ,'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
 	set(zoom,'ActionPostCallback',@on_zoom_pan);
 	zoom('xon');
