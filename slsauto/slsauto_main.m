@@ -177,7 +177,7 @@ function vu2lab_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 dlg_out = inputdlg(	handles.gtxt.translate({'The neighborhood for the nearest local maximum search (s)' ...
 							'The local maximum minimum value' 'The segmentation minimum block size (s)'}), ...
-					handles.gtxt.translate('Input function parameters'), 1, {'0.040' '0.5' '0.080'}, 'on');
+					handles.gtxt.translate('Input function parameters'), 1, {'0.029' '0.5' '0.080'}, 'on');
 if isempty(dlg_out)
 	return
 end
@@ -219,7 +219,7 @@ function lpcsynth_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to lpcsynth_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-dlg_out = inputdlg(	handles.gtxt.translate({'The output file length (s)' 'Type of synthesis block boundary (V|U|VU)'}), ...
+dlg_out = inputdlg(	handles.gtxt.translate({'The output file length (s)' 'Type of synthesis block boundary (v|u|a)'}), ...
 					handles.gtxt.translate('Input function parameters'), 1, {'60' 'v'}, 'on');
 if isempty(dlg_out)
 	return

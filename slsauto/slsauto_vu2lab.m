@@ -70,7 +70,7 @@ function [lab_syntagm lab_lpc lpc] = split_lpc_b(cfg, alg, pitch_vu, lab_vu)
 		extr_t( arrayfun(@(x) any(syn_t_rg(:,1)<x & x<syn_t_rg(:,2)), extr_t) ) = [];
 
 		if ~isempty(extr_t)
-			lab_lpc(end+1,1) = struct('begin',extr_t(1), 'end',extr_t(1), 'string','#pitch_auto'); %#ok<AGROW>
+			lab_lpc(end+1,1) = struct('begin',extr_t(1), 'end',extr_t(1), 'string','#seg_a'); %#ok<AGROW>
 		end
 	end
 end
@@ -85,7 +85,7 @@ function [lab_vu pitch_vu] = split_pitch_vu(cfg, alg, power)
 		% Уточнение границы V-U: поиск ближайшего локального максимума в power.max_t
 		[mv,mi] = min(abs(pitch_vu(voc_reg(vi)+1,1) - power.max_t));
 		if mv < alg.peak_neigh_t
-			lab_vu(vi*2-1) = struct('begin',power.max_t(mi), 'end',power.max_t(mi), 'string','#pitch_v');
+			lab_vu(vi*2-1) = struct('begin',power.max_t(mi), 'end',power.max_t(mi), 'string','#seg_v');
 		else
 			kill_ind(vi*2-1) = true;
 		end
@@ -93,7 +93,7 @@ function [lab_vu pitch_vu] = split_pitch_vu(cfg, alg, power)
 		% Уточнение границы U-V: поиск ближайшего локального минимума в power.min_t
 		[mv,mi] = min(abs(pitch_vu(voc_reg(vi+1),1) - power.min_t));
 		if mv < alg.peak_neigh_t
-			lab_vu(vi*2) = struct('begin',power.min_t(mi), 'end',power.min_t(mi), 'string','#pitch_u');
+			lab_vu(vi*2) = struct('begin',power.min_t(mi), 'end',power.min_t(mi), 'string','#seg_u');
 		else
 			kill_ind(vi*2) = true;
 		end
@@ -113,7 +113,7 @@ end
 
 function save_lab(cfg, lab_vu)
 	lab = lab_read(slsauto_getpath(cfg,'lab'));
-	ref_str = '#pitch_';
+	ref_str = '#seg_';
 	lab(strncmp(ref_str,{lab.string},numel(ref_str))) = [];
 
 	lab_filename = slsauto_getpath(cfg,'lab');
@@ -124,7 +124,7 @@ function save_lab(cfg, lab_vu)
 end
 
 function val = peak_val(lab, power)
-	if strcmp(lab.string,'#pitch_V')
+	if strcmp(lab.string,'#seg_v')
 		obs = power.max_t;
 		ind = power.max_ind;
 	else

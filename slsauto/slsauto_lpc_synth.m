@@ -1,6 +1,6 @@
 function slsauto_lpc_synth(cfg, synth_t, border_type)
 	if nargin<3
-		border_type = 'v'; % 'v' - split to V+U regions; 'u' - split to U+V regions; 'vu' or 'uv' - split to U and V regions
+		border_type = 'v'; % 'v' - split to V+U regions; 'u' - split to U+V regions; 'a' - split to automatic regions;
 	end
 	border_type = lower(border_type);
 
@@ -18,7 +18,7 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 	% Поиск границ элементов синтеза
 	ii = false(size(lab));
 	for bi = 1:numel(border_type)
-		ii = ii | strcmp(['#pitch_' border_type(bi)],{lab.string}');
+		ii = ii | strcmp(['#seg_' border_type(bi)],{lab.string}');
 	end
 	block_pos = sort(unique( round([lab(ii).begin]'*lpc_cache.fs)+1 ));
 
