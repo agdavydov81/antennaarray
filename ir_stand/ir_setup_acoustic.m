@@ -22,7 +22,7 @@ function varargout = ir_setup_acoustic(varargin)
 
 % Edit the above text to modify the response to help ir_setup_acoustic
 
-% Last Modified by GUIDE v2.5 07-Apr-2015 06:14:12
+% Last Modified by GUIDE v2.5 30-Apr-2015 14:31:42
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -167,11 +167,14 @@ if get(handles.get_harm_chkbtn, 'Value')
 else
 	is_enable = 'off';
 end
-set(handles.harm_freq_start_ed,  'Enable',is_enable);
-set(handles.harm_freq_finish_ed, 'Enable',is_enable);
-set(handles.harm_scan_time_ed,   'Enable',is_enable);
-set(handles.harm_scan_lin,		 'Enable',is_enable);
-set(handles.harm_scan_log,		 'Enable',is_enable);
+set(handles.harm_freq_start_ed,		'Enable',is_enable);
+set(handles.harm_freq_start_slider,	'Enable',is_enable);
+set(handles.harm_freq_finish_ed,	'Enable',is_enable);
+set(handles.harm_freq_finish_slider,'Enable',is_enable);
+set(handles.harm_scan_time_ed,		'Enable',is_enable);
+set(handles.harm_scan_time_slider,	'Enable',is_enable);
+set(handles.harm_scan_lin,			'Enable',is_enable);
+set(handles.harm_scan_log,			'Enable',is_enable);
 
 
 % --- Executes on button press in ok_btn.
@@ -242,3 +245,69 @@ cur_vol = get(hObject,'Value');
 set(handles.volume_text, 'String',sprintf('Громкость акустического сигнала: %.0f%%',cur_vol*100));
 dos_str = ['"' fullfile(fileparts(mfilename('fullpath')), 'sls', 'nircmd', 'nircmdc.exe') '" setsysvolume ' sprintf('%.0f',cur_vol*65535)];
 [dos_status,dos_result] = dos(dos_str);
+
+
+% --- Executes on slider movement.
+function harm_freq_start_slider_Callback(hObject, eventdata, handles)
+% hObject    handle to harm_freq_start_slider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+set(handles.harm_freq_start_ed, 'String', num2str(round(get(hObject,'Value'))));
+
+
+% --- Executes on slider movement.
+function harm_freq_finish_slider_Callback(hObject, eventdata, handles)
+% hObject    handle to harm_freq_finish_slider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+set(handles.harm_freq_finish_ed, 'String', num2str(round(get(hObject,'Value'))));
+
+
+% --- Executes on slider movement.
+function harm_scan_time_slider_Callback(hObject, eventdata, handles)
+% hObject    handle to harm_scan_time_slider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+set(handles.harm_scan_time_ed, 'String', num2str(round(get(hObject,'Value'))));
+
+
+function harm_freq_start_ed_Callback(hObject, eventdata, handles)
+% hObject    handle to harm_freq_start_ed (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of harm_freq_start_ed as text
+%        str2double(get(hObject,'String')) returns contents of harm_freq_start_ed as a double
+sl_obj = handles.harm_freq_start_slider;
+set(sl_obj, 'Value', max(get(sl_obj,'Min'), min( get(sl_obj,'Max'), str2double(get(hObject,'String')) )) );
+
+
+function harm_freq_finish_ed_Callback(hObject, eventdata, handles)
+% hObject    handle to harm_freq_finish_ed (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of harm_freq_finish_ed as text
+%        str2double(get(hObject,'String')) returns contents of harm_freq_finish_ed as a double
+sl_obj = handles.harm_freq_finish_slider;
+set(sl_obj, 'Value', max(get(sl_obj,'Min'), min( get(sl_obj,'Max'), str2double(get(hObject,'String')) )) );
+
+
+function harm_scan_time_ed_Callback(hObject, eventdata, handles)
+% hObject    handle to harm_scan_time_ed (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of harm_scan_time_ed as text
+%        str2double(get(hObject,'String')) returns contents of harm_scan_time_ed as a double
+sl_obj = handles.harm_scan_time_slider;
+set(sl_obj, 'Value', max(get(sl_obj,'Min'), min( get(sl_obj,'Max'), str2double(get(hObject,'String')) )) );

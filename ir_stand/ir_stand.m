@@ -22,7 +22,7 @@ function varargout = ir_stand(varargin)
 
 % Edit the above text to modify the response to help ir_stand
 
-% Last Modified by GUIDE v2.5 07-Apr-2015 06:10:05
+% Last Modified by GUIDE v2.5 30-Apr-2015 14:24:30
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1099,4 +1099,3 @@ function added_paths=recursive_call(root, cfg, added_paths)
 	for i=1:length(list)
 		added_paths=recursive_call([root filesep list{i}], cfg, added_paths);
 	end
-
