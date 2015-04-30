@@ -277,7 +277,7 @@ function harm_scan_time_slider_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-set(handles.harm_scan_time_ed, 'String', num2str(round(get(hObject,'Value'))));
+set(handles.harm_scan_time_ed, 'String', num2str(roundn(get(hObject,'Value'),-1)));
 
 
 function harm_freq_start_ed_Callback(hObject, eventdata, handles)
