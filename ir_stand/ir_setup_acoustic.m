@@ -86,8 +86,11 @@ cfg.acoustic_generator.harm.enable = ~cfg.acoustic_generator.sls.enable;
 set(handles.get_sls_chkbtn,		 'Value',cfg.acoustic_generator.sls.enable);
 set(handles.get_harm_chkbtn,	 'Value',cfg.acoustic_generator.harm.enable);
 set(handles.harm_freq_start_ed,  'String',num2str(cfg.acoustic_generator.harm.freq_start));
+harm_freq_start_ed_Callback(handles.harm_freq_start_ed, eventdata, handles);
 set(handles.harm_freq_finish_ed, 'String',num2str(cfg.acoustic_generator.harm.freq_finish));
+harm_freq_finish_ed_Callback(handles.harm_freq_finish_ed, eventdata, handles);
 set(handles.harm_scan_time_ed,   'String',num2str(cfg.acoustic_generator.harm.scan_time));
+harm_scan_time_ed_Callback(handles.harm_scan_time_ed, eventdata, handles);
 
 set(handles.volume_slider,		 'Value',cfg.acoustic_generator.volume);
 volume_slider_Callback(handles.volume_slider, [], handles);
