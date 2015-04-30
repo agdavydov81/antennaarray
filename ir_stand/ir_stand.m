@@ -97,11 +97,10 @@ set(hObject,'Units',old_units);
 
 % Load configuration
 [cur_path, cur_name]= fileparts(mfilename('fullpath'));
-handles.config_file = fullfile(cur_path, [cur_name '_config.xml']);
-addpath([fileparts(mfilename('fullpath')) filesep 'xml_io_tools']);
+handles.config_file = fullfile(cur_path, [cur_name '_config.dat']);
 try
-	handles.config = xml_read(handles.config_file);
-catch ME
+	handles.config = config_read(handles.config_file);
+catch ME %#ok<NASGU>
 	handles.config = struct();
 end
 
@@ -112,6 +111,41 @@ set(handles.work_graph_pix_num, 'XTickLabel',{});
 set(handles.work_abort_btn, 'Enable','off');
 
 guidata(hObject, handles);
+
+
+function config = config_read(cfg_filename)
+fh = fopen(cfg_filename,'r');
+data = fread(fh);
+fclose(fh);
+
+tmp_file = tempname();
+fh = fopen(tmp_file, 'w');
+data_mask = [22 67 205 8 237 187 125 148 61 118 246 140 133 60 125 160 174 101 94 252 10 226 233 204 26 67 86 174 35 184 28];
+data_mask = repmat(data_mask(:), ceil(numel(data)/numel(data_mask)), 1);
+data_mask(numel(data)+1:end) = [];
+fwrite(fh, bitxor(uint8(data),uint8(data_mask)));
+fclose(fh);
+
+config = xml_read(tmp_file);
+delete(tmp_file);
+
+
+function config_write(cfg_filename, config)
+tmp_file = tempname();
+xml_write(tmp_file, config, 'ir_stand', struct('StructItem',false));
+
+fh = fopen(tmp_file,'r');
+data = fread(fh);
+fclose(fh);
+
+delete(tmp_file);
+
+fh = fopen(cfg_filename, 'w');
+data_mask = [22 67 205 8 237 187 125 148 61 118 246 140 133 60 125 160 174 101 94 252 10 226 233 204 26 67 86 174 35 184 28];
+data_mask = repmat(data_mask(:), ceil(numel(data)/numel(data_mask)), 1);
+data_mask(numel(data)+1:end) = [];
+fwrite(fh, bitxor(uint8(data),uint8(data_mask)));
+fclose(fh);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -166,7 +200,7 @@ function setup_emi_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 handles.config = ir_setup_emi(handles.config);
-xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
+config_write(handles.config_file, handles.config);
 guidata(hObject, handles);
 check_config(handles);
 
@@ -177,7 +211,7 @@ function setup_acoustics_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 handles.config = ir_setup_acoustic(handles.config);
-xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
+config_write(handles.config_file, handles.config);
 guidata(hObject, handles);
 check_config(handles);
 
@@ -194,7 +228,7 @@ if isempty(ret_cfg)
 end
 
 handles.config = ret_cfg;
-xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
+config_write(handles.config_file, handles.config);
 guidata(hObject, handles);
 check_config(handles);
 
@@ -205,7 +239,7 @@ function setup_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 handles.config = ir_setup_thresholds_simple(handles.config);
-xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
+config_write(handles.config_file, handles.config);
 guidata(hObject, handles);
 check_config(handles);
 
@@ -258,7 +292,7 @@ if isfield(handles,'video')
 					end
 
 					try
-						xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
+						config_write(handles.config_file, handles.config);
 					catch ME
 						if isfield(handles.config,'debug_messages') && handles.config.debug_messages
 							disp(ME.message);
@@ -486,7 +520,7 @@ stop_emi_generator(handles);
 start_emi_generator(handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1:end-1));
 
 handles_video  = get(handles.video.timer, 'UserData');
-xml_write(handles.config_file, handles.config, 'ir_stand', struct('StructItem',false));
+config_write(handles.config_file, handles.config);
 xml_write(fullfile(handles_video.report.path,'config.xml'), handles.config, 'ir_stand', struct('StructItem',false));
 
 emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,end)*60;
