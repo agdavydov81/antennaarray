@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 23-Oct-2014 05:04:10
+% Last Modified by GUIDE v2.5 01-May-2015 03:39:13
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -93,6 +93,7 @@ if not(isfield(cfg,'thresholds'));
 	cfg.thresholds.report_graph_time = 3600;
 	cfg.debug_messages = 0;
 	cfg.debug_saveframes = 0;
+	cfg.password = '';
 end
 
 set(handles.start_delay,				'String', num2str(cfg.thresholds.start_delay));
@@ -113,6 +114,7 @@ set(handles.report_deton_img_number,	'String', num2str(cfg.thresholds.report_det
 set(handles.report_graph_time,			'String', num2str(cfg.thresholds.report_graph_time));
 set(handles.debug_messages,				'Value',  cfg.debug_messages);
 set(handles.debug_saveframes,			'Value',  cfg.debug_saveframes);
+handles.password_string = cfg.password;
 
 
 % Update handles structure
@@ -149,6 +151,7 @@ if handles.press_ok
 	cfg.thresholds.report_graph_time =			str2double(get(handles.report_graph_time,'String'));
 	cfg.debug_messages =						get(handles.debug_messages,'Value');
 	cfg.debug_saveframes =						get(handles.debug_saveframes,'Value');
+	cfg.password =								handles.password_string;
 end
 
 varargout{1} = cfg;
@@ -233,3 +236,16 @@ function filter_hp_freqz_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 filter_hp_factor = str2double(get(handles.filter_hp_factor,'String'));
 fvtool([1 -1],[1 filter_hp_factor]);
+
+
+% --- Executes on button press in password_btn.
+function password_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to password_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+pass = passwordEntryDialog('CheckPasswordLength',false, 'ValidatePassword',true, 'WindowName','¬ведите пароль');
+if pass == -1
+	return
+end
+handles.password_string = pass;
+guidata(hObject, handles);

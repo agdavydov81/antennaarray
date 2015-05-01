@@ -98,6 +98,7 @@ if not(isfield(cfg.thresholds,'report_deton_img_number'));		cfg.thresholds.repor
 if not(isfield(cfg.thresholds,'report_graph_time'));			cfg.thresholds.report_graph_time = 3600;		end
 if not(isfield(cfg,'debug_messages'));							cfg.debug_messages = 0;							end
 if not(isfield(cfg,'debug_saveframes'));						cfg.debug_saveframes = 0;						end
+if not(isfield(cfg,'password'));								cfg.password = '';								end
 
 handles.config = cfg;
 

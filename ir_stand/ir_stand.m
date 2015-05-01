@@ -194,11 +194,30 @@ if isfield_ex(handles,'config.acoustic_generator.volume')
 end
 
 
+function is_ok = check_pass(cfg)
+is_ok = false;
+if isfield(cfg,'password') && ~isempty(cfg.password)
+	pass = passwordEntryDialog('CheckPasswordLength',false, 'WindowName','Введите пароль');
+	if pass == -1
+		return
+	end
+	is_ok = strcmp(pass, cfg.password);
+	if ~is_ok
+		msgbox('Введен неверный пароль.','Пароль','error','modal');
+	end
+else
+	is_ok = true;
+end
+
+
 % --- Executes on button press in setup_emi_btn.
 function setup_emi_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_emi_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+if ~check_pass(handles.config)
+	return
+end
 handles.config = ir_setup_emi(handles.config);
 config_write(handles.config_file, handles.config);
 guidata(hObject, handles);
@@ -210,6 +229,9 @@ function setup_acoustics_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_acoustics_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+if ~check_pass(handles.config)
+	return
+end
 handles.config = ir_setup_acoustic(handles.config);
 config_write(handles.config_file, handles.config);
 guidata(hObject, handles);
@@ -221,6 +243,10 @@ function setup_irvideo_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_irvideo_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+if ~check_pass(handles.config)
+	return
+end
+
 ret_cfg = ir_setup_video(handles.config);
 if isempty(ret_cfg)
 	errordlg('Не обнаружено подходящих видео устройств.', [mfilename ' help'], 'modal');
@@ -238,6 +264,9 @@ function setup_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to setup_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+if ~check_pass(handles.config)
+	return
+end
 handles.config = ir_setup_thresholds_simple(handles.config);
 config_write(handles.config_file, handles.config);
 guidata(hObject, handles);
