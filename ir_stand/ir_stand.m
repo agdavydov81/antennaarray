@@ -127,11 +127,17 @@ fwrite(fh, bitxor(uint8(data),uint8(data_mask)));
 fclose(fh);
 
 config = xml_read(tmp_file);
+if isfield(config,'password')
+	config.password = char(config.password);
+end
 delete(tmp_file);
 
 
 function config_write(cfg_filename, config)
 tmp_file = tempname();
+if isfield(config,'password')
+	config.password = double(config.password);
+end
 xml_write(tmp_file, config, 'ir_stand', struct('StructItem',false));
 
 fh = fopen(tmp_file,'r');
