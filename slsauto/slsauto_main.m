@@ -200,21 +200,35 @@ end
 pause(0.2);
 dlg_out = cellfun(@str2double, dlg_out, 'UniformOutput',false);
 try
-	if matlabpool('size')==0
-		local_jm=findResource('scheduler','type','local');
-		if local_jm.ClusterSize>1 && ... 
-			strcmp(questdlg(handles.gtxt.translate({'No matlabpool opened' ...
-				'Matlabpool usage can significantly reduce analysis time.' ...
-				'Open local matlabpool?'}),handles.gtxt.translate('Parallel computations'), ...
-				handles.gtxt.translate('Yes'),handles.gtxt.translate('No'),handles.gtxt.translate('Yes')), ...
-				handles.gtxt.translate('Yes'))
-			matlabpool('local');
+	if exist('parpool','file')
+		p = gcp('nocreate');
+		if isempty(p)
+			c = parcluster();
+			if c.NumWorkers>1 && pool_dlg(handles)
+				parpool();
+			end
+			pause(0.2);
 		end
-		pause(0.2);
+	else
+		if matlabpool('size')==0 % R2011b
+			local_jm = findResource('scheduler','type','local');
+			if local_jm.ClusterSize>1 && pool_dlg(handles)
+				matlabpool('local');
+			end
+			pause(0.2);
+		end
 	end
 catch
 end
 slsauto_lpc_analyse(struct('snd_filename',get(handles.snd_filename_edit,'String')), dlg_out{:});
+
+
+function is_open = pool_dlg(handles)
+is_open = strcmp(questdlg(handles.gtxt.translate({'No matlabpool opened' ...
+	'Matlabpool usage can significantly reduce analysis time.' ...
+	'Open local matlabpool?'}),handles.gtxt.translate('Parallel computations'), ...
+	handles.gtxt.translate('Yes'),handles.gtxt.translate('No'),handles.gtxt.translate('Yes')), ...
+	handles.gtxt.translate('Yes'));
 
 
 % --- Executes on button press in lpcsynth_btn.
