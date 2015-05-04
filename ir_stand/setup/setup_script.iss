@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "IR Stand"
-#define MyAppVersion "1.0.99"
+#define MyAppVersion "1.0.103"
 #define MyAppPublisher "Belarusian State University of Informatics and Radioelectronics (BSUIR)"
 #define MyAppURL "http://www.bsuir.by/"
 #define MyAppExeName "ir_stand.m"
@@ -32,7 +32,7 @@ SolidCompression=yes
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 Source: "..\*.m"; DestDir: "{app}"; Flags: ignoreversion
