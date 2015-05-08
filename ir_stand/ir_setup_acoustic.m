@@ -22,7 +22,7 @@ function varargout = ir_setup_acoustic(varargin)
 
 % Edit the above text to modify the response to help ir_setup_acoustic
 
-% Last Modified by GUIDE v2.5 30-Apr-2015 14:31:42
+% Last Modified by GUIDE v2.5 08-May-2015 01:48:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -71,6 +71,16 @@ else
 end
 handles.config = cfg;
 
+set_controls(handles, cfg);
+
+% Update handles structure
+guidata(hObject, handles);
+
+% UIWAIT makes ir_setup_acoustic wait for user response (see UIRESUME)
+uiwait(handles.figure1);
+
+
+function cfg = set_controls(handles, cfg)
 if not(isfield(cfg,'acoustic_generator'));					cfg.acoustic_generator = struct();				end
 if not(isfield(cfg.acoustic_generator,'sls'));				cfg.acoustic_generator.sls = struct();			end
 if not(isfield(cfg.acoustic_generator.sls,'enable'));		cfg.acoustic_generator.sls.enable = 1;			end
@@ -86,11 +96,11 @@ cfg.acoustic_generator.harm.enable = ~cfg.acoustic_generator.sls.enable;
 set(handles.get_sls_chkbtn,		 'Value',cfg.acoustic_generator.sls.enable);
 set(handles.get_harm_chkbtn,	 'Value',cfg.acoustic_generator.harm.enable);
 set(handles.harm_freq_start_ed,  'String',num2str(cfg.acoustic_generator.harm.freq_start));
-harm_freq_start_ed_Callback(handles.harm_freq_start_ed, eventdata, handles);
+harm_freq_start_ed_Callback(handles.harm_freq_start_ed, [], handles);
 set(handles.harm_freq_finish_ed, 'String',num2str(cfg.acoustic_generator.harm.freq_finish));
-harm_freq_finish_ed_Callback(handles.harm_freq_finish_ed, eventdata, handles);
+harm_freq_finish_ed_Callback(handles.harm_freq_finish_ed, [], handles);
 set(handles.harm_scan_time_ed,   'String',num2str(cfg.acoustic_generator.harm.scan_time));
-harm_scan_time_ed_Callback(handles.harm_scan_time_ed, eventdata, handles);
+harm_scan_time_ed_Callback(handles.harm_scan_time_ed, [], handles);
 
 set(handles.volume_slider,		 'Value',cfg.acoustic_generator.volume);
 volume_slider_Callback(handles.volume_slider, [], handles);
@@ -103,12 +113,6 @@ switch cfg.acoustic_generator.harm.scan_type
 	otherwise
 end
 harm_enable_controls(handles);
-
-% Update handles structure
-guidata(hObject, handles);
-
-% UIWAIT makes ir_setup_acoustic wait for user response (see UIRESUME)
-uiwait(handles.figure1);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -314,3 +318,11 @@ function harm_scan_time_ed_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of harm_scan_time_ed as a double
 sl_obj = handles.harm_scan_time_slider;
 set(sl_obj, 'Value', max(get(sl_obj,'Min'), min( get(sl_obj,'Max'), str2double(get(hObject,'String')) )) );
+
+
+% --- Executes on button press in reset_btn.
+function reset_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to reset_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set_controls(handles, struct());

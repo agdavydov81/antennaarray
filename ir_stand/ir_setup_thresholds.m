@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 01-May-2015 03:39:13
+% Last Modified by GUIDE v2.5 08-May-2015 03:04:27
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -71,30 +71,44 @@ else
 end
 handles.config = cfg;
 
-if not(isfield(cfg,'thresholds'));
-	% Сохранено только для отладки
-	% Настоящая инициализация производится в ir_setup_thresholds_simple
-	cfg.thresholds = struct();
-	cfg.thresholds.start_delay = 3;
-	cfg.thresholds.filter_no_median = 1;
-	cfg.thresholds.filter_hp_factor = -0.97;
-	cfg.thresholds.filter_hp_initframes = 200;
-	cfg.thresholds.stat_lo = 0.005;
-	cfg.thresholds.stat_hi = 0.995;
-	cfg.thresholds.stat_time = 15;
-	cfg.thresholds.stat_pixshift = 1;
-	cfg.thresholds.median_size = 3;
-	cfg.thresholds.median_size_ispercent = 0;
-	cfg.thresholds.report_path = '.';
-	cfg.thresholds.report_detoff_img_interval = 60;
-	cfg.thresholds.report_detoff_img_number = 1440;
-	cfg.thresholds.report_deton_img_interval = 1;
-	cfg.thresholds.report_deton_img_number = 30;
-	cfg.thresholds.report_graph_time = 3600;
-	cfg.debug_messages = 0;
-	cfg.debug_saveframes = 0;
-	cfg.password = '';
-end
+handles = set_controls(handles, cfg);
+
+% Update handles structure
+guidata(hObject, handles);
+
+% UIWAIT makes ir_setup_thresholds wait for user response (see UIRESUME)
+uiwait(handles.figure1);
+
+
+function [handles, cfg] = set_controls(handles, cfg)
+% Копия сброса настроек из ir_setup_thresholds_simple
+if not(isfield(cfg,'thresholds'));								cfg.thresholds = struct();						end
+if not(isfield(cfg.thresholds,'detector_on_points'));			cfg.thresholds.detector_on_points = 100;		end
+if not(isfield(cfg.thresholds,'detector_on_part'));				cfg.thresholds.detector_on_part = 0.01;			end
+if not(isfield(cfg.thresholds,'detector_off_points'));			cfg.thresholds.detector_off_points = 80;		end
+if not(isfield(cfg.thresholds,'detector_off_part'));			cfg.thresholds.detector_off_part = 0.008;		end
+if not(isfield(cfg.thresholds,'detector_pre_buff'));			cfg.thresholds.detector_pre_buff = 0.5;			end
+if not(isfield(cfg.thresholds,'detector_post_buff'));			cfg.thresholds.detector_post_buff = 0.8;		end
+
+if not(isfield(cfg.thresholds,'start_delay'));					cfg.thresholds.start_delay = 3;					end
+if not(isfield(cfg.thresholds,'filter_no_median'));				cfg.thresholds.filter_no_median = 1;			end
+if not(isfield(cfg.thresholds,'filter_hp_factor'));				cfg.thresholds.filter_hp_factor = -0.97;		end
+if not(isfield(cfg.thresholds,'filter_hp_initframes'));			cfg.thresholds.filter_hp_initframes = 200;		end
+if not(isfield(cfg.thresholds,'stat_lo'));						cfg.thresholds.stat_lo = 0.005;					end
+if not(isfield(cfg.thresholds,'stat_hi'));						cfg.thresholds.stat_hi = 0.995;					end
+if not(isfield(cfg.thresholds,'stat_time'));					cfg.thresholds.stat_time = 15;					end
+if not(isfield(cfg.thresholds,'stat_pixshift'));				cfg.thresholds.stat_pixshift = 1;				end
+if not(isfield(cfg.thresholds,'median_size'));					cfg.thresholds.median_size = 3;					end
+if not(isfield(cfg.thresholds,'median_size_ispercent'));		cfg.thresholds.median_size_ispercent = 0;		end
+if not(isfield(cfg.thresholds,'report_path'));					cfg.thresholds.report_path = '.';				end
+if not(isfield(cfg.thresholds,'report_detoff_img_interval'));	cfg.thresholds.report_detoff_img_interval = 60;	end
+if not(isfield(cfg.thresholds,'report_detoff_img_number'));		cfg.thresholds.report_detoff_img_number = 1440;	end
+if not(isfield(cfg.thresholds,'report_deton_img_interval'));	cfg.thresholds.report_deton_img_interval = 1;	end
+if not(isfield(cfg.thresholds,'report_deton_img_number'));		cfg.thresholds.report_deton_img_number = 30;	end
+if not(isfield(cfg.thresholds,'report_graph_time'));			cfg.thresholds.report_graph_time = 3600;		end
+if not(isfield(cfg,'debug_messages'));							cfg.debug_messages = 0;							end
+if not(isfield(cfg,'debug_saveframes'));						cfg.debug_saveframes = 0;						end
+if not(isfield(cfg,'password'));								cfg.password = '';								end
 
 set(handles.start_delay,				'String', num2str(cfg.thresholds.start_delay));
 set(handles.filter_no_median,			'Value',  cfg.thresholds.filter_no_median);
@@ -115,13 +129,6 @@ set(handles.report_graph_time,			'String', num2str(cfg.thresholds.report_graph_t
 set(handles.debug_messages,				'Value',  cfg.debug_messages);
 set(handles.debug_saveframes,			'Value',  cfg.debug_saveframes);
 handles.password_string = cfg.password;
-
-
-% Update handles structure
-guidata(hObject, handles);
-
-% UIWAIT makes ir_setup_thresholds wait for user response (see UIRESUME)
-uiwait(handles.figure1);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -248,4 +255,13 @@ if pass == -1
 	return
 end
 handles.password_string = pass;
+guidata(hObject, handles);
+
+
+% --- Executes on button press in reset_btn.
+function reset_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to reset_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+handles = set_controls(handles, struct());
 guidata(hObject, handles);

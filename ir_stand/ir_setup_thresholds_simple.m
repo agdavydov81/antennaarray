@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds_simple(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds_simple
 
-% Last Modified by GUIDE v2.5 14-Oct-2014 00:12:17
+% Last Modified by GUIDE v2.5 08-May-2015 02:24:12
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -72,6 +72,16 @@ end
 
 handles.config_orig = cfg;
 
+handles.config = set_controls(handles, cfg);
+
+% Update handles structure
+guidata(hObject, handles);
+
+% UIWAIT makes ir_setup_thresholds_simple wait for user response (see UIRESUME)
+uiwait(handles.figure1);
+
+
+function cfg = set_controls(handles, cfg)
 if not(isfield(cfg,'thresholds'));								cfg.thresholds = struct();						end
 if not(isfield(cfg.thresholds,'detector_on_points'));			cfg.thresholds.detector_on_points = 100;		end
 if not(isfield(cfg.thresholds,'detector_on_part'));				cfg.thresholds.detector_on_part = 0.01;			end
@@ -100,20 +110,12 @@ if not(isfield(cfg,'debug_messages'));							cfg.debug_messages = 0;							end
 if not(isfield(cfg,'debug_saveframes'));						cfg.debug_saveframes = 0;						end
 if not(isfield(cfg,'password'));								cfg.password = '';								end
 
-handles.config = cfg;
-
 set(handles.detector_on_points,			'String', num2str(cfg.thresholds.detector_on_points));
 set(handles.detector_on_part,			'String', num2str(cfg.thresholds.detector_on_part));
 set(handles.detector_off_points,		'String', num2str(cfg.thresholds.detector_off_points));
 set(handles.detector_off_part,			'String', num2str(cfg.thresholds.detector_off_part));
 set(handles.detector_pre_buff,			'String', num2str(cfg.thresholds.detector_pre_buff));
 set(handles.detector_post_buff,			'String', num2str(cfg.thresholds.detector_post_buff));
-
-% Update handles structure
-guidata(hObject, handles);
-
-% UIWAIT makes ir_setup_thresholds_simple wait for user response (see UIRESUME)
-uiwait(handles.figure1);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -204,3 +206,11 @@ function advanced_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 handles.config = ir_setup_thresholds(handles.config);
 guidata(hObject, handles);
+
+
+% --- Executes on button press in reset_btn.
+function reset_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to reset_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set_controls(handles, struct());
