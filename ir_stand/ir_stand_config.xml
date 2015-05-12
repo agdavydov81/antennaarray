@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ir_stand>
    <emi_generator>
-      <program_list/>
-      <continue_flag>1</continue_flag>
+      <program_list>[1 6 96; 1 7 96; 1 8 10; 1 9 10; 1 10 10; 1 11 10; 1 12 10; 1 13 10]</program_list>
+      <continue_flag>0</continue_flag>
       <program_index>1</program_index>
    </emi_generator>
    <acoustic_generator>
@@ -11,45 +11,46 @@
       </sls>
       <harm>
          <enable>0</enable>
-         <freq_start>100</freq_start>
-         <freq_finish>8000</freq_finish>
+         <freq_start>400</freq_start>
+         <freq_finish>400</freq_finish>
          <scan_time>10</scan_time>
          <scan_type>log</scan_type>
       </harm>
-      <volume>0.95</volume>
+      <volume>0.952692</volume>
    </acoustic_generator>
    <video_device>
-      <name>Logitech B910 HD Webcam</name>
-      <mode>RGB24_640x480</mode>
-      <axis>[0.5 637.5 0.5 477.5]</axis>
+      <name>FLIR USB Video</name>
+      <mode>F7M0_640x483</mode>
+      <axis>[87 527 51.0000000000001 412]</axis>
       <t_range>[-40 150]</t_range>
       <palette>FLIR</palette>
       <autobalance>1</autobalance>
    </video_device>
    <thresholds>
-      <detector_on_points>100</detector_on_points>
-      <detector_on_part>0.01</detector_on_part>
-      <detector_off_points>80</detector_off_points>
-      <detector_off_part>0.008</detector_off_part>
-      <detector_pre_buff>0.5</detector_pre_buff>
-      <detector_post_buff>0.8</detector_post_buff>
       <start_delay>3</start_delay>
-      <filter_no_median>1</filter_no_median>
-      <filter_hp_factor>-0.97</filter_hp_factor>
-      <filter_hp_initframes>200</filter_hp_initframes>
-      <stat_lo>0.005</stat_lo>
-      <stat_hi>0.995</stat_hi>
-      <stat_time>15</stat_time>
-      <stat_pixshift>1</stat_pixshift>
-      <median_size>3</median_size>
-      <median_size_ispercent>0</median_size_ispercent>
+      <filter_hp_factor>-0.94</filter_hp_factor>
+      <filter_hp_initframes>50</filter_hp_initframes>
+      <stat_lo>0.002</stat_lo>
+      <stat_hi>0.998</stat_hi>
+      <stat_time>20</stat_time>
+      <median_size>5</median_size>
+      <detector_on_points>60</detector_on_points>
+      <detector_on_part>0.01</detector_on_part>
+      <detector_off_points>20</detector_off_points>
+      <detector_off_part>0.005</detector_off_part>
+      <detector_pre_buff>0.5</detector_pre_buff>
+      <detector_post_buff>0.5</detector_post_buff>
       <report_path>.</report_path>
       <report_detoff_img_interval>60</report_detoff_img_interval>
-      <report_detoff_img_number>1440</report_detoff_img_number>
-      <report_deton_img_interval>1</report_deton_img_interval>
-      <report_deton_img_number>30</report_deton_img_number>
-      <report_graph_time>3600</report_graph_time>
+      <report_detoff_img_number>1000</report_detoff_img_number>
+      <report_deton_img_interval>0</report_deton_img_interval>
+      <report_deton_img_number>200</report_deton_img_number>
+      <report_graph_time>7200</report_graph_time>
+      <stat_pixshift>3</stat_pixshift>
+      <filter_no_median>1</filter_no_median>
+      <median_size_ispercent>0</median_size_ispercent>
    </thresholds>
-   <debug_messages>1</debug_messages>
-   <debug_saveframes>1</debug_saveframes>
+   <debug_messages>0</debug_messages>
+   <debug_saveframes>0</debug_saveframes>
+   <password/>
 </ir_stand>
