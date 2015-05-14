@@ -55,7 +55,7 @@ function ret = isfield_ex(obj, fl_name)
 	end
 
 % --- Executes just before ir_stand is made visible.
-function ir_stand_OpeningFcn(hObject, eventdata, handles, varargin)
+function ir_stand_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 % This function has no output args, see OutputFcn.
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -112,7 +112,7 @@ imshow(ones(10,10,3), 'Parent',handles.work_img_orig);
 imshow(ones(10,10,3), 'Parent',handles.work_img_bw);
 set(handles.work_graph_pix_num, 'XTickLabel',{});
 
-set(handles.work_abort_btn, 'Enable','off');
+set(handles.work_abort_btn, 'Visible','off', 'Position',get(handles.work_start_btn, 'Position'));
 
 guidata(hObject, handles);
 
@@ -237,7 +237,7 @@ end
 
 
 % --- Executes on button press in setup_emi_btn.
-function setup_emi_btn_Callback(hObject, eventdata, handles)
+function setup_emi_btn_Callback(hObject, eventdata, handles) %#ok<*DEFNU>
 % hObject    handle to setup_emi_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -305,8 +305,8 @@ function work_abort_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-set(handles.work_start_btn, 'Enable','on');
-set(handles.work_abort_btn, 'Enable','off');
+set(handles.work_start_btn, 'Visible','on');
+set(handles.work_abort_btn, 'Visible','off');
 set(handles.setup_emi_btn, 'Enable','on');
 set(handles.setup_irvideo_btn, 'Enable','on');
 set(handles.setup_acoustics_btn, 'Enable','on');
@@ -437,8 +437,8 @@ catch
 end
 handles.video.config = handles.config;
 
-set(handles.work_start_btn, 'Enable','off');
-set(handles.work_abort_btn, 'Enable','on');
+set(handles.work_start_btn, 'Visible','off');
+set(handles.work_abort_btn, 'Visible','on');
 set(handles.setup_emi_btn, 'Enable','off');
 set(handles.setup_irvideo_btn, 'Enable','off');
 set(handles.setup_acoustics_btn, 'Enable','off');
@@ -549,7 +549,7 @@ end
 guidata(handles.figure1, handles);
 
 
-function emi_timer_func(timer_handle, eventdata)
+function emi_timer_func(timer_handle, eventdata) %#ok<*INUSD>
 
 
 function emi_timer_stop(timer_handle, eventdata)
@@ -560,7 +560,7 @@ if ~ishandle(figure1_handle)
 	return
 end
 handles = guidata(figure1_handle);
-if strcmp(get(handles.work_abort_btn,'Enable'),'off')
+if strcmp(get(handles.work_abort_btn,'Visible'),'off')
 	delete(timer_handle);
 	return
 end
@@ -712,7 +712,7 @@ end
 function watchdog_timer_func(timer_handle, eventdata)
 try
 	handles = get(timer_handle, 'UserData');
-	if strcmp(get(handles.work_abort_btn,'Enable'),'off')
+	if strcmp(get(handles.work_abort_btn,'Visible'),'off')
 		stop(timer_handle);
 		return;
 	end
@@ -781,7 +781,7 @@ try
 		frame_cur_rgb = fix((frame_cur-cur_min)/(cur_max-cur_min)*63)+1;
 	else
 		image(frame_cur*64, 'Parent',handles_video.handles.work_img_orig);
-		frame_cur_rgb = fix(frame_cur/4);
+		frame_cur_rgb = fix(frame_cur*63)+1;
 	end
 	frame_cur_rgb = reshape(handles_video.palette(max(1,min(64,frame_cur_rgb)),:,:), [size(frame_cur_rgb) 3]);
 	axis(handles_video.handles.work_img_orig,'equal');
