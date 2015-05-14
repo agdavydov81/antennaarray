@@ -66,12 +66,16 @@ set(hObject,'Units',old_units);
 % Fill configuration fields
 if isempty(varargin)
 	cfg = struct();
+	cfg_def = struct();
 else
 	cfg = varargin{1};
+	cfg_def = varargin{2};
 end
+handles.config0.emi_generator = struct('program_list',[], 'program_index',1, 'continue_flag',true);
 handles.config = cfg;
+handles.config_default = cfg_def;
 
-set_controls(handles, cfg);
+set_controls(handles, struct_merge(cfg,cfg_def,handles.config0));
 
 set_icon(handles.add_btn, 'add.png');
 set_icon(handles.del_btn, 'delete.png');
@@ -91,47 +95,12 @@ uiwait(handles.figure1);
 
 
 function cfg = set_controls(handles, cfg)
-if not(isfield(cfg,'emi_generator'));					cfg.emi_generator = struct();				end
-if not(isfield(cfg.emi_generator,'program_list'));		cfg.emi_generator.program_list = [1 6 96; 1 7 96; 1 8 10; 1 9 10; 1 10 10; 1 11 10; 1 12 10; 1 13 10];	end
 if size(cfg.emi_generator.program_list,2) == 3
 	cfg.emi_generator.program_list(:,4) = 1;
 end
-if not(isfield(cfg.emi_generator,'program_index'));		cfg.emi_generator.program_index = 1;		end
-if not(isfield(cfg.emi_generator,'continue_flag'));		cfg.emi_generator.continue_flag = true;		end
 
 set(handles.emi_program_tbl, 'Data', [cfg.emi_generator.program_list; nan(1,numel(get(handles.emi_program_tbl,'ColumnWidth')))]);
 set(handles.emi_continue_flag, 'Value', cfg.emi_generator.continue_flag);
-
-
-function set_icon(btn, icon_filename, left_align)
-try
-	if nargin<3
-		left_align = false;
-	end
-	[logo_image, logo_map, logo_alpha] = imread(fullfile(fileparts(mfilename('fullpath')), 'icons', icon_filename));
-	if ~isempty(logo_map)
-		logo_map = reshape(uint8(logo_map * 255), size(logo_map,1), 1, 3);
-		logo_image = cell2mat(arrayfun(@(x) logo_map(x+1,:,:), logo_image, 'UniformOutput',false));
-	end
-	if ~isempty(logo_alpha)
-		back_color = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_alpha) 1]);
-		logo_alpha = repmat(double(logo_alpha)/255,[1 1 3]);
-		logo_image = uint8(double(logo_image).*logo_alpha + back_color.*(1-logo_alpha));
-	end
-	if left_align
-		old_units = get(btn, 'Units');
-		set(btn, 'Units','Pixels');
-		pos = get(btn, 'Position');
-		set(btn, 'Units',old_units);
-		logo_image1 = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_image,1) pos(3)-size(logo_image,2)-10 1]);
-		logo_image = [logo_image logo_image1];
-	end
-	set(btn, 'CData',logo_image);
-	if ~left_align
-		set(btn, 'String','');
-	end
-catch
-end
 
 
 % --- Outputs from this function are returned to the command line.
@@ -312,7 +281,7 @@ function reset_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to reset_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-set_controls(handles, struct());
+set_controls(handles, struct_merge(handles.config_default,handles.config0));
 
 
 % --- Executes when selected cell(s) is changed in emi_program_tbl.

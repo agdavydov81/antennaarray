@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ir_stand>
    <emi_generator>
-      <program_list>[1 6 96; 1 7 96; 1 8 10; 1 9 10; 1 10 10; 1 11 10; 1 12 10; 1 13 10]</program_list>
+      <program_list>[1 6 96 1; 1 7 96 1; 1 8 10 1; 1 9 10 1; 1 10 10 1; 1 11 10 1; 1 12 10 1; 1 13 10 1]</program_list>
       <continue_flag>0</continue_flag>
       <program_index>1</program_index>
    </emi_generator>
@@ -11,12 +11,12 @@
       </sls>
       <harm>
          <enable>0</enable>
-         <freq_start>400</freq_start>
-         <freq_finish>400</freq_finish>
+         <freq_start>100</freq_start>
+         <freq_finish>8000</freq_finish>
          <scan_time>10</scan_time>
          <scan_type>log</scan_type>
       </harm>
-      <volume>0.952692</volume>
+      <volume>0.95</volume>
    </acoustic_generator>
    <video_device>
       <name>FLIR USB Video</name>

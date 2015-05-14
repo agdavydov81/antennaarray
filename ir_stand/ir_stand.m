@@ -102,11 +102,9 @@ else % if isunix
 	handles.config_file = getenv('HOME');
 end
 handles.config_file = fullfile(handles.config_file, [mfilename '_config.xml']);
-try
-	handles.config = config_read(handles.config_file);
-catch ME %#ok<NASGU>
-	handles.config = struct();
-end
+handles.config = config_read(handles.config_file);
+[~, cfg_name, cfg_ext] = fileparts(handles.config_file);
+handles.config_default = config_read(fullfile(fileparts(mfilename('fullpath')), [cfg_name cfg_ext]));
 
 imshow(ones(10,10,3), 'Parent',handles.work_img_orig);
 imshow(ones(10,10,3), 'Parent',handles.work_img_bw);
@@ -126,33 +124,37 @@ guidata(hObject, handles);
 
 
 function config = config_read(cfg_filename)
-[~, cfg_name, cfg_ext] = fileparts(cfg_filename);
-if ~exist(cfg_filename,'file')
-	cfg_filename = fullfile(fileparts(mfilename('fullpath')), [cfg_name cfg_ext]);
-end
-if ~exist(cfg_filename,'file')
-	cfg_filename = fullfile(fileparts(mfilename('fullpath')), [cfg_name '.xml']);
-end
-if strcmp(cfg_ext,'.xml')
-	config = xml_read(cfg_filename);
-else
-	fh = fopen(cfg_filename,'r');
-	data = fread(fh);
-	fclose(fh);
+try
+	[~, cfg_name, cfg_ext] = fileparts(cfg_filename);
+	if ~exist(cfg_filename,'file')
+		cfg_filename = fullfile(fileparts(mfilename('fullpath')), [cfg_name cfg_ext]);
+	end
+	if ~exist(cfg_filename,'file')
+		cfg_filename = fullfile(fileparts(mfilename('fullpath')), [cfg_name '.xml']);
+	end
+	if strcmp(cfg_ext,'.xml')
+		config = xml_read(cfg_filename);
+	else
+		fh = fopen(cfg_filename,'r');
+		data = fread(fh);
+		fclose(fh);
 
-	tmp_file = tempname();
-	fh = fopen(tmp_file, 'w');
-	data_mask = [22 67 205 8 237 187 125 148 61 118 246 140 133 60 125 160 174 101 94 252 10 226 233 204 26 67 86 174 35 184 28];
-	data_mask = repmat(data_mask(:), ceil(numel(data)/numel(data_mask)), 1);
-	data_mask(numel(data)+1:end) = [];
-	fwrite(fh, bitxor(uint8(data),uint8(data_mask)));
-	fclose(fh);
+		tmp_file = tempname();
+		fh = fopen(tmp_file, 'w');
+		data_mask = [22 67 205 8 237 187 125 148 61 118 246 140 133 60 125 160 174 101 94 252 10 226 233 204 26 67 86 174 35 184 28];
+		data_mask = repmat(data_mask(:), ceil(numel(data)/numel(data_mask)), 1);
+		data_mask(numel(data)+1:end) = [];
+		fwrite(fh, bitxor(uint8(data),uint8(data_mask)));
+		fclose(fh);
 
-	config = xml_read(tmp_file);
-	delete(tmp_file);
-end
-if isfield(config,'password')
-	config.password = char(config.password);
+		config = xml_read(tmp_file);
+		delete(tmp_file);
+	end
+	if isfield(config,'password')
+		config.password = char(config.password);
+	end
+catch ME %#ok<NASGU>
+	config = struct();
 end
 
 
@@ -179,37 +181,6 @@ else
 	data_mask(numel(data)+1:end) = [];
 	fwrite(fh, bitxor(uint8(data),uint8(data_mask)));
 	fclose(fh);
-end
-
-
-function set_icon(btn, icon_filename, left_align)
-try
-	if nargin<3
-		left_align = false;
-	end
-	[logo_image, logo_map, logo_alpha] = imread(fullfile(fileparts(mfilename('fullpath')), 'icons', icon_filename));
-	if ~isempty(logo_map)
-		logo_map = reshape(uint8(logo_map * 255), size(logo_map,1), 1, 3);
-		logo_image = cell2mat(arrayfun(@(x) logo_map(x+1,:,:), logo_image, 'UniformOutput',false));
-	end
-	if ~isempty(logo_alpha)
-		back_color = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_alpha) 1]);
-		logo_alpha = repmat(double(logo_alpha)/255,[1 1 3]);
-		logo_image = uint8(double(logo_image).*logo_alpha + back_color.*(1-logo_alpha));
-	end
-	if left_align
-		old_units = get(btn, 'Units');
-		set(btn, 'Units','Pixels');
-		pos = get(btn, 'Position');
-		set(btn, 'Units',old_units);
-		logo_image1 = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_image,1) pos(3)-size(logo_image,2)-10 1]);
-		logo_image = [logo_image logo_image1];
-	end
-	set(btn, 'CData',logo_image);
-	if ~left_align
-		set(btn, 'String','');
-	end
-catch
 end
 
 
@@ -283,7 +254,7 @@ function setup_emi_btn_Callback(hObject, eventdata, handles) %#ok<*DEFNU>
 if ~check_pass(handles.config)
 	return
 end
-handles.config = ir_setup_emi(handles.config);
+handles.config = ir_setup_emi(handles.config, handles.config_default);
 config_write(handles.config_file, handles.config);
 guidata(hObject, handles);
 check_config(handles);
@@ -297,7 +268,7 @@ function setup_acoustics_btn_Callback(hObject, eventdata, handles)
 if ~check_pass(handles.config)
 	return
 end
-handles.config = ir_setup_acoustic(handles.config);
+handles.config = ir_setup_acoustic(handles.config, handles.config_default);
 config_write(handles.config_file, handles.config);
 guidata(hObject, handles);
 check_config(handles);
@@ -312,7 +283,7 @@ if ~check_pass(handles.config)
 	return
 end
 
-ret_cfg = ir_setup_video(handles.config);
+ret_cfg = ir_setup_video(handles.config, handles.config_default);
 if isempty(ret_cfg)
 	errordlg('Не обнаружено подходящих видео устройств.', [mfilename ' help'], 'modal');
 	return
@@ -332,7 +303,21 @@ function setup_btn_Callback(hObject, eventdata, handles)
 if ~check_pass(handles.config)
 	return
 end
-handles.config = ir_setup_thresholds_simple(handles.config);
+handles.config = ir_setup_thresholds_simple(handles.config, handles.config_default);
+config_write(handles.config_file, handles.config);
+guidata(hObject, handles);
+check_config(handles);
+
+
+% --- Executes on button press in setup_reset_btn.
+function setup_reset_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to setup_reset_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if ~check_pass(handles.config)
+	return
+end
+handles.config = handles.config_default;
 config_write(handles.config_file, handles.config);
 guidata(hObject, handles);
 check_config(handles);
@@ -1228,10 +1213,3 @@ function added_paths=recursive_call(root, cfg, added_paths)
 	for i=1:length(list)
 		added_paths=recursive_call([root filesep list{i}], cfg, added_paths);
 	end
-
-
-% --- Executes on button press in setup_reset_btn.
-function setup_reset_btn_Callback(hObject, eventdata, handles)
-% hObject    handle to setup_reset_btn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)

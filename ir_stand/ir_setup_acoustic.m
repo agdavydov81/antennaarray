@@ -66,12 +66,18 @@ set(hObject,'Units',old_units);
 % Fill configuration fields
 if isempty(varargin)
 	cfg = struct();
+	cfg_def = struct();
 else
 	cfg = varargin{1};
+	cfg_def = varargin{2};
 end
+handles.config0.acoustic_generator.sls.enable = 1;
+handles.config0.acoustic_generator.harm = struct('enable',0, 'freq_start',100, 'freq_finish',8000, 'scan_time',10, 'scan_type','log');
+handles.config0.acoustic_generator.volume = 0.95;
 handles.config = cfg;
+handles.config_default = cfg_def;
 
-set_controls(handles, cfg);
+set_controls(handles, struct_merge(cfg,cfg_def,handles.config0));
 
 set_icon(handles.ok_btn, 'yes.png', true);
 set_icon(handles.cancel_btn, 'no.png', true);
@@ -84,48 +90,7 @@ guidata(hObject, handles);
 uiwait(handles.figure1);
 
 
-function set_icon(btn, icon_filename, left_align)
-try
-	if nargin<3
-		left_align = false;
-	end
-	[logo_image, logo_map, logo_alpha] = imread(fullfile(fileparts(mfilename('fullpath')), 'icons', icon_filename));
-	if ~isempty(logo_map)
-		logo_map = reshape(uint8(logo_map * 255), size(logo_map,1), 1, 3);
-		logo_image = cell2mat(arrayfun(@(x) logo_map(x+1,:,:), logo_image, 'UniformOutput',false));
-	end
-	if ~isempty(logo_alpha)
-		back_color = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_alpha) 1]);
-		logo_alpha = repmat(double(logo_alpha)/255,[1 1 3]);
-		logo_image = uint8(double(logo_image).*logo_alpha + back_color.*(1-logo_alpha));
-	end
-	if left_align
-		old_units = get(btn, 'Units');
-		set(btn, 'Units','Pixels');
-		pos = get(btn, 'Position');
-		set(btn, 'Units',old_units);
-		logo_image1 = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_image,1) pos(3)-size(logo_image,2)-10 1]);
-		logo_image = [logo_image logo_image1];
-	end
-	set(btn, 'CData',logo_image);
-	if ~left_align
-		set(btn, 'String','');
-	end
-catch
-end
-
-
 function cfg = set_controls(handles, cfg)
-if not(isfield(cfg,'acoustic_generator'));					cfg.acoustic_generator = struct();				end
-if not(isfield(cfg.acoustic_generator,'sls'));				cfg.acoustic_generator.sls = struct();			end
-if not(isfield(cfg.acoustic_generator.sls,'enable'));		cfg.acoustic_generator.sls.enable = 1;			end
-if not(isfield(cfg.acoustic_generator,'harm'));				cfg.acoustic_generator.harm = struct();			end
-if not(isfield(cfg.acoustic_generator.harm,'enable'));		cfg.acoustic_generator.harm.enable = 0;			end
-if not(isfield(cfg.acoustic_generator.harm,'freq_start'));	cfg.acoustic_generator.harm.freq_start = 100;	end
-if not(isfield(cfg.acoustic_generator.harm,'freq_finish'));	cfg.acoustic_generator.harm.freq_finish = 8000;	end
-if not(isfield(cfg.acoustic_generator.harm,'scan_time'));	cfg.acoustic_generator.harm.scan_time = 10;		end
-if not(isfield(cfg.acoustic_generator.harm,'scan_type'));	cfg.acoustic_generator.harm.scan_type = 'log';	end
-if not(isfield(cfg.acoustic_generator,'volume'));			cfg.acoustic_generator.volume = 0.95;			end
 cfg.acoustic_generator.harm.enable = ~cfg.acoustic_generator.sls.enable;
 
 set(handles.get_sls_chkbtn,		 'Value',cfg.acoustic_generator.sls.enable);
@@ -360,4 +325,4 @@ function reset_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to reset_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-set_controls(handles, struct());
+set_controls(handles, struct_merge(handles.config_default,handles.config0));
