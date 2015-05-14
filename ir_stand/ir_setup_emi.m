@@ -22,7 +22,7 @@ function varargout = ir_setup_emi(varargin)
 
 % Edit the above text to modify the response to help ir_setup_emi
 
-% Last Modified by GUIDE v2.5 25-Oct-2014 01:51:33
+% Last Modified by GUIDE v2.5 14-May-2015 15:58:32
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -71,19 +71,50 @@ else
 end
 handles.config = cfg;
 
-if not(isfield(cfg,'emi_generator'));					cfg.emi_generator = struct();				end
-if not(isfield(cfg.emi_generator,'program_list'));		cfg.emi_generator.program_list = [];		end
-if not(isfield(cfg.emi_generator,'program_index'));		cfg.emi_generator.program_index = 1;		end
-if not(isfield(cfg.emi_generator,'continue_flag'));		cfg.emi_generator.continue_flag = true;		end
+set_controls(handles, cfg);
 
-set(handles.emi_program_tbl, 'Data', [cfg.emi_generator.program_list; nan(1,numel(get(handles.emi_program_tbl,'ColumnWidth')))]);
-set(handles.emi_continue_flag, 'Value', cfg.emi_generator.continue_flag);
+set_icon(handles.add_btn, 'add.png');
+set_icon(handles.del_btn, 'delete.png');
+set_icon(handles.top_btn, 'top.png');
+set_icon(handles.up_btn, 'up.png');
+set_icon(handles.down_btn, 'down.png');
+set_icon(handles.bottom_btn, 'bottom.png');
 
 % Update handles structure
 guidata(hObject, handles);
 
 % UIWAIT makes ir_setup_emi wait for user response (see UIRESUME)
 uiwait(handles.figure1);
+
+
+function cfg = set_controls(handles, cfg)
+if not(isfield(cfg,'emi_generator'));					cfg.emi_generator = struct();				end
+if not(isfield(cfg.emi_generator,'program_list'));		cfg.emi_generator.program_list = [1 6 96; 1 7 96; 1 8 10; 1 9 10; 1 10 10; 1 11 10; 1 12 10; 1 13 10];	end
+if size(cfg.emi_generator.program_list,2) == 3
+	cfg.emi_generator.program_list(:,4) = 1;
+end
+if not(isfield(cfg.emi_generator,'program_index'));		cfg.emi_generator.program_index = 1;		end
+if not(isfield(cfg.emi_generator,'continue_flag'));		cfg.emi_generator.continue_flag = true;		end
+
+set(handles.emi_program_tbl, 'Data', [cfg.emi_generator.program_list; nan(1,numel(get(handles.emi_program_tbl,'ColumnWidth')))]);
+set(handles.emi_continue_flag, 'Value', cfg.emi_generator.continue_flag);
+
+
+function set_icon(btn, icon_filename)
+try
+	[logo_image, logo_map, logo_alpha] = imread(fullfile(fileparts(mfilename('fullpath')), 'icons', icon_filename));
+	if ~isempty(logo_map)
+		logo_map = reshape(uint8(logo_map * 255), size(logo_map,1), 1, 3);
+		logo_image = cell2mat(arrayfun(@(x) logo_map(x+1,:,:), logo_image, 'UniformOutput',false));
+	end
+	if ~isempty(logo_alpha)
+		back_color = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_alpha) 1]);
+		logo_alpha = repmat(double(logo_alpha)/255,[1 1 3]);
+		logo_image = uint8(double(logo_image).*logo_alpha + back_color.*(1-logo_alpha));
+	end
+	set(btn, 'CData',logo_image, 'String','');
+catch
+end
 
 
 % --- Outputs from this function are returned to the command line.
@@ -179,3 +210,98 @@ nan_rows = all(isnan(data),2);
 if any(nan_rows(1:end-1)) || not(nan_rows(end))
 	set(hObject, 'Data',[data(not(nan_rows),:); nan(1,size(data,2))]);
 end
+
+
+% --- Executes on button press in add_btn.
+function add_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to add_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+data = get(handles.emi_program_tbl, 'Data');
+sel = get(handles.emi_program_tbl, 'UserData');
+if isempty(sel)
+	return
+end
+set(handles.emi_program_tbl, 'Data',[data(1:sel(1)-1,:); nan(1,size(data,2)-1), 1; data(sel(1):end,:)]);
+
+
+% --- Executes on button press in del_btn.
+function del_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to del_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+data = get(handles.emi_program_tbl, 'Data');
+sel = get(handles.emi_program_tbl, 'UserData');
+if size(data,1)<2 || isempty(sel) || sel(1)==size(data,1)
+	return
+end
+set(handles.emi_program_tbl, 'Data',data([1:sel(1)-1 sel(1)+1:end],:));
+
+
+% --- Executes on button press in up_btn.
+function up_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to up_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+data = get(handles.emi_program_tbl, 'Data');
+sel = get(handles.emi_program_tbl, 'UserData');
+if size(data,1)<2 || isempty(sel) || sel(1)==size(data,1) || sel(1)==1
+	return
+end
+set(handles.emi_program_tbl, 'Data',data([1:sel(1)-2 sel(1) sel(1)-1 sel(1)+1:end],:));
+
+
+% --- Executes on button press in down_btn.
+function down_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to down_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+data = get(handles.emi_program_tbl, 'Data');
+sel = get(handles.emi_program_tbl, 'UserData');
+if size(data,1)<2 || isempty(sel) || sel(1)>=size(data,1)-1
+	return
+end
+set(handles.emi_program_tbl, 'Data',data([1:sel(1)-1 sel(1)+1 sel(1) sel(1)+2:end],:));
+
+
+% --- Executes on button press in top_btn.
+function top_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to top_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+data = get(handles.emi_program_tbl, 'Data');
+sel = get(handles.emi_program_tbl, 'UserData');
+if size(data,1)<2 || isempty(sel) || sel(1)==size(data,1)
+	return
+end
+set(handles.emi_program_tbl, 'Data',data([sel(1) 1:sel(1)-1 sel(1)+1:end],:));
+
+
+% --- Executes on button press in bottom_btn.
+function bottom_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to bottom_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+data = get(handles.emi_program_tbl, 'Data');
+sel = get(handles.emi_program_tbl, 'UserData');
+if size(data,1)<2 || isempty(sel) || sel(1)==size(data,1)
+	return
+end
+set(handles.emi_program_tbl, 'Data',data([1:sel(1)-1 sel(1)+1:end-1 sel(1) end],:));
+
+
+% --- Executes on button press in reset_btn.
+function reset_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to reset_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set_controls(handles, struct());
+
+
+% --- Executes when selected cell(s) is changed in emi_program_tbl.
+function emi_program_tbl_CellSelectionCallback(hObject, eventdata, handles)
+% hObject    handle to emi_program_tbl (see GCBO)
+% eventdata  structure with the following fields (see UITABLE)
+%	Indices: row and column indices of the cell(s) currently selecteds
+% handles    structure with handles and user data (see GUIDATA)
+set(hObject, 'UserData', eventdata.Indices);

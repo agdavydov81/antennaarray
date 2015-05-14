@@ -96,8 +96,12 @@ set(hObject,'Position',[(scr_sz(3)-cur_pos(3))/2, (scr_sz(4)-cur_pos(4))/2, cur_
 set(hObject,'Units',old_units);
 
 % Load configuration
-[cur_path, cur_name]= fileparts(mfilename('fullpath'));
-handles.config_file = fullfile(cur_path, [cur_name '_config.dat']);
+if ispc
+	handles.config_file = getenv('USERPROFILE');
+else % if isunix
+	handles.config_file = getenv('HOME');
+end
+handles.config_file = fullfile(handles.config_file, [mfilename '_config.xml']);
 try
 	handles.config = config_read(handles.config_file);
 catch ME %#ok<NASGU>
@@ -114,44 +118,60 @@ guidata(hObject, handles);
 
 
 function config = config_read(cfg_filename)
-fh = fopen(cfg_filename,'r');
-data = fread(fh);
-fclose(fh);
+[~, cfg_name, cfg_ext] = fileparts(cfg_filename);
+if ~exist(cfg_filename,'file')
+	cfg_filename = fullfile(fileparts(mfilename('fullpath')), [cfg_name cfg_ext]);
+end
+if ~exist(cfg_filename,'file')
+	cfg_filename = fullfile(fileparts(mfilename('fullpath')), [cfg_name '.xml']);
+end
+if strcmp(cfg_ext,'.xml')
+	config = xml_read(cfg_filename);
+else
+	fh = fopen(cfg_filename,'r');
+	data = fread(fh);
+	fclose(fh);
 
-tmp_file = tempname();
-fh = fopen(tmp_file, 'w');
-data_mask = [22 67 205 8 237 187 125 148 61 118 246 140 133 60 125 160 174 101 94 252 10 226 233 204 26 67 86 174 35 184 28];
-data_mask = repmat(data_mask(:), ceil(numel(data)/numel(data_mask)), 1);
-data_mask(numel(data)+1:end) = [];
-fwrite(fh, bitxor(uint8(data),uint8(data_mask)));
-fclose(fh);
+	tmp_file = tempname();
+	fh = fopen(tmp_file, 'w');
+	data_mask = [22 67 205 8 237 187 125 148 61 118 246 140 133 60 125 160 174 101 94 252 10 226 233 204 26 67 86 174 35 184 28];
+	data_mask = repmat(data_mask(:), ceil(numel(data)/numel(data_mask)), 1);
+	data_mask(numel(data)+1:end) = [];
+	fwrite(fh, bitxor(uint8(data),uint8(data_mask)));
+	fclose(fh);
 
-config = xml_read(tmp_file);
+	config = xml_read(tmp_file);
+	delete(tmp_file);
+end
 if isfield(config,'password')
 	config.password = char(config.password);
 end
-delete(tmp_file);
 
 
 function config_write(cfg_filename, config)
-tmp_file = tempname();
 if isfield(config,'password')
 	config.password = double(config.password);
 end
-xml_write(tmp_file, config, 'ir_stand', struct('StructItem',false));
+[~, ~, cfg_ext] = fileparts(cfg_filename);
+if strcmp(cfg_ext,'.xml')
+	xml_write(cfg_filename, config, 'ir_stand', struct('StructItem',false));
+else
+	tmp_file = tempname();
+	xml_write(tmp_file, config, 'ir_stand', struct('StructItem',false));
 
-fh = fopen(tmp_file,'r');
-data = fread(fh);
-fclose(fh);
+	fh = fopen(tmp_file,'r');
+	data = fread(fh);
+	fclose(fh);
 
-delete(tmp_file);
+	delete(tmp_file);
 
-fh = fopen(cfg_filename, 'w');
-data_mask = [22 67 205 8 237 187 125 148 61 118 246 140 133 60 125 160 174 101 94 252 10 226 233 204 26 67 86 174 35 184 28];
-data_mask = repmat(data_mask(:), ceil(numel(data)/numel(data_mask)), 1);
-data_mask(numel(data)+1:end) = [];
-fwrite(fh, bitxor(uint8(data),uint8(data_mask)));
-fclose(fh);
+	fh = fopen(cfg_filename, 'w');
+	data_mask = [22 67 205 8 237 187 125 148 61 118 246 140 133 60 125 160 174 101 94 252 10 226 233 204 26 67 86 174 35 184 28];
+	data_mask = repmat(data_mask(:), ceil(numel(data)/numel(data_mask)), 1);
+	data_mask(numel(data)+1:end) = [];
+	fwrite(fh, bitxor(uint8(data),uint8(data_mask)));
+	fclose(fh);
+end
 
 
 % --- Outputs from this function are returned to the command line.
