@@ -79,6 +79,9 @@ set_icon(handles.top_btn, 'top.png');
 set_icon(handles.up_btn, 'up.png');
 set_icon(handles.down_btn, 'down.png');
 set_icon(handles.bottom_btn, 'bottom.png');
+set_icon(handles.ok_btn, 'yes.png', true);
+set_icon(handles.cancel_btn, 'no.png', true);
+set_icon(handles.reset_btn, 'undo.png', true);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -100,8 +103,11 @@ set(handles.emi_program_tbl, 'Data', [cfg.emi_generator.program_list; nan(1,nume
 set(handles.emi_continue_flag, 'Value', cfg.emi_generator.continue_flag);
 
 
-function set_icon(btn, icon_filename)
+function set_icon(btn, icon_filename, left_align)
 try
+	if nargin<3
+		left_align = false;
+	end
 	[logo_image, logo_map, logo_alpha] = imread(fullfile(fileparts(mfilename('fullpath')), 'icons', icon_filename));
 	if ~isempty(logo_map)
 		logo_map = reshape(uint8(logo_map * 255), size(logo_map,1), 1, 3);
@@ -112,7 +118,18 @@ try
 		logo_alpha = repmat(double(logo_alpha)/255,[1 1 3]);
 		logo_image = uint8(double(logo_image).*logo_alpha + back_color.*(1-logo_alpha));
 	end
-	set(btn, 'CData',logo_image, 'String','');
+	if left_align
+		old_units = get(btn, 'Units');
+		set(btn, 'Units','Pixels');
+		pos = get(btn, 'Position');
+		set(btn, 'Units',old_units);
+		logo_image1 = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_image,1) pos(3)-size(logo_image,2)-10 1]);
+		logo_image = [logo_image logo_image1];
+	end
+	set(btn, 'CData',logo_image);
+	if ~left_align
+		set(btn, 'String','');
+	end
 catch
 end
 

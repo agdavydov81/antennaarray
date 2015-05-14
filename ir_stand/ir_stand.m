@@ -22,7 +22,7 @@ function varargout = ir_stand(varargin)
 
 % Edit the above text to modify the response to help ir_stand
 
-% Last Modified by GUIDE v2.5 30-Apr-2015 14:24:30
+% Last Modified by GUIDE v2.5 14-May-2015 22:44:45
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -114,6 +114,14 @@ set(handles.work_graph_pix_num, 'XTickLabel',{});
 
 set(handles.work_abort_btn, 'Visible','off', 'Position',get(handles.work_start_btn, 'Position'));
 
+set_icon(handles.setup_emi_btn, 'disaster.png', true);
+set_icon(handles.setup_acoustics_btn, 'sound.png', true);
+set_icon(handles.setup_irvideo_btn, 'camera.png', true);
+set_icon(handles.setup_btn, 'pinion.png', true);
+set_icon(handles.setup_reset_btn, 'undo.png', true);
+set_icon(handles.work_start_btn, 'find.png', true);
+set_icon(handles.work_abort_btn, 'stop_sign.png', true);
+
 guidata(hObject, handles);
 
 
@@ -171,6 +179,37 @@ else
 	data_mask(numel(data)+1:end) = [];
 	fwrite(fh, bitxor(uint8(data),uint8(data_mask)));
 	fclose(fh);
+end
+
+
+function set_icon(btn, icon_filename, left_align)
+try
+	if nargin<3
+		left_align = false;
+	end
+	[logo_image, logo_map, logo_alpha] = imread(fullfile(fileparts(mfilename('fullpath')), 'icons', icon_filename));
+	if ~isempty(logo_map)
+		logo_map = reshape(uint8(logo_map * 255), size(logo_map,1), 1, 3);
+		logo_image = cell2mat(arrayfun(@(x) logo_map(x+1,:,:), logo_image, 'UniformOutput',false));
+	end
+	if ~isempty(logo_alpha)
+		back_color = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_alpha) 1]);
+		logo_alpha = repmat(double(logo_alpha)/255,[1 1 3]);
+		logo_image = uint8(double(logo_image).*logo_alpha + back_color.*(1-logo_alpha));
+	end
+	if left_align
+		old_units = get(btn, 'Units');
+		set(btn, 'Units','Pixels');
+		pos = get(btn, 'Position');
+		set(btn, 'Units',old_units);
+		logo_image1 = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_image,1) pos(3)-size(logo_image,2)-10 1]);
+		logo_image = [logo_image logo_image1];
+	end
+	set(btn, 'CData',logo_image);
+	if ~left_align
+		set(btn, 'String','');
+	end
+catch
 end
 
 
@@ -311,6 +350,7 @@ set(handles.setup_emi_btn, 'Enable','on');
 set(handles.setup_irvideo_btn, 'Enable','on');
 set(handles.setup_acoustics_btn, 'Enable','on');
 set(handles.setup_btn, 'Enable','on');
+set(handles.setup_reset_btn, 'Enable','on');
 
 stop_emi_generator(handles);
 
@@ -443,7 +483,7 @@ set(handles.setup_emi_btn, 'Enable','off');
 set(handles.setup_irvideo_btn, 'Enable','off');
 set(handles.setup_acoustics_btn, 'Enable','off');
 set(handles.setup_btn, 'Enable','off');
-
+set(handles.setup_reset_btn, 'Enable','off');
 
 % Init fields for processing
 handles.video.tic_id = tic();
@@ -1188,3 +1228,10 @@ function added_paths=recursive_call(root, cfg, added_paths)
 	for i=1:length(list)
 		added_paths=recursive_call([root filesep list{i}], cfg, added_paths);
 	end
+
+
+% --- Executes on button press in setup_reset_btn.
+function setup_reset_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to setup_reset_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
