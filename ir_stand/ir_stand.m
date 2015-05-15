@@ -583,7 +583,7 @@ if ~isempty(handles.config.emi_generator.program_list)
 		handles.config.emi_generator.program_index = min(size(handles.config.emi_generator.program_list,1),max(1,handles.config.emi_generator.program_index));
 	end
 
-	start_emi_generator(handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1:end-1));
+	start_emi_generator(handles, handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1:2));
 
 	emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,end)*60;
 	if emi_delay>0 && ~isinf(emi_delay)
@@ -618,7 +618,7 @@ end
 guidata(figure1_handle, handles);
 
 stop_emi_generator(handles);
-start_emi_generator(handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1:end-1));
+start_emi_generator(handles, handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1:2));
 
 handles_video  = get(handles.video.timer, 'UserData');
 config_write(handles.config_file, handles.config);
@@ -631,43 +631,51 @@ if emi_delay>0 && ~isinf(emi_delay)
 end
 
 
-function start_emi_generator(sequence_register)
+function start_emi_generator(handles, sequence_register)
 %% USB Connection (VISA)
+try
+	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
+	% Create the VISA-USB object if it does not exist
+	% otherwise use the object that was found.
+	if isempty(obj1)
+		obj1 = visa('AGILENT', 'USB0::0x0957::0x1F01::my51350313::0::INSTR');
+	else
+		fclose(obj1);
+		obj1 = obj1(1);
+	end
+	% Connect to instrument object, obj1.
+	fopen(obj1);
 
-obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
-% Create the VISA-USB object if it does not exist
-% otherwise use the object that was found.
-if isempty(obj1)
-    obj1 = visa('AGILENT', 'USB0::0x0957::0x1F01::my51350313::0::INSTR');
-else
-    fclose(obj1);
-    obj1 = obj1(1);
+	%% Reset & Status
+
+	fprintf(obj1, '*CLS');
+	fprintf(obj1, '*RST');
+	% instrumentInfo = query(obj1, '*IDN?');
+	% disp(['Instrument identification information: ' instrumentInfo]);
+
+	%% Commands
+
+	fprintf(obj1,':OUTPut:STATe OFF');
+	fprintf(obj1,':OUTPut:MODulation:STATe OFF');
+
+
+	fprintf(obj1,':FREQuency 66MHz');
+	fprintf(obj1,':POWer -10dBm');
+
+	fprintf(obj1,'%s',sprintf('*RCL %02d,%d', sequence_register(2), sequence_register(1)));
+	fprintf(obj1,':FREQuency:MODE LIST');
+	fprintf(obj1,':OUTPut:STATe ON');
+
+	%%
+	fclose(obj1);
+catch ME
+	% Всегда отображать такую важную ошибку.
+%	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
+		disp(ME.message);
+		disp(ME.stack(1));
+		msgbox(ME.message, 'EMI generator error', 'warn');
+%	end
 end
-% Connect to instrument object, obj1.
-fopen(obj1);
-
-%% Reset & Status
-
-fprintf(obj1, '*CLS');
-fprintf(obj1, '*RST');
-% instrumentInfo = query(obj1, '*IDN?');
-% disp(['Instrument identification information: ' instrumentInfo]);
-
-%% Commands
-
-fprintf(obj1,':OUTPut:STATe OFF');
-fprintf(obj1,':OUTPut:MODulation:STATe OFF');
-
-
-fprintf(obj1,':FREQuency 66MHz');
-fprintf(obj1,':POWer -10dBm');
-
-fprintf(obj1,'%s',sprintf('*RCL %02d,%d', sequence_register(2), sequence_register(1)));
-fprintf(obj1,':FREQuency:MODE LIST');
-fprintf(obj1,':OUTPut:STATe ON');
-
-%%
-fclose(obj1);
 
 
 function stop_emi_generator(handles)
