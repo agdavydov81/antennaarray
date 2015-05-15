@@ -79,6 +79,11 @@ handles.config0.thresholds = struct('detector_on_points',100, 'detector_on_part'
 									'median_size',3, 'median_size_ispercent',0, 'report_path','.', ...
 									'report_detoff_img_interval',60, 'report_detoff_img_number',1440, ...
 									'report_deton_img_interval',1, 'report_deton_img_number',30, 'report_graph_time',3600);
+if ispc
+	handles.config0.thresholds.report_path = getenv('USERPROFILE');
+else % if isunix
+	handles.config0.thresholds.report_path = getenv('HOME');
+end
 handles.config_orig = cfg;
 handles.config_default = cfg_def;
 handles.config = struct_merge(cfg,cfg_def,handles.config0);

@@ -96,6 +96,11 @@ handles.config_file = fullfile(handles.config_file, [mfilename '_config.xml']);
 handles.config = config_read(handles.config_file);
 [~, cfg_name, cfg_ext] = fileparts(handles.config_file);
 handles.config_default = config_read(fullfile(fileparts(mfilename('fullpath')), [cfg_name cfg_ext]));
+if ispc
+	handles.config_default.thresholds.report_path = getenv('USERPROFILE');
+else % if isunix
+	handles.config_default.thresholds.report_path = getenv('HOME');
+end
 
 imshow(ones(10,10,3), 'Parent',handles.work_img_orig);
 imshow(ones(10,10,3), 'Parent',handles.work_img_bw);
