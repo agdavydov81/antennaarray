@@ -70,7 +70,6 @@ if not(isfield(cfg.video_device,'t_range'));			cfg.video_device.t_range = [-40 1
 if not(isfield(cfg.video_device,'palette'));			cfg.video_device.palette = 'FLIR';			end
 if not(isfield(cfg.video_device,'autobalance'));		cfg.video_device.autobalance = 1;			end
 
-
 set(handles.t_range,		'String',	num2str(cfg.video_device.t_range));
 set(handles.palette_menu,	'Value',	find(strcmp(cfg.video_device.palette, get(handles.palette_menu, 'String')),1));
 set(handles.autobalance,	'Value',	cfg.video_device.autobalance);
@@ -147,6 +146,11 @@ set(zoom, 'ActionPostCallback',@ir_setup_video_post_zoom_pan);
 set(pan , 'ActionPostCallback',@ir_setup_video_post_zoom_pan);
 
 start(handles.video.timer);
+
+set_icon(handles.zoomin, 'zoom_in.png');
+set_icon(handles.zoom_reset, 'zoom_out.png');
+set_icon(handles.setup_ok, 'yes.png', true);
+set_icon(handles.setup_cancel, 'no.png', true);
 
 % UIWAIT makes ir_setup_video wait for user response (see UIRESUME)
 uiwait(handles.figure1);
@@ -236,12 +240,12 @@ set(handles.palette_text,		'Units','pixels',	'Position',[405 Y+52 60 16]);
 
 set(handles.autobalance,		'Units','pixels',	'Position',[10 Y+20 325 25]);
 
-set(handles.zoom_reset,			'Units','pixels',	'Position',[30+X-22 Y+80 22 22]);
-set(handles.zoomin,				'Units','pixels',	'Position',[30+X-52 Y+80 22 22]);
+set(handles.zoom_reset,			'Units','pixels',	'Position',[30+X-26 Y+80 25 25]);
+set(handles.zoomin,				'Units','pixels',	'Position',[30+X-56 Y+80 25 25]);
 set(handles.video_fps,			'Units','pixels',	'Position',[30+X-210 Y+83 150 16]);
 
-set(handles.setup_ok,			'Units','pixels',	'Position',[30+X-70-8-70 Y+110 70 22]);
-set(handles.setup_cancel,		'Units','pixels',	'Position',[30+X-70      Y+110 70 22]);
+set(handles.setup_ok,			'Units','pixels',	'Position',[30+X-73-4-73 Y+110 73 25]);
+set(handles.setup_cancel,		'Units','pixels',	'Position',[30+X-73      Y+110 73 25]);
 
 
 % --- Outputs from this function are returned to the command line.
