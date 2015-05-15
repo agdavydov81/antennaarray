@@ -66,13 +66,23 @@ set(hObject,'Units',old_units);
 % Fill configuration fields
 if isempty(varargin)
 	cfg = struct();
+	cfg_def = struct();
 else
 	cfg = varargin{1};
+	cfg_def = varargin{2};
 end
-
+handles.config0 = struct('debug_messages',0, 'debug_saveframes',0, 'password','');
+handles.config0.thresholds = struct('detector_on_points',100, 'detector_on_part',0.01, 'detector_off_points',80, ...
+									'detector_off_part',0.008, 'detector_pre_buff',0.5, 'detector_post_buff',0.8, ...
+									'start_delay',3, 'filter_no_median',1, 'filter_hp_factor',-0.97, 'filter_hp_initframes',200, ...
+									'stat_lo',0.005, 'stat_hi',0.995, 'stat_time',15, 'stat_pixshift',1, ...
+									'median_size',3, 'median_size_ispercent',0, 'report_path','.', ...
+									'report_detoff_img_interval',60, 'report_detoff_img_number',1440, ...
+									'report_deton_img_interval',1, 'report_deton_img_number',30, 'report_graph_time',3600);
 handles.config_orig = cfg;
-
-handles.config = set_controls(handles, cfg);
+handles.config_default = cfg_def;
+handles.config = struct_merge(cfg,cfg_def,handles.config0);
+set_controls(handles, handles.config);
 
 set_icon(handles.ok_btn, 'yes.png', true);
 set_icon(handles.cancel_btn, 'no.png', true);
@@ -85,35 +95,7 @@ guidata(hObject, handles);
 uiwait(handles.figure1);
 
 
-function cfg = set_controls(handles, cfg)
-if not(isfield(cfg,'thresholds'));								cfg.thresholds = struct();						end
-if not(isfield(cfg.thresholds,'detector_on_points'));			cfg.thresholds.detector_on_points = 100;		end
-if not(isfield(cfg.thresholds,'detector_on_part'));				cfg.thresholds.detector_on_part = 0.01;			end
-if not(isfield(cfg.thresholds,'detector_off_points'));			cfg.thresholds.detector_off_points = 80;		end
-if not(isfield(cfg.thresholds,'detector_off_part'));			cfg.thresholds.detector_off_part = 0.008;		end
-if not(isfield(cfg.thresholds,'detector_pre_buff'));			cfg.thresholds.detector_pre_buff = 0.5;			end
-if not(isfield(cfg.thresholds,'detector_post_buff'));			cfg.thresholds.detector_post_buff = 0.8;		end
-
-if not(isfield(cfg.thresholds,'start_delay'));					cfg.thresholds.start_delay = 3;					end
-if not(isfield(cfg.thresholds,'filter_no_median'));				cfg.thresholds.filter_no_median = 1;			end
-if not(isfield(cfg.thresholds,'filter_hp_factor'));				cfg.thresholds.filter_hp_factor = -0.97;		end
-if not(isfield(cfg.thresholds,'filter_hp_initframes'));			cfg.thresholds.filter_hp_initframes = 200;		end
-if not(isfield(cfg.thresholds,'stat_lo'));						cfg.thresholds.stat_lo = 0.005;					end
-if not(isfield(cfg.thresholds,'stat_hi'));						cfg.thresholds.stat_hi = 0.995;					end
-if not(isfield(cfg.thresholds,'stat_time'));					cfg.thresholds.stat_time = 15;					end
-if not(isfield(cfg.thresholds,'stat_pixshift'));				cfg.thresholds.stat_pixshift = 1;				end
-if not(isfield(cfg.thresholds,'median_size'));					cfg.thresholds.median_size = 3;					end
-if not(isfield(cfg.thresholds,'median_size_ispercent'));		cfg.thresholds.median_size_ispercent = 0;		end
-if not(isfield(cfg.thresholds,'report_path'));					cfg.thresholds.report_path = '.';				end
-if not(isfield(cfg.thresholds,'report_detoff_img_interval'));	cfg.thresholds.report_detoff_img_interval = 60;	end
-if not(isfield(cfg.thresholds,'report_detoff_img_number'));		cfg.thresholds.report_detoff_img_number = 1440;	end
-if not(isfield(cfg.thresholds,'report_deton_img_interval'));	cfg.thresholds.report_deton_img_interval = 1;	end
-if not(isfield(cfg.thresholds,'report_deton_img_number'));		cfg.thresholds.report_deton_img_number = 30;	end
-if not(isfield(cfg.thresholds,'report_graph_time'));			cfg.thresholds.report_graph_time = 3600;		end
-if not(isfield(cfg,'debug_messages'));							cfg.debug_messages = 0;							end
-if not(isfield(cfg,'debug_saveframes'));						cfg.debug_saveframes = 0;						end
-if not(isfield(cfg,'password'));								cfg.password = '';								end
-
+function set_controls(handles, cfg)
 set(handles.detector_on_points,			'String', num2str(cfg.thresholds.detector_on_points));
 set(handles.detector_on_part,			'String', num2str(cfg.thresholds.detector_on_part));
 set(handles.detector_off_points,		'String', num2str(cfg.thresholds.detector_off_points));
@@ -129,16 +111,19 @@ function varargout = ir_setup_thresholds_simple_OutputFcn(hObject, eventdata, ha
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-cfg = handles.config;
+cfg = handles.config_orig;
 if handles.press_ok
-	cfg.thresholds.detector_on_points =			str2double(get(handles.detector_on_points,'String'));
-	cfg.thresholds.detector_on_part =			str2double(get(handles.detector_on_part,'String'));
-	cfg.thresholds.detector_off_points =		str2double(get(handles.detector_off_points,'String'));
-	cfg.thresholds.detector_off_part =			str2double(get(handles.detector_off_part,'String'));
-	cfg.thresholds.detector_pre_buff =			str2double(get(handles.detector_pre_buff,'String'));
-	cfg.thresholds.detector_post_buff =			str2double(get(handles.detector_post_buff,'String'));
-else
-	cfg = handles.config_orig;
+	cfg.thresholds = handles.config.thresholds;
+	cfg.debug_messages = handles.config.debug_messages;
+	cfg.debug_saveframes = handles.config.debug_saveframes;
+	cfg.password = handles.config.password;
+
+	cfg.thresholds.detector_on_points =		str2double(get(handles.detector_on_points,'String'));
+	cfg.thresholds.detector_on_part =		str2double(get(handles.detector_on_part,'String'));
+	cfg.thresholds.detector_off_points =	str2double(get(handles.detector_off_points,'String'));
+	cfg.thresholds.detector_off_part =		str2double(get(handles.detector_off_part,'String'));
+	cfg.thresholds.detector_pre_buff =		str2double(get(handles.detector_pre_buff,'String'));
+	cfg.thresholds.detector_post_buff =		str2double(get(handles.detector_post_buff,'String'));
 end
 
 varargout{1} = cfg;
@@ -208,7 +193,7 @@ function advanced_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to advanced_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.config = ir_setup_thresholds(handles.config);
+handles.config = ir_setup_thresholds(handles.config, struct_merge(handles.config_default,handles.config0));
 guidata(hObject, handles);
 
 
@@ -217,4 +202,4 @@ function reset_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to reset_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-set_controls(handles, struct());
+set_controls(handles, struct_merge(handles.config_default,handles.config0));

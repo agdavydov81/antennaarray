@@ -66,12 +66,15 @@ set(hObject,'Units',old_units);
 % Fill configuration fields
 if isempty(varargin)
 	cfg = struct();
+	cfg_def = struct();
 else
 	cfg = varargin{1};
+	cfg_def = varargin{2};
 end
 handles.config = cfg;
+handles.config_default = cfg_def;
 
-handles = set_controls(handles, cfg);
+handles = set_controls(handles, struct_merge(cfg,cfg_def));
 
 set_icon(handles.ok_btn, 'yes.png', true);
 set_icon(handles.cancel_btn, 'no.png', true);
@@ -85,35 +88,6 @@ uiwait(handles.figure1);
 
 
 function [handles, cfg] = set_controls(handles, cfg)
-% Копия сброса настроек из ir_setup_thresholds_simple
-if not(isfield(cfg,'thresholds'));								cfg.thresholds = struct();						end
-if not(isfield(cfg.thresholds,'detector_on_points'));			cfg.thresholds.detector_on_points = 100;		end
-if not(isfield(cfg.thresholds,'detector_on_part'));				cfg.thresholds.detector_on_part = 0.01;			end
-if not(isfield(cfg.thresholds,'detector_off_points'));			cfg.thresholds.detector_off_points = 80;		end
-if not(isfield(cfg.thresholds,'detector_off_part'));			cfg.thresholds.detector_off_part = 0.008;		end
-if not(isfield(cfg.thresholds,'detector_pre_buff'));			cfg.thresholds.detector_pre_buff = 0.5;			end
-if not(isfield(cfg.thresholds,'detector_post_buff'));			cfg.thresholds.detector_post_buff = 0.8;		end
-
-if not(isfield(cfg.thresholds,'start_delay'));					cfg.thresholds.start_delay = 3;					end
-if not(isfield(cfg.thresholds,'filter_no_median'));				cfg.thresholds.filter_no_median = 1;			end
-if not(isfield(cfg.thresholds,'filter_hp_factor'));				cfg.thresholds.filter_hp_factor = -0.97;		end
-if not(isfield(cfg.thresholds,'filter_hp_initframes'));			cfg.thresholds.filter_hp_initframes = 200;		end
-if not(isfield(cfg.thresholds,'stat_lo'));						cfg.thresholds.stat_lo = 0.005;					end
-if not(isfield(cfg.thresholds,'stat_hi'));						cfg.thresholds.stat_hi = 0.995;					end
-if not(isfield(cfg.thresholds,'stat_time'));					cfg.thresholds.stat_time = 15;					end
-if not(isfield(cfg.thresholds,'stat_pixshift'));				cfg.thresholds.stat_pixshift = 1;				end
-if not(isfield(cfg.thresholds,'median_size'));					cfg.thresholds.median_size = 3;					end
-if not(isfield(cfg.thresholds,'median_size_ispercent'));		cfg.thresholds.median_size_ispercent = 0;		end
-if not(isfield(cfg.thresholds,'report_path'));					cfg.thresholds.report_path = '.';				end
-if not(isfield(cfg.thresholds,'report_detoff_img_interval'));	cfg.thresholds.report_detoff_img_interval = 60;	end
-if not(isfield(cfg.thresholds,'report_detoff_img_number'));		cfg.thresholds.report_detoff_img_number = 1440;	end
-if not(isfield(cfg.thresholds,'report_deton_img_interval'));	cfg.thresholds.report_deton_img_interval = 1;	end
-if not(isfield(cfg.thresholds,'report_deton_img_number'));		cfg.thresholds.report_deton_img_number = 30;	end
-if not(isfield(cfg.thresholds,'report_graph_time'));			cfg.thresholds.report_graph_time = 3600;		end
-if not(isfield(cfg,'debug_messages'));							cfg.debug_messages = 0;							end
-if not(isfield(cfg,'debug_saveframes'));						cfg.debug_saveframes = 0;						end
-if not(isfield(cfg,'password'));								cfg.password = '';								end
-
 set(handles.start_delay,				'String', num2str(cfg.thresholds.start_delay));
 set(handles.filter_no_median,			'Value',  cfg.thresholds.filter_no_median);
 set(handles.filter_hp_factor,			'String', num2str(cfg.thresholds.filter_hp_factor));
@@ -267,5 +241,5 @@ function reset_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to reset_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles = set_controls(handles, struct());
+handles = set_controls(handles, struct_merge(handles.config_default));
 guidata(hObject, handles);
