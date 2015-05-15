@@ -75,17 +75,8 @@ guidata(hObject, handles);
 addpath_recursive(fileparts(mfilename('fullpath')), 'ignore_dirs',{'@.*' '\.svn' 'private' 'html'});
 
 % Show BSUIR logo
-[logo_image, logo_map, logo_alpha] = imread(fullfile(fileparts(mfilename('fullpath')), 'bsuir_logo.png'));
-if ~isempty(logo_map)
-	logo_map = reshape(uint8(logo_map * 255), size(logo_map,1), 1, 3);
-	logo_image = cell2mat(arrayfun(@(x) logo_map(x+1,:,:), logo_image, 'UniformOutput',false));
-end
-if ~isempty(logo_alpha)
-	back_color = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_alpha) 1]);
-	logo_alpha = repmat(double(logo_alpha)/255,[1 1 3]);
-	logo_image = uint8(double(logo_image).*logo_alpha + back_color.*(1-logo_alpha));
-end
-imshow(logo_image, 'Parent',handles.logo_axes);
+show_image(handles.logo_axes, 'bsuir_logo.png');
+show_image(handles.detector_lamp, fullfile('icons','light_gray.png'));
 
 % Position to center of screen
 old_units = get(hObject,'Units');
@@ -120,7 +111,33 @@ set_icon(handles.setup_reset_btn, 'undo.png', true);
 set_icon(handles.work_start_btn, 'find.png', true);
 set_icon(handles.work_abort_btn, 'stop_sign.png', true);
 
+set(zoom, 'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
+set(pan , 'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
+
 guidata(hObject, handles);
+
+
+function show_image(image_axes, image_filename)
+[logo_image, logo_map, logo_alpha] = imread(fullfile(fileparts(mfilename('fullpath')), image_filename));
+if ~isempty(logo_map)
+	logo_map = reshape(uint8(logo_map * 255), size(logo_map,1), 1, 3);
+	logo_image = cell2mat(arrayfun(@(x) logo_map(x+1,:,:), logo_image, 'UniformOutput',false));
+end
+if ~isempty(logo_alpha)
+	back_color = repmat(reshape(255*get(0,'defaultUicontrolBackgroundColor'), [1 1 3]), [size(logo_alpha) 1]);
+	logo_alpha = repmat(double(logo_alpha)/255,[1 1 3]);
+	logo_image = uint8(double(logo_image).*logo_alpha + back_color.*(1-logo_alpha));
+end
+imshow(logo_image, 'Parent',image_axes);
+
+
+function on_zoom_pan(hObject, eventdata)
+handles = guidata(hObject);
+ax_list = [handles.work_graph_pix_num handles.work_graph_pix_part];
+if any(eventdata.Axes==ax_list)
+	x_lim=xlim();
+	set(ax_list, 'XLim', x_lim);
+end
 
 
 function config = config_read(cfg_filename)
@@ -476,8 +493,7 @@ handles.video.toc_frames = 0;
 handles.video.work_stage = 0;
 
 % Turn off detector lamp
-scatter(0,0,300,0.3+[0 0 0],'filled', 'Parent',handles.detector_lamp, 'Visible','off');
-set(handles.detector_lamp, 'Visible','off');
+show_image(handles.detector_lamp, fullfile('icons','light_gray.png'));
 
 % Create image processing timer
 handles.video.timer = timer('TimerFcn',@video_timer_func, 'StopFcn',@player_timer_stop, ...
@@ -897,6 +913,7 @@ try
 
 				handles_video.work_stage = 300;
 				start_generators(handles_video.handles);
+				show_image(handles_video.handles.detector_lamp, fullfile('icons','light_green.png'));
 			end
 
 		%% Main work stage
@@ -1008,7 +1025,7 @@ try
 				if new_st % Detector just turn ON - make anomaly report
 					handles_video.report.overall(end+1,2:4) = {datestr(now) toc2str(toc_t,':') sprintf('%d',handles_video.toc_frames)};
 
-					scatter(0,0,300,[1 0 0],'filled', 'Parent',handles_video.handles.detector_lamp);
+					show_image(handles_video.handles.detector_lamp, fullfile('icons','light_red.png'));
 
 					if handles_video.report.fh~=-1 && handles_video.config.thresholds.report_deton_img_number>0
 						handles_video.report.anomaly_path = fullfile(handles_video.report.path, sprintf('anomaly_%06d_%s', handles_video.toc_frames, toc2str(toc_t,'.')), filesep);
@@ -1035,11 +1052,11 @@ try
 				else % Detector just turn OFF
 					handles_video.report.overall(end,5:7) = {datestr(now) toc2str(toc_t,':') sprintf('%d',handles_video.toc_frames)};
 
-					scatter(0,0,300,0.3+[0 0 0],'filled', 'Parent',handles_video.handles.detector_lamp, 'Visible','off');
+					show_image(handles_video.handles.detector_lamp, fullfile('icons','light_green.png'));
+
 					handles_video.report.normal_img_toc = toc_t;
 				end
 
-				set(handles_video.handles.detector_lamp, 'Visible','off');
 				handles_video.detector.state=new_st;
 			end
 
