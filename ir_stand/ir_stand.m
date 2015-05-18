@@ -700,7 +700,7 @@ catch ME
 		disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
-%		msgbox(ME.message, 'EMI generator error', 'warn');
+		msgbox(ME.message, 'EMI generator error', 'error');
 %	end
 end
 
