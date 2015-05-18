@@ -22,7 +22,7 @@ function varargout = ir_setup_emi(varargin)
 
 % Edit the above text to modify the response to help ir_setup_emi
 
-% Last Modified by GUIDE v2.5 14-May-2015 15:58:32
+% Last Modified by GUIDE v2.5 17-May-2015 17:11:20
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -71,7 +71,7 @@ else
 	cfg = varargin{1};
 	cfg_def = varargin{2};
 end
-handles.config0.emi_generator = struct('program_list',[], 'program_index',1, 'continue_flag',true);
+handles.config0.emi_generator = struct('program_list',[], 'continue_flag',true, 'continue_index',1, 'continue_counter',1);
 handles.config = cfg;
 handles.config_default = cfg_def;
 
@@ -101,6 +101,9 @@ end
 
 set(handles.emi_program_tbl, 'Data', [cfg.emi_generator.program_list; nan(1,numel(get(handles.emi_program_tbl,'ColumnWidth')))]);
 set(handles.emi_continue_flag, 'Value', cfg.emi_generator.continue_flag);
+set(handles.continue_index_ed,	'String', num2str(cfg.emi_generator.continue_index));
+set(handles.continue_counter_ed,'String', num2str(cfg.emi_generator.continue_counter));
+emi_continue_flag_Callback(handles.emi_continue_flag, [], handles);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -116,7 +119,8 @@ if handles.press_ok
 	kill_ind = any(isnan(cfg.emi_generator.program_list),2);
 	cfg.emi_generator.program_list(kill_ind, :) = [];
 	cfg.emi_generator.continue_flag = get(handles.emi_continue_flag, 'Value');
-	cfg.emi_generator.program_index = 1;
+	cfg.emi_generator.continue_index = str2double(get(handles.continue_index_ed,'String'));
+	cfg.emi_generator.continue_counter = str2double(get(handles.continue_counter_ed,'String'));
 end
 
 varargout{1} = cfg;
@@ -291,3 +295,20 @@ function emi_program_tbl_CellSelectionCallback(hObject, eventdata, handles)
 %	Indices: row and column indices of the cell(s) currently selecteds
 % handles    structure with handles and user data (see GUIDATA)
 set(hObject, 'UserData', eventdata.Indices);
+
+
+% --- Executes on button press in emi_continue_flag.
+function emi_continue_flag_Callback(hObject, eventdata, handles)
+% hObject    handle to emi_continue_flag (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of emi_continue_flag
+if get(hObject, 'Value')
+	is_enable = 'on';
+else
+	is_enable = 'off';
+end
+set(handles.continue_index_ed,	'Enable',is_enable);
+set(handles.continue_counter_ed,'Enable',is_enable);
+

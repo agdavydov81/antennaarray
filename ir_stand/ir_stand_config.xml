@@ -3,7 +3,8 @@
    <emi_generator>
       <program_list>[1 6 96 1; 1 7 96 1; 1 8 10 1; 1 9 10 1; 1 10 10 1; 1 11 10 1; 1 12 10 1; 1 13 10 1]</program_list>
       <continue_flag>0</continue_flag>
-      <program_index>1</program_index>
+      <continue_index>1</continue_index>
+      <continue_counter>1</continue_counter>
    </emi_generator>
    <acoustic_generator>
       <sls>

@@ -22,7 +22,7 @@ function varargout = ir_stand(varargin)
 
 % Edit the above text to modify the response to help ir_stand
 
-% Last Modified by GUIDE v2.5 14-May-2015 22:44:45
+% Last Modified by GUIDE v2.5 18-May-2015 02:00:17
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -43,16 +43,18 @@ else
 end
 % End initialization code - DO NOT EDIT
 
+
 function ret = isfield_ex(obj, fl_name)
-	ret = true;
-	while ret && ~isempty(fl_name)
-		[cur_fl fl_name] = strtok(fl_name,'.');
-		ret = isfield(obj,cur_fl);
-		if ~ret
-			break
-		end
-		obj = obj.(cur_fl);
+ret = true;
+while ret && ~isempty(fl_name)
+	[cur_fl fl_name] = strtok(fl_name,'.');
+	ret = isfield(obj,cur_fl);
+	if ~ret
+		break
 	end
+	obj = obj.(cur_fl);
+end
+
 
 % --- Executes just before ir_stand is made visible.
 function ir_stand_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
@@ -370,6 +372,7 @@ if isfield_ex(handles,'config.acoustic_generator.harm.enable') && handles.config
 		end
 	catch ME
 		if isfield(handles.config,'debug_messages') && handles.config.debug_messages
+			disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock))); %#ok<*DSPS>
 			disp(ME.message);
 			disp(ME.stack(1));
 		end
@@ -397,6 +400,7 @@ if isfield(handles,'video')
 						config_write(handles.config_file, handles.config);
 					catch ME
 						if isfield(handles.config,'debug_messages') && handles.config.debug_messages
+							disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
 							disp(ME.message);
 							disp(ME.stack(1));
 						end
@@ -451,6 +455,7 @@ if isfield(handles,'video')
 		end
 	catch ME
 		if isfield(handles.config,'debug_messages') && handles.config.debug_messages
+			disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
 			disp(ME.message);
 			disp(ME.stack(1));
 		end
@@ -499,6 +504,7 @@ handles.video.work_stage = 0;
 
 % Turn off detector lamp
 show_image(handles.detector_lamp, fullfile('icons','light_gray.png'));
+set(handles.state_emi, 'String','ЭМВ:');
 
 % Create image processing timer
 handles.video.timer = timer('TimerFcn',@video_timer_func, 'StopFcn',@player_timer_stop, ...
@@ -511,6 +517,7 @@ set(handles.video.timer, 'UserData',handles_video);
 guidata(handles.figure1, handles);
 
 start(handles.video.timer);
+
 
 function start_generators(handles)
 % Generages signal
@@ -577,19 +584,25 @@ if handles.config.acoustic_generator.sls.enable
 end
 
 % Start EMI generator
+handles.config.emi_generator.program_list(handles.config.emi_generator.program_list(:,4)<0,4) = 0;
 handles.emi_timer_handle = [];
-if ~isempty(handles.config.emi_generator.program_list)
+handles.emi_timer_tic_id = [];
+if ~isempty(handles.config.emi_generator.program_list) && sum(fix(handles.config.emi_generator.program_list(:,4)))>0
 	if handles.config.emi_generator.continue_flag
-		handles.config.emi_generator.program_index = min(size(handles.config.emi_generator.program_list,1),max(1,handles.config.emi_generator.program_index));
+		handles.config.emi_generator.continue_index = min(size(handles.config.emi_generator.program_list,1),max(1,handles.config.emi_generator.continue_index));
+	else
+		handles.config.emi_generator.continue_index = 1;
+		handles.config.emi_generator.continue_counter = 1;
 	end
 
-	start_emi_generator(handles, handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1:2));
+	handles = start_emi_generator(handles);
 
-	emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,end)*60;
+	emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,3)*60;
 	if emi_delay>0 && ~isinf(emi_delay)
 		handles.emi_timer_handle = timer('TimerFcn',@emi_timer_func, 'StopFcn',@emi_timer_stop, ...
-								'ExecutionMode','singleShot', 'StartDelay',max(1,emi_delay), 'UserData',handles.figure1);
+								   'ExecutionMode','singleShot', 'StartDelay',max(1,emi_delay), 'UserData',handles.figure1);
 		start(handles.emi_timer_handle);
+		handles.emi_timer_tic_id = tic();
 	end
 end
 guidata(handles.figure1, handles);
@@ -611,29 +624,42 @@ if strcmp(get(handles.work_abort_btn,'Visible'),'off')
 	return
 end
 
-handles.config.emi_generator.program_index = handles.config.emi_generator.program_index+1;
-if handles.config.emi_generator.program_index > size(handles.config.emi_generator.program_list,1)
-	handles.config.emi_generator.program_index = 1;
-end
-guidata(figure1_handle, handles);
-
 stop_emi_generator(handles);
-start_emi_generator(handles, handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,1:2));
+handles.config.emi_generator.continue_counter = handles.config.emi_generator.continue_counter+1;
+handles = start_emi_generator(handles);
+handles.emi_timer_tic_id = tic();
+guidata(figure1_handle, handles);
 
 handles_video  = get(handles.video.timer, 'UserData');
 config_write(handles.config_file, handles.config);
 xml_write(fullfile(handles_video.report.path,'config.xml'), handles.config, 'ir_stand', struct('StructItem',false));
 
-emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.program_index,end)*60;
+emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,3)*60;
 if emi_delay>0 && ~isinf(emi_delay)
 	set(timer_handle,'StartDelay',max(1,emi_delay));
 	start(timer_handle);
 end
 
 
-function start_emi_generator(handles, sequence_register)
+function handles = start_emi_generator(handles, sequence_register)
 %% USB Connection (VISA)
 try
+	handles.config.emi_generator.program_list(handles.config.emi_generator.program_list(:,4)<0,4) = 0;
+	if sum(fix(handles.config.emi_generator.program_list(:,4)))<=0
+		error('Нет программ для генератора ЭМВ.');
+	end
+	while handles.config.emi_generator.continue_counter > handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,4)
+		handles.config.emi_generator.continue_index = handles.config.emi_generator.continue_index+1;
+		if handles.config.emi_generator.continue_index > size(handles.config.emi_generator.program_list,1)
+			handles.config.emi_generator.continue_index = 1;
+		end
+		handles.config.emi_generator.continue_counter = 1;
+	end
+	
+	sequence_register = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,1:2);
+
+	set(handles.state_emi, 'UserData',sprintf('ЭМВ: Программа=%d; Повтор=%d; Seq=%d; Reg=%d;',handles.config.emi_generator.continue_index,handles.config.emi_generator.continue_counter, sequence_register));
+
 	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
 	% Create the VISA-USB object if it does not exist
 	% otherwise use the object that was found.
@@ -671,9 +697,10 @@ try
 catch ME
 	% Всегда отображать такую важную ошибку.
 %	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
+		disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
-		msgbox(ME.message, 'EMI generator error', 'warn');
+%		msgbox(ME.message, 'EMI generator error', 'warn');
 %	end
 end
 
@@ -709,6 +736,7 @@ try
 	fclose(obj1);
 catch ME
 	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
+		disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
 	end
@@ -757,6 +785,7 @@ try
 	set(timer_handle, 'UserData',handles_play);
 catch ME
 	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
+		disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
 	end
@@ -779,44 +808,48 @@ try
 	end
 catch ME
 	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
+		disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
 	end
 end
 
+
 function str = toc2str(toc_t, sep_ch)
-	time_s = fix(toc_t);
-	time_h = fix(time_s/3600);  time_s = time_s-time_h*3600;
-	time_m = fix(time_s/60);    time_s = time_s-time_m*60;
-	str = sprintf('%02d%c%02d%c%02d', time_h, sep_ch, time_m, sep_ch, time_s);
-	
+time_s = fix(toc_t);
+time_h = fix(time_s/3600);  time_s = time_s-time_h*3600;
+time_m = fix(time_s/60);    time_s = time_s-time_m*60;
+str = sprintf('%02d%c%02d%c%02d', time_h, sep_ch, time_m, sep_ch, time_s);
+
+
 function data = make_stat_shift(data, shift_sz, merge_func)
-	data_merge = zeros([size(data) 2*shift_sz+1]);
+data_merge = zeros([size(data) 2*shift_sz+1]);
 
-	data_big = [repmat(data(1,:),shift_sz,1); data; repmat(data(end,:),shift_sz,1)];
-	for sh=-shift_sz:shift_sz
-		data_merge(:,:,sh+shift_sz+1) = data_big(sh+shift_sz+(1:size(data,1)),:);
-	end
-	data = merge_func(data_merge, [], 3);
+data_big = [repmat(data(1,:),shift_sz,1); data; repmat(data(end,:),shift_sz,1)];
+for sh=-shift_sz:shift_sz
+	data_merge(:,:,sh+shift_sz+1) = data_big(sh+shift_sz+(1:size(data,1)),:);
+end
+data = merge_func(data_merge, [], 3);
 
-	data_big = [repmat(data(:,1),1,shift_sz), data, repmat(data(:,end),1,shift_sz)];
-	for sh=-shift_sz:shift_sz
-		data_merge(:,:,sh+shift_sz+1) = data_big(:,sh+shift_sz+(1:size(data,2)));
-	end
-	data = merge_func(data_merge, [], 3);
+data_big = [repmat(data(:,1),1,shift_sz), data, repmat(data(:,end),1,shift_sz)];
+for sh=-shift_sz:shift_sz
+	data_merge(:,:,sh+shift_sz+1) = data_big(:,sh+shift_sz+(1:size(data,2)));
+end
+data = merge_func(data_merge, [], 3);
+
 
 function video_timer_func(timer_handle, eventdata)
 try
 	%% Camera image aquiring and displaying
 	handles_video = get(timer_handle,'UserData');
+	handles = guidata(handles_video.handles.figure1);
 	frame_cur = getsnapshot(handles_video.vidobj);
 	frame_cur = frame_cur(1:end-3,1:end-3,1);
 
 	% For DEBUG ONLY
 	if isfield(handles_video.config,'debug_saveframes') && handles_video.config.debug_saveframes && not(isempty(handles_video.config.thresholds.report_path))
 		if not(isfield(handles_video,'report'))
-			[cur.Y, cur.M, cur.D, cur.H, cur.MN, cur.S] = datevec(now);
-			handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%d.%d_%02d.%02d.%02d', mfilename, cur.Y, cur.M, cur.D, cur.H, cur.MN, round(cur.S)), filesep);
+			handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%d.%d_%02d.%02d.%02d', mfilename, fix(clock)), filesep);
 			[mk_status, mk_message] = mkdir(fullfile(handles_video.report.path,'raw_frames'));
 			if mk_status~=1
 				error('disp:report',['Ошибка создания каталога "' fullfile(handles_video.report.path,'raw_frames') '" протокола: ' mk_message]);
@@ -851,7 +884,7 @@ try
 	%% Time stamp displaying
 	toc_t = toc(handles_video.tic_id);
 	handles_video.toc_frames = handles_video.toc_frames+1;
-	set(handles_video.handles.work_timer, 'String', [toc2str(toc_t,':') sprintf('\n(%d)', handles_video.toc_frames)]);
+	set(handles_video.handles.state_timer, 'String', [toc2str(toc_t,':') sprintf('\n(%d)', handles_video.toc_frames)]);
 
 	%% Image processing cycle
 	switch handles_video.work_stage
@@ -931,6 +964,10 @@ try
 
 		%% Main work stage
 		case 300
+			if ~isempty(handles.emi_timer_tic_id)
+				set(handles.state_emi, 'String', [get(handles.state_emi,'UserData') ' ' toc2str(toc(handles.emi_timer_tic_id),':')]);
+			end
+			
 			% High pass filtering
 			if isfield(handles_video,'filter_hp')
 				[frame_cur, handles_video.filter_hp.z] = filter(handles_video.filter_hp.b, handles_video.filter_hp.a, frame_cur, handles_video.filter_hp.z, 1);
@@ -972,8 +1009,7 @@ try
 
 				if not(isempty(handles_video.config.thresholds.report_path))
 					if isnan(handles_video_report_path)
-						[cur.Y, cur.M, cur.D, cur.H, cur.MN, cur.S] = datevec(now);
-						handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%d.%d_%02d.%02d.%02d', mfilename, cur.Y, cur.M, cur.D, cur.H, cur.MN, round(cur.S)), filesep);
+						handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%d.%d_%02d.%02d.%02d', mfilename, fix(clock)), filesep);
 						[mk_status, mk_message] = mkdir(handles_video.report.path);
 						if mk_status~=1
 							error('disp:report',['Ошибка создания каталога "' handles_video.report.path '" протокола: ' mk_message]);
@@ -1058,9 +1094,12 @@ try
 						end
 						handles_video.report.prebuf_img = {};
 						handles_video.report.prebuf_toc = zeros(0,2);
-					end
 
-					% @@ TODO: Save Generators state
+						% Save Generators state
+						fh_emi = fopen(fullfile(handles_video.report.anomaly_path,'emi_state.txt'), 'wt');
+						fprintf(fh_emi, '%s\n', get(handles.state_emi, 'String'));
+						fclose(fh_emi);
+					end
 
 				else % Detector just turn OFF
 					handles_video.report.overall(end,5:7) = {datestr(now) toc2str(toc_t,':') sprintf('%d',handles_video.toc_frames)};
@@ -1107,12 +1146,13 @@ try
 			disp('ERROR: Unknown work stage.');
 			error('ERROR: Unknown work stage.');
 	end
-	
+
 	set(timer_handle, 'UserData',handles_video);
 
 	drawnow();
 catch ME
 	if strcmp(ME.identifier,'disp:report') || (isfield(handles_video.config,'debug_messages') && handles_video.config.debug_messages)
+		disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
 	end

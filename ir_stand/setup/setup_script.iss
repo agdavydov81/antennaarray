@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "IR Stand"
-#define MyAppVersion "1.0.103"
+#define MyAppVersion "1.0.118"
 #define MyAppPublisher "Belarusian State University of Informatics and Radioelectronics (BSUIR)"
 #define MyAppURL "http://www.bsuir.by/"
 #define MyAppExeName "ir_stand.m"
@@ -39,9 +39,11 @@ Source: "..\*.m"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\*.fig"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\*.mexw32"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\*.mexw64"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\ir_stand_config.xml"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\bsuir_logo.png"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\ir_stand_description.doc"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\sls\*"; DestDir: "{app}\sls"; Flags: ignoreversion recursesubdirs
+Source: "..\icons\*"; DestDir: "{app}\icons"; Flags: ignoreversion recursesubdirs
 Source: "..\xml_io_tools\*"; DestDir: "{app}\xml_io_tools"; Flags: ignoreversion recursesubdirs
 Source: "bsuir_logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
