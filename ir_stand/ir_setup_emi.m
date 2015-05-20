@@ -22,7 +22,7 @@ function varargout = ir_setup_emi(varargin)
 
 % Edit the above text to modify the response to help ir_setup_emi
 
-% Last Modified by GUIDE v2.5 17-May-2015 17:11:20
+% Last Modified by GUIDE v2.5 20-May-2015 12:57:36
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -71,7 +71,7 @@ else
 	cfg = varargin{1};
 	cfg_def = varargin{2};
 end
-handles.config0.emi_generator = struct('program_list',[], 'continue_flag',true, 'continue_index',1, 'continue_counter',1);
+handles.config0.emi_generator = struct('program_list',[], 'continue_flag',true, 'continue_index',1, 'continue_counter',1, 'restart_list',true);
 handles.config = cfg;
 handles.config_default = cfg_def;
 
@@ -98,12 +98,17 @@ function cfg = set_controls(handles, cfg)
 if size(cfg.emi_generator.program_list,2) == 3
 	cfg.emi_generator.program_list(:,4) = 1;
 end
+if size(cfg.emi_generator.program_list,2) == 4
+	cfg.emi_generator.program_list(:,[5 6]) = nan;
+end
 
 set(handles.emi_program_tbl, 'Data', [cfg.emi_generator.program_list; nan(1,numel(get(handles.emi_program_tbl,'ColumnWidth')))]);
 set(handles.emi_continue_flag, 'Value', cfg.emi_generator.continue_flag);
 set(handles.continue_index_ed,	'String', num2str(cfg.emi_generator.continue_index));
 set(handles.continue_counter_ed,'String', num2str(cfg.emi_generator.continue_counter));
 emi_continue_flag_Callback(handles.emi_continue_flag, [], handles);
+set(handles.restart_list_1, 'Value', ~handles.config0.emi_generator.restart_list);
+set(handles.restart_list_2, 'Value', handles.config0.emi_generator.restart_list);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -116,11 +121,12 @@ function varargout = ir_setup_emi_OutputFcn(hObject, eventdata, handles)
 cfg = handles.config;
 if handles.press_ok
 	cfg.emi_generator.program_list = get(handles.emi_program_tbl, 'Data');
-	kill_ind = any(isnan(cfg.emi_generator.program_list),2);
+	kill_ind = any(isnan(cfg.emi_generator.program_list(:,1:4)),2);
 	cfg.emi_generator.program_list(kill_ind, :) = [];
 	cfg.emi_generator.continue_flag = get(handles.emi_continue_flag, 'Value');
 	cfg.emi_generator.continue_index = str2double(get(handles.continue_index_ed,'String'));
 	cfg.emi_generator.continue_counter = str2double(get(handles.continue_counter_ed,'String'));
+	cfg.emi_generator.restart_list = get(handles.restart_list_2, 'Value');
 end
 
 varargout{1} = cfg;
@@ -212,7 +218,7 @@ sel = get(handles.emi_program_tbl, 'UserData');
 if isempty(sel)
 	return
 end
-set(handles.emi_program_tbl, 'Data',[data(1:sel(1)-1,:); nan(1,size(data,2)-1), 1; data(sel(1):end,:)]);
+set(handles.emi_program_tbl, 'Data',[data(1:sel(1)-1,:); 1, nan(1,size(data,2)-1); data(sel(1):end,:)]);
 
 
 % --- Executes on button press in del_btn.
@@ -311,4 +317,3 @@ else
 end
 set(handles.continue_index_ed,	'Enable',is_enable);
 set(handles.continue_counter_ed,'Enable',is_enable);
-

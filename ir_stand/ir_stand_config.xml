@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ir_stand>
    <emi_generator>
-      <program_list>[1 6 96 1; 1 7 96 1; 1 8 10 1; 1 9 10 1; 1 10 10 1; 1 11 10 1; 1 12 10 1; 1 13 10 1]</program_list>
+      <program_list>[1 6 96 1 10 3000; 1 7 96 1 10 3000; 1 8 10 1 NaN NaN; 1 9 10 1 NaN NaN; 1 10 10 1 NaN NaN; 1 11 10 1 NaN NaN; 1 12 10 1 NaN NaN; 1 13 10 1 NaN NaN]</program_list>
       <continue_flag>0</continue_flag>
       <continue_index>1</continue_index>
       <continue_counter>1</continue_counter>
+      <restart_list>1</restart_list>
    </emi_generator>
    <acoustic_generator>
       <sls>
@@ -41,7 +42,6 @@
       <detector_off_part>0.005</detector_off_part>
       <detector_pre_buff>0.5</detector_pre_buff>
       <detector_post_buff>0.5</detector_post_buff>
-      <report_path>.</report_path>
       <report_detoff_img_interval>60</report_detoff_img_interval>
       <report_detoff_img_number>1000</report_detoff_img_number>
       <report_deton_img_interval>0</report_deton_img_interval>

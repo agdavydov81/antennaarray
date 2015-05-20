@@ -177,7 +177,7 @@ try
 	if isfield(config,'password')
 		config.password = char(config.password);
 	end
-catch ME %#ok<NASGU>
+catch ME
 	config = struct();
 end
 
@@ -586,7 +586,7 @@ end
 % Start EMI generator
 handles.config.emi_generator.program_list(handles.config.emi_generator.program_list(:,4)<0,4) = 0;
 handles.emi_timer_handle = [];
-handles.emi_timer_tic_id = [];
+state_emi_ud = struct('emi_state_str','ЭМВ:', 'emi_timer_tic_id',[]);
 if ~isempty(handles.config.emi_generator.program_list) && sum(fix(handles.config.emi_generator.program_list(:,4)))>0
 	if handles.config.emi_generator.continue_flag
 		handles.config.emi_generator.continue_index = min(size(handles.config.emi_generator.program_list,1),max(1,handles.config.emi_generator.continue_index));
@@ -595,16 +595,18 @@ if ~isempty(handles.config.emi_generator.program_list) && sum(fix(handles.config
 		handles.config.emi_generator.continue_counter = 1;
 	end
 
-	handles = start_emi_generator(handles);
+	[handles, state_emi_ud.emi_state_str]= start_emi_generator(handles);
 
 	emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,3)*60;
 	if emi_delay>0 && ~isinf(emi_delay)
 		handles.emi_timer_handle = timer('TimerFcn',@emi_timer_func, 'StopFcn',@emi_timer_stop, ...
 								   'ExecutionMode','singleShot', 'StartDelay',max(1,emi_delay), 'UserData',handles.figure1);
 		start(handles.emi_timer_handle);
-		handles.emi_timer_tic_id = tic();
+		get(handles.state_emi,'UserData');
+		state_emi_ud.emi_timer_tic_id = tic();
 	end
 end
+set(handles.state_emi,'UserData',state_emi_ud);
 guidata(handles.figure1, handles);
 
 
@@ -626,8 +628,9 @@ end
 
 stop_emi_generator(handles);
 handles.config.emi_generator.continue_counter = handles.config.emi_generator.continue_counter+1;
-handles = start_emi_generator(handles);
-handles.emi_timer_tic_id = tic();
+[handles, state_emi_ud.emi_state_str] = start_emi_generator(handles);
+state_emi_ud.emi_timer_tic_id = tic();
+set(handles.state_emi,'UserData',state_emi_ud);
 guidata(figure1_handle, handles);
 
 handles_video  = get(handles.video.timer, 'UserData');
@@ -641,7 +644,7 @@ if emi_delay>0 && ~isinf(emi_delay)
 end
 
 
-function handles = start_emi_generator(handles, sequence_register)
+function [handles, emi_state_str] = start_emi_generator(handles, sequence_register)
 %% USB Connection (VISA)
 try
 	handles.config.emi_generator.program_list(handles.config.emi_generator.program_list(:,4)<0,4) = 0;
@@ -655,10 +658,10 @@ try
 		end
 		handles.config.emi_generator.continue_counter = 1;
 	end
-	
+
 	sequence_register = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,1:2);
 
-	set(handles.state_emi, 'UserData',sprintf('ЭМВ: Программа=%d; Повтор=%d; Seq=%d; Reg=%d;',handles.config.emi_generator.continue_index,handles.config.emi_generator.continue_counter, sequence_register));
+	emi_state_str = sprintf('ЭМВ: Программа=%d; Повтор=%d; Seq=%d; Reg=%d;',handles.config.emi_generator.continue_index,handles.config.emi_generator.continue_counter, sequence_register);
 
 	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
 	% Create the VISA-USB object if it does not exist
@@ -805,6 +808,11 @@ try
 		sls_dir = [fileparts(mfilename('fullpath')) filesep 'sls' filesep];
 		dos_str = ['"' sls_dir 'hstart.exe" /NOCONSOLE /D="' sls_dir '" "Lobanov_mark.exe Db_Bor1/ 0 0"'];
 		dos(dos_str);
+	end
+	
+	if isfield_ex(handles,'config.acoustic_generator.volume')
+		set(handles.volume_slider, 'Value',handles.config.acoustic_generator.volume);
+		volume_slider_Callback(handles.volume_slider, [], handles);
 	end
 catch ME
 	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
@@ -964,8 +972,9 @@ try
 
 		%% Main work stage
 		case 300
-			if ~isempty(handles.emi_timer_tic_id)
-				set(handles.state_emi, 'String', [get(handles.state_emi,'UserData') ' ' toc2str(toc(handles.emi_timer_tic_id),':')]);
+			state_emi_ud = get(handles.state_emi,'UserData');
+			if ~isempty(state_emi_ud.emi_timer_tic_id)
+				set(handles.state_emi, 'String', [state_emi_ud.emi_state_str ' ' toc2str(toc(state_emi_ud.emi_timer_tic_id),':')]);
 			end
 			
 			% High pass filtering
@@ -1196,35 +1205,14 @@ function volume_slider_Callback(hObject, eventdata, handles)
 cur_vol = get(hObject,'Value');
 set(handles.volume_text, 'String',sprintf('Громкость акустического сигнала: %.0f%%',cur_vol*100));
 dos_str = ['"' fullfile(fileparts(mfilename('fullpath')), 'sls', 'nircmd', 'nircmdc.exe') '" setsysvolume ' sprintf('%.0f',cur_vol*65535)];
-[dos_status,dos_result] = dos(dos_str);
+sls_dir = [fileparts(mfilename('fullpath')) filesep 'sls' filesep];
+dos_str = ['"' sls_dir 'hstart.exe" /NOCONSOLE "' dos_str '"'];
+dos(dos_str);
 handles.config.acoustic_generator.volume = cur_vol;
 guidata(hObject, handles);
 
 
 function added_paths=addpath_recursive(root, varargin)
-%ADDPATH_RECURSIVE Smart replace for addpath(genpath(...)) functions call.
-%   [ADDED_PATHS]=ADDPATH_RECURSIVE(root_dir, ...) recursively add
-%   directories to MATLAB path from specified root and return list of added
-%   directories. Function support next call types.
-%
-%   ADDPATH_RECURSIVE() - recursively add directories from calling function
-%   path. Equivalent to ADDPATH_RECURSIVE(FILEPARTS(MFILENAME('fullpath')) call.
-%
-%   ADDPATH_RECURSIVE(root, 'arg1','val1', 'arg2','val2', ...).
-%   Next arguments supported:
-%   'ignore_dirs' - string or cell of strings with regular expressions
-%     describing names (not full path or parts of name) of ignored folders
-%     (and also subfolders). For example
-%     ADDPATH_RECURSIVE(root,'ignore_dirs','@.*' '\.svn')
-%     ADDPATH_RECURSIVE(root,'ignore_dirs',{'@.*' '\.svn' 'c\+\+'})
-%   'addpath_arg' - string or cell of optional arguments directly passed to
-%     addpath function. For example
-%     ADDPATH_RECURSIVE(root,'addpath_arg','-end')
-%   'add_root' - flag (false by default) for adding to path also root folder.
-
-%   Author(s): A.G.Davydov
-%   $Revision: 1.0.0.3 $  $Date: 2012/09/03 19:06:11 $ 
-
 	if nargin==0 || isempty(root)
 		call_stack=dbstack('-completenames');
 		if length(call_stack)>1
