@@ -47,7 +47,7 @@ end
 function ret = isfield_ex(obj, fl_name)
 ret = true;
 while ret && ~isempty(fl_name)
-	[cur_fl fl_name] = strtok(fl_name,'.');
+	[cur_fl, fl_name] = strtok(fl_name,'.'); %#ok<STTOK>
 	ret = isfield(obj,cur_fl);
 	if ~ret
 		break
@@ -177,7 +177,7 @@ try
 	if isfield(config,'password')
 		config.password = char(config.password);
 	end
-catch ME
+catch ME %#ok<*NASGU>
 	config = struct();
 end
 
@@ -226,19 +226,19 @@ cfg = handles.config;
 is_ok = true;
 
 if is_ok && not(isfield(cfg,'emi_generator'))
-	msgbox('Настройте геренатор ЭМВ для начала работы.', [mfilename ' help'], 'help', 'modal');
+	msgbox('Настройте геренатор ЭМВ для начала работы.', 'Настройки', 'help', 'modal');
 	is_ok = false;
 end
 if is_ok && not(isfield(cfg,'acoustic_generator'))
-	msgbox('Настройте геренатор акустического воздействия для начала работы.', [mfilename ' help'], 'help', 'modal');
+	msgbox('Настройте геренатор акустического воздействия для начала работы.', 'Настройки', 'help', 'modal');
 	is_ok = false;
 end
 if is_ok && not(isfield(cfg,'video_device'))
-	msgbox('Настройте тепловизор для начала работы.', [mfilename ' help'], 'help', 'modal');
+	msgbox('Настройте тепловизор для начала работы.', 'Настройки', 'help', 'modal');
 	is_ok = false;
 end
 if is_ok && not(isfield(cfg,'thresholds'))
-	msgbox('Настройте пороги программы для начала работы.', [mfilename ' help'], 'help', 'modal');
+	msgbox('Настройте пороги программы для начала работы.', 'Настройки', 'help', 'modal');
 	is_ok = false;
 end
 
@@ -309,7 +309,7 @@ end
 
 ret_cfg = ir_setup_video(handles.config, handles.config_default);
 if isempty(ret_cfg)
-	errordlg('Не обнаружено подходящих видео устройств.', [mfilename ' help'], 'modal');
+	errordlg('Не обнаружено подходящих видео устройств.', 'Ошибка видео', 'modal');
 	return
 end
 
@@ -375,6 +375,7 @@ if isfield_ex(handles,'config.acoustic_generator.harm.enable') && handles.config
 			disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock))); %#ok<*DSPS>
 			disp(ME.message);
 			disp(ME.stack(1));
+			msgbox(ME.message,'Ошибка аудио');
 		end
 	end
 end
@@ -403,6 +404,7 @@ if isfield(handles,'video')
 							disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 							disp(ME.message);
 							disp(ME.stack(1));
+							msgbox(ME.message,'Ошибка сохранения настроек');
 						end
 					end
 
@@ -458,6 +460,7 @@ if isfield(handles,'video')
 			disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 			disp(ME.message);
 			disp(ME.stack(1));
+			msgbox(ME.message,'Ошибка остановки');
 		end
 	end
 end
@@ -473,7 +476,7 @@ function work_start_btn_Callback(hObject, eventdata, handles)
 video_devices = imaqhwinfo('winvideo');
 cur_cam = find(strcmp(handles.config.video_device.name, {video_devices.DeviceInfo.DeviceName}),1);
 if isempty(cur_cam)
-	errordlg(['Не обнаружено видео устройство "' handles.config.video_device.name '".'], [mfilename ' help'], 'modal');
+	errordlg(['Не обнаружено видео устройство "' handles.config.video_device.name '".'], 'Ошибка видео', 'modal');
 	return
 end
 
@@ -484,7 +487,7 @@ triggerconfig(handles.video.vidobj, 'manual');
 try
 	start(handles.video.vidobj);
 catch
-	errordlg(['Ошибка получения изображения из "' handles.config.video_device.name '".'], [mfilename ' help'], 'modal');
+	errordlg(['Ошибка получения изображения из "' handles.config.video_device.name '".'], 'Ошибка видео', 'modal');
 	return
 end
 handles.video.config = handles.config;
@@ -531,8 +534,8 @@ if handles.config.acoustic_generator.harm.enable
 	harm_cfg = handles.config.acoustic_generator.harm;
 	harm_freq = [harm_cfg.freq_start harm_cfg.freq_finish];
 	if any(harm_freq<1 | harm_freq > play.fs*0.45)
-		errordlg(['Частоты синтеза сигнала выходят за допустимый диапазон [1,' num2str(round(play.fs*0.45)) '] Гц.'], [mfilename ' error'], 'modal');
-		return;
+		errordlg(['Частоты синтеза сигнала выходят за допустимый диапазон [1,' num2str(round(play.fs*0.45)) '] Гц.'], 'Ошибка аудио', 'modal');
+		return
 	end
 
 	%Test if current initialisation is ok
@@ -703,7 +706,8 @@ catch ME
 		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
-		msgbox(ME.message, 'EMI generator error', 'error');
+		msgbox(ME.message, 'Ошибка генератора ЭМВ', 'error');
+		work_abort_btn_Callback(handles.work_abort_btn, [], handles);
 %	end
 end
 
@@ -742,6 +746,7 @@ catch ME
 		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
+		msgbox(ME.message,'Ошибка остановки генератора ЭМВ');
 	end
 end
 
@@ -791,13 +796,15 @@ catch ME
 		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
+		msgbox(ME.message,'Ошибка генератора акустического воздействия');
 	end
 end
 
 
 function watchdog_timer_func(timer_handle, eventdata)
 try
-	handles = get(timer_handle, 'UserData');
+	hndl_ud = get(timer_handle, 'UserData');
+	handles = guidata(hndl_ud.figure1);
 	if strcmp(get(handles.work_abort_btn,'Visible'),'off')
 		stop(timer_handle);
 		return;
@@ -819,6 +826,7 @@ catch ME
 		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
+		msgbox(ME.message,'Ошибка осторожевого таймера');
 	end
 end
 
@@ -851,7 +859,18 @@ try
 	%% Camera image aquiring and displaying
 	handles_video = get(timer_handle,'UserData');
 	handles = guidata(handles_video.handles.figure1);
-	frame_cur = getsnapshot(handles_video.vidobj);
+	try
+		frame_cur = getsnapshot(handles_video.vidobj);
+	catch ME
+%		if isfield(handles.config,'debug_messages') && handles.config.debug_messages
+			disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock))); %#ok<*DSPS>
+			disp(ME.message);
+			disp(ME.stack(1));
+			errordlg(ME.message, 'Ошибка видео', 'modal');
+			work_abort_btn_Callback(handles.work_abort_btn, [], handles);
+			return
+%		end
+	end
 	frame_cur = frame_cur(1:end-3,1:end-3,1);
 
 	% For DEBUG ONLY
@@ -1164,6 +1183,7 @@ catch ME
 		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
+		msgbox(ME.message,'Ошибка обработчика видео');
 	end
 end
 
@@ -1209,7 +1229,23 @@ sls_dir = [fileparts(mfilename('fullpath')) filesep 'sls' filesep];
 dos_str = ['"' sls_dir 'hstart.exe" /NOCONSOLE "' dos_str '"'];
 dos(dos_str);
 handles.config.acoustic_generator.volume = cur_vol;
+config_write(handles.config_file, handles.config);
 guidata(hObject, handles);
+obj_ud = get(hObject,'UserData');
+if cur_vol<0.85 && isempty(obj_ud)
+	pos = get(handles.figure1, 'Position');
+	w = 80;
+	h = 3.5;
+	pos = [(pos(3)-w)/2 (pos(4)-h)/2 w h];
+	hndl = uicontrol('Parent',handles.figure1, 'Style','text',  'Min',0,  'Max',3,  ...
+			'String',sprintf('\nУровень громкости акустического сигнала < 70 дБ.'),  'Units','characters', ...
+			'Position',pos, 'BackgroundColor',[1 0.25 0.25], 'FontSize',9);
+	set(hObject,'UserData',hndl);
+end
+if cur_vol>=0.85 && ~isempty(obj_ud)
+	delete(obj_ud);
+	set(hObject,'UserData',[]);
+end
 
 
 function added_paths=addpath_recursive(root, varargin)
@@ -1271,6 +1307,10 @@ list(ignore_mask)=[];
 for i=1:length(list)
 	added_paths=addpath_recursive_call([root filesep list{i}], cfg, added_paths);
 end
+
+
+function errordlg(varargin)
+msgbox(varargin{:});
 
 
 function msgbox(msg, title, varargin)
