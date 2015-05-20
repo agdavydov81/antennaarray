@@ -1,4 +1,5 @@
 function struct_major = struct_merge(varargin)
+	varargin(cellfun(@isempty, varargin)) = [];
 	if ~all(cellfun(@isstruct, varargin))
 		error('Not a struct object.');
 	end
@@ -8,7 +9,7 @@ function struct_major = struct_merge(varargin)
 		struct_major = varargin{1};
 	end
 
-	for st_i = 2:nargin
+	for st_i = 2:numel(varargin)
 		struct_minor = varargin{st_i};
 
 		fl_maj = fieldnames(struct_major);

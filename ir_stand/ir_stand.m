@@ -22,7 +22,7 @@ function varargout = ir_stand(varargin)
 
 % Edit the above text to modify the response to help ir_stand
 
-% Last Modified by GUIDE v2.5 18-May-2015 02:00:17
+% Last Modified by GUIDE v2.5 20-May-2015 20:33:50
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -372,7 +372,7 @@ if isfield_ex(handles,'config.acoustic_generator.harm.enable') && handles.config
 		end
 	catch ME
 		if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-			disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock))); %#ok<*DSPS>
+			disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock))); %#ok<*DSPS>
 			disp(ME.message);
 			disp(ME.stack(1));
 		end
@@ -400,7 +400,7 @@ if isfield(handles,'video')
 						config_write(handles.config_file, handles.config);
 					catch ME
 						if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-							disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
+							disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 							disp(ME.message);
 							disp(ME.stack(1));
 						end
@@ -455,7 +455,7 @@ if isfield(handles,'video')
 		end
 	catch ME
 		if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-			disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
+			disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 			disp(ME.message);
 			disp(ME.stack(1));
 		end
@@ -700,7 +700,7 @@ try
 catch ME
 	% Всегда отображать такую важную ошибку.
 %	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-		disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
+		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
 		msgbox(ME.message, 'EMI generator error', 'error');
@@ -739,7 +739,7 @@ try
 	fclose(obj1);
 catch ME
 	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-		disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
+		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
 	end
@@ -788,7 +788,7 @@ try
 	set(timer_handle, 'UserData',handles_play);
 catch ME
 	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-		disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
+		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
 	end
@@ -816,7 +816,7 @@ try
 	end
 catch ME
 	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-		disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
+		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
 	end
@@ -1161,7 +1161,7 @@ try
 	drawnow();
 catch ME
 	if strcmp(ME.identifier,'disp:report') || (isfield(handles_video.config,'debug_messages') && handles_video.config.debug_messages)
-		disp(sprintf('%d.%d.%d %02d.%02d.%02d:',fix(clock)));
+		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
 	end
@@ -1213,61 +1213,95 @@ guidata(hObject, handles);
 
 
 function added_paths=addpath_recursive(root, varargin)
-	if nargin==0 || isempty(root)
-		call_stack=dbstack('-completenames');
-		if length(call_stack)>1
-			root=fileparts(call_stack(2).file);
-		else
-			root=pwd();
-		end
-	end
-
-	cfg=struct('ignore_dirs',{{}}, 'addpath_arg',{{}}, 'add_root',false);
-	if rem(length(varargin),2)
-		error('addpath_recursive:arguments_parse', 'Incorrect number of input arguments.');
-	end
-	for i=1:length(varargin)/2
-		cfg.(varargin{2*i-1})=varargin{2*i};
-	end
-
-	if isa(cfg.ignore_dirs,'char')
-		cfg.ignore_dirs={cfg.ignore_dirs};
-	end
-	if not(isa(cfg.ignore_dirs,'cell'))
-		error('addpath_recursive:arguments_parse', 'ignore_dirs argument must be string or cell of strings.');
-	end
-
-	if isa(cfg.addpath_arg,'char')
-		cfg.addpath_arg={cfg.addpath_arg};
-	end
-	if not(isa(cfg.addpath_arg,'cell'))
-		error('addpath_recursive:arguments_parse', 'addpath_arg argument must be string or cell.');
-	end
-
-	added_paths=recursive_call(root, cfg, {});
-
-
-function added_paths=recursive_call(root, cfg, added_paths)
-	if cfg.add_root
-		addpath(root, cfg.addpath_arg{:});
-		added_paths{end+1}=root;
+if nargin==0 || isempty(root)
+	call_stack=dbstack('-completenames');
+	if length(call_stack)>1
+		root=fileparts(call_stack(2).file);
 	else
-		cfg.add_root=true;
+		root=pwd();
 	end
+end
 
-	list=dir(root);
-	list(not([list.isdir]))=[];
-	list={list.name};
-	list(strcmp(list,'.'))=[];
-	list(strcmp(list,'..'))=[];
+cfg=struct('ignore_dirs',{{}}, 'addpath_arg',{{}}, 'add_root',false);
+if rem(length(varargin),2)
+	error('addpath_recursive:arguments_parse', 'Incorrect number of input arguments.');
+end
+for i=1:length(varargin)/2
+	cfg.(varargin{2*i-1})=varargin{2*i};
+end
 
-	ignore_mask=false(size(list));
-	for i=1:length(cfg.ignore_dirs)
-		[reg_beg, reg_end]=regexp(list, cfg.ignore_dirs{i});
-		ignore_mask=ignore_mask | cellfun(@(l,b,e) not(isempty(b))&&b==1&&e==length(l), list, reg_beg, reg_end);
+if isa(cfg.ignore_dirs,'char')
+	cfg.ignore_dirs={cfg.ignore_dirs};
+end
+if not(isa(cfg.ignore_dirs,'cell'))
+	error('addpath_recursive:arguments_parse', 'ignore_dirs argument must be string or cell of strings.');
+end
+
+if isa(cfg.addpath_arg,'char')
+	cfg.addpath_arg={cfg.addpath_arg};
+end
+if not(isa(cfg.addpath_arg,'cell'))
+	error('addpath_recursive:arguments_parse', 'addpath_arg argument must be string or cell.');
+end
+
+added_paths=addpath_recursive_call(root, cfg, {});
+
+
+function added_paths=addpath_recursive_call(root, cfg, added_paths)
+if cfg.add_root
+	addpath(root, cfg.addpath_arg{:});
+	added_paths{end+1}=root;
+else
+	cfg.add_root=true;
+end
+
+list=dir(root);
+list(not([list.isdir]))=[];
+list={list.name};
+list(strcmp(list,'.'))=[];
+list(strcmp(list,'..'))=[];
+
+ignore_mask=false(size(list));
+for i=1:length(cfg.ignore_dirs)
+	[reg_beg, reg_end]=regexp(list, cfg.ignore_dirs{i});
+	ignore_mask=ignore_mask | cellfun(@(l,b,e) not(isempty(b))&&b==1&&e==length(l), list, reg_beg, reg_end);
+end
+list(ignore_mask)=[];
+
+for i=1:length(list)
+	added_paths=addpath_recursive_call([root filesep list{i}], cfg, added_paths);
+end
+
+
+function msgbox(msg, title, varargin)
+handles = guidata(gcf);
+msglist = get(handles.logo_axes, 'UserData');
+if isempty(msglist)
+	pos = [2 1 100 3.2];
+else
+	pos = get(msglist(end),'Position');
+	pos(2) = pos(2) + pos(4) + 0.1;
+end
+msg = sprintf('%d.%02d.%02d %02d.%02d.%02d: %s\n%s',fix(clock),title,msg);
+hndl = uicontrol('Parent',handles.figure1,  'Style','text',  'Min',0,  'Max',3,  'String',msg,  'Units','characters',  'Position',pos, 'BackgroundColor',[1 0.5 0.5], ...
+	'HorizontalAlignment','left',  'Enable','inactive',  'ButtonDownFcn',@msgbox_buttondown);
+set(handles.logo_axes, 'UserData',[msglist hndl]);
+
+
+function msgbox_buttondown(hObject, eventdata)
+handles = guidata(hObject);
+msglist = get(handles.logo_axes, 'UserData');
+obj_ind = find(msglist==hObject);
+msglist(obj_ind) = [];
+set(handles.logo_axes, 'UserData',msglist);
+obj_pos = get(hObject, 'Position');
+delete(hObject);
+if obj_ind<=numel(msglist)
+	next_pos = get(msglist(obj_ind),'Position');
+	dy = next_pos(2) - obj_pos(2);
+	for ii = obj_ind:numel(msglist)
+		cur_pos = get(msglist(ii), 'Position');
+		cur_pos(2) = cur_pos(2) - dy;
+		set(msglist(ii), 'Position',cur_pos);
 	end
-	list(ignore_mask)=[];
-
-	for i=1:length(list)
-		added_paths=recursive_call([root filesep list{i}], cfg, added_paths);
-	end
+end
