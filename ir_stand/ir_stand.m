@@ -589,7 +589,7 @@ end
 % Start EMI generator
 handles.config.emi_generator.program_list(handles.config.emi_generator.program_list(:,4)<0,4) = 0;
 handles.emi_timer_handle = [];
-state_emi_ud = struct('emi_state_str','ЭМВ:', 'emi_timer_tic_id',[]);
+state_emi_ud = [];
 if ~isempty(handles.config.emi_generator.program_list) && sum(fix(handles.config.emi_generator.program_list(:,4)))>0
 	if handles.config.emi_generator.continue_flag
 		handles.config.emi_generator.continue_index = min(size(handles.config.emi_generator.program_list,1),max(1,handles.config.emi_generator.continue_index));
@@ -598,15 +598,13 @@ if ~isempty(handles.config.emi_generator.program_list) && sum(fix(handles.config
 		handles.config.emi_generator.continue_counter = 1;
 	end
 
-	[handles, state_emi_ud.emi_state_str]= start_emi_generator(handles);
+	[handles, state_emi_ud] = start_emi_generator(handles);
 
 	emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,3)*60;
 	if emi_delay>0 && ~isinf(emi_delay)
 		handles.emi_timer_handle = timer('TimerFcn',@emi_timer_func, 'StopFcn',@emi_timer_stop, ...
 								   'ExecutionMode','singleShot', 'StartDelay',max(1,emi_delay), 'UserData',handles.figure1);
 		start(handles.emi_timer_handle);
-		get(handles.state_emi,'UserData');
-		state_emi_ud.emi_timer_tic_id = tic();
 	end
 end
 set(handles.state_emi,'UserData',state_emi_ud);
@@ -631,8 +629,7 @@ end
 
 stop_emi_generator(handles);
 handles.config.emi_generator.continue_counter = handles.config.emi_generator.continue_counter+1;
-[handles, state_emi_ud.emi_state_str] = start_emi_generator(handles);
-state_emi_ud.emi_timer_tic_id = tic();
+[handles, state_emi_ud] = start_emi_generator(handles);
 set(handles.state_emi,'UserData',state_emi_ud);
 guidata(figure1_handle, handles);
 
@@ -647,7 +644,7 @@ if emi_delay>0 && ~isinf(emi_delay)
 end
 
 
-function [handles, emi_state_str] = start_emi_generator(handles, sequence_register)
+function [handles, state_emi_ud] = start_emi_generator(handles, sequence_register)
 %% USB Connection (VISA)
 try
 	handles.config.emi_generator.program_list(handles.config.emi_generator.program_list(:,4)<0,4) = 0;
@@ -656,15 +653,22 @@ try
 	end
 	while handles.config.emi_generator.continue_counter > handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,4)
 		handles.config.emi_generator.continue_index = handles.config.emi_generator.continue_index+1;
+		handles.config.emi_generator.continue_counter = 1;
 		if handles.config.emi_generator.continue_index > size(handles.config.emi_generator.program_list,1)
 			handles.config.emi_generator.continue_index = 1;
+			if ~handles.config.emi_generator.restart_list
+				work_abort_btn_Callback(handles.work_abort_btn, [], handles);
+				return
+			end
 		end
-		handles.config.emi_generator.continue_counter = 1;
 	end
 
 	sequence_register = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,1:2);
 
-	emi_state_str = sprintf('ЭМВ: Программа=%d; Повтор=%d; Seq=%d; Reg=%d;',handles.config.emi_generator.continue_index,handles.config.emi_generator.continue_counter, sequence_register);
+	state_emi_ud.program_str = sprintf('ЭМВ: Программа=%d; Повтор=%d; Seq=%d; Reg=%d;',handles.config.emi_generator.continue_index,handles.config.emi_generator.continue_counter, sequence_register);
+	state_emi_ud.sweep_f1f2 = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,[5 6]);
+	state_emi_ud.sweep_t = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,3)*60;
+	state_emi_ud.tic_id = tic();
 
 	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
 	% Create the VISA-USB object if it does not exist
@@ -816,7 +820,7 @@ try
 		dos_str = ['"' sls_dir 'hstart.exe" /NOCONSOLE /D="' sls_dir '" "Lobanov_mark.exe Db_Bor1/ 0 0"'];
 		dos(dos_str);
 	end
-	
+
 	if isfield_ex(handles,'config.acoustic_generator.volume')
 		set(handles.volume_slider, 'Value',handles.config.acoustic_generator.volume);
 		volume_slider_Callback(handles.volume_slider, [], handles);
@@ -992,8 +996,13 @@ try
 		%% Main work stage
 		case 300
 			state_emi_ud = get(handles.state_emi,'UserData');
-			if ~isempty(state_emi_ud.emi_timer_tic_id)
-				set(handles.state_emi, 'String', [state_emi_ud.emi_state_str ' ' toc2str(toc(state_emi_ud.emi_timer_tic_id),':')]);
+			if ~isempty(state_emi_ud)
+				emi_t = toc(state_emi_ud.tic_id);
+				emi_str = [state_emi_ud.program_str ' ' toc2str(emi_t,':')];
+				if all(state_emi_ud.sweep_f1f2>0)
+					emi_str = [emi_str sprintf('; F~%.3f МГц',10.^( min(fix(emi_t/state_emi_ud.sweep_t*11411),11410)/11410 * diff(log10(state_emi_ud.sweep_f1f2)) + log10(state_emi_ud.sweep_f1f2(1))))];
+				end
+				set(handles.state_emi, 'String', emi_str);
 			end
 			
 			% High pass filtering
@@ -1320,7 +1329,11 @@ if isempty(msglist)
 	pos = [2 1 100 3.2];
 else
 	pos = get(msglist(end),'Position');
-	pos(2) = pos(2) + pos(4) + 0.1;
+	pos2 = pos(2) + pos(4) + 0.1;
+	btn_pos = get(handles.work_start_btn, 'Position');
+	if pos2+pos(4)<btn_pos(2) % Немного грубо, т.к. не учитывается позиция панели, но будет работать
+		pos(2) = pos2;
+	end
 end
 msg = sprintf('%d.%02d.%02d %02d.%02d.%02d: %s\n%s',fix(clock),title,msg);
 hndl = uicontrol('Parent',handles.figure1,  'Style','text',  'Min',0,  'Max',3,  'String',msg,  'Units','characters',  'Position',pos, 'BackgroundColor',[1 0.5 0.5], ...
