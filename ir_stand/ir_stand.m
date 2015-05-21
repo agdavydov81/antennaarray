@@ -497,6 +497,32 @@ function work_start_btn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+try
+	if isfield_ex(handles,'video.report.imagelist')
+		imlist = handles.video.report.imagelist;
+		if ~isempty(imlist)
+			cur_pos = get(handles.caret_pix_num,'XData');
+			[~,mi]=min(abs(cur_pos(1)-[imlist.time]));
+			mi = max(1,min(numel(imlist), mi));
+			tokn = regexp(imlist(mi).emi_state,'ЭМВ: Программа=(\d+); Повтор=(\d+); Seq=(\d+); Reg=(\d+);','tokens');
+			tokn = cellfun(@str2double, tokn{1});
+
+			if  tokn(1)<=size(handles.config.emi_generator.program_list,1) && ...
+				tokn(2)<=handles.config.emi_generator.program_list(tokn(1),4) && ...
+				tokn(3)==handles.config.emi_generator.program_list(tokn(1),1) && ...
+				tokn(4)==handles.config.emi_generator.program_list(tokn(1),2)
+
+				if strcmp(questdlg('Попытаться продолжить работу с позиции курсора?','Продолжение работы','Да','Нет','Да'),'Да')
+					handles.config.emi_generator.continue_flag = true;
+					handles.config.emi_generator.continue_index = tokn(1);
+					handles.config.emi_generator.continue_counter = tokn(2);
+				end
+			end
+		end
+	end
+catch
+end
+
 % Find video recorder
 video_devices = imaqhwinfo('winvideo');
 cur_cam = find(strcmp(handles.config.video_device.name, {video_devices.DeviceInfo.DeviceName}),1);
