@@ -380,7 +380,7 @@ if isfield_ex(handles,'config.acoustic_generator.harm.enable') && handles.config
 			disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock))); %#ok<*DSPS>
 			disp(ME.message);
 			disp(ME.stack(1));
-			msgbox(ME.message,'Ошибка аудио');
+%			msgbox(ME.message,'Ошибка аудио');
 		end
 	end
 end
@@ -419,7 +419,7 @@ if isfield(handles,'video')
 							disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 							disp(ME.message);
 							disp(ME.stack(1));
-							msgbox(ME.message,'Ошибка сохранения настроек');
+%							msgbox(ME.message,'Ошибка сохранения настроек');
 						end
 					end
 
@@ -475,7 +475,7 @@ if isfield(handles,'video')
 			disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 			disp(ME.message);
 			disp(ME.stack(1));
-			msgbox(ME.message,'Ошибка остановки');
+%			msgbox(ME.message,'Ошибка остановки');
 		end
 	end
 end
@@ -858,7 +858,7 @@ catch ME
 		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
-		msgbox(ME.message,'Ошибка генератора акустического воздействия');
+%		msgbox(ME.message,'Ошибка генератора акустического воздействия');
 	end
 end
 
@@ -888,7 +888,7 @@ catch ME
 		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
-		msgbox(ME.message,'Ошибка осторожевого таймера');
+%		msgbox(ME.message,'Ошибка осторожевого таймера');
 	end
 end
 
@@ -1262,7 +1262,7 @@ catch ME
 		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
 		disp(ME.message);
 		disp(ME.stack(1));
-		msgbox(ME.message,'Ошибка обработчика видео');
+%		msgbox(ME.message,'Ошибка обработчика видео');
 	end
 end
 
