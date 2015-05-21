@@ -398,6 +398,13 @@ if isfield(handles,'video')
 			if isfield(handles_video,'report') && isfield(handles_video.report,'fh')
 				handles.video.report = handles_video.report;
 				guidata(hObject, handles);
+				
+				if handles_video.report.fh_emi~=-1
+					try
+						fclose(handles_video.report.fh_emi);
+					catch
+					end
+				end
 
 				if handles_video.report.fh~=-1
 					try
@@ -1067,7 +1074,7 @@ try
 					handles_video_report_path = nan;
 				end
 				handles_video.report = struct(	'fh',-1, 'prebuf_img',{{}}, 'prebuf_toc',zeros(0,2), 'prebuf_emi',{{}}, ...
-												'normal_img_cnt',0, 'normal_img_toc',-inf, 'overall',{{}}, ...
+												'normal_img_cnt',0, 'normal_img_toc',-inf, 'overall',{{}}, 'fh_emi',-1, ...
 												'imagelist',struct('filename',{},'frame',{},'time',{},'emi_state',{}));
 
 				if not(isempty(handles_video.config.thresholds.report_path))
@@ -1152,19 +1159,21 @@ try
 						handles_video.report.anomaly_img_cnt = numel(handles_video.report.prebuf_img);
 						handles_video.report.anomaly_img_toc = -inf;
 
+						% Save Generators state
+						if handles_video.report.fh_emi~=-1
+							fclose(handles_video.report.fh_emi);
+						end
+						handles_video.report.fh_emi = fopen(fullfile(handles_video.report.anomaly_path,'emi_state.txt'), 'wt');
+						
 						for ii = 1:handles_video.report.anomaly_img_cnt
 							img_filename = sprintf('%simage_%06d_%s.png',handles_video.report.anomaly_path, handles_video.report.prebuf_toc(ii,1), toc2str(handles_video.report.prebuf_toc(ii,2),'.'));
 							imwrite(handles_video.report.prebuf_img{ii}, img_filename, 'png');
 							handles_video.report.imagelist(end+1,1) = struct('filename',img_filename, 'frame',handles_video.report.prebuf_toc(ii,1), 'time',handles_video.report.prebuf_toc(ii,2), 'emi_state',handles_video.report.prebuf_emi{ii});
+							fprintf(handles_video.report.fh_emi, '%d\t%e\t%s\n', handles_video.report.prebuf_toc(ii,1), handles_video.report.prebuf_toc(ii,2), handles_video.report.prebuf_emi{ii});
 						end
 						handles_video.report.prebuf_img = {};
 						handles_video.report.prebuf_toc = zeros(0,2);
 						handles_video.report.prebuf_emi = {};
-
-						% Save Generators state
-						fh_emi = fopen(fullfile(handles_video.report.anomaly_path,'emi_state.txt'), 'wt');
-						fprintf(fh_emi, '%s\n', get(handles.state_emi, 'String'));
-						fclose(fh_emi);
 					end
 
 				else % Detector just turn OFF
@@ -1185,7 +1194,9 @@ try
 					imwrite([frame_cur_rgb frame_cur_bw], img_filename, 'png');
 					handles_video.report.anomaly_img_cnt = handles_video.report.anomaly_img_cnt+1;
 					handles_video.report.anomaly_img_toc = toc_t;
-					handles_video.report.imagelist(end+1,1) = struct('filename',img_filename, 'frame',handles_video.toc_frames, 'time',toc_t, 'emi_state',get(handles.state_emi,'String'));
+					emi_state = get(handles.state_emi,'String');
+					handles_video.report.imagelist(end+1,1) = struct('filename',img_filename, 'frame',handles_video.toc_frames, 'time',toc_t, 'emi_state',emi_state);
+					fprintf(handles_video.report.fh_emi, '%d\t%e\t%s\n', handles_video.toc_frames, toc_t, emi_state);
 				end
 			end
 
