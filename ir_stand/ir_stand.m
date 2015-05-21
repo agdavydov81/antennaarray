@@ -22,7 +22,7 @@ function varargout = ir_stand(varargin)
 
 % Edit the above text to modify the response to help ir_stand
 
-% Last Modified by GUIDE v2.5 20-May-2015 20:33:50
+% Last Modified by GUIDE v2.5 21-May-2015 06:54:33
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -97,12 +97,7 @@ end
 handles.config_file = fullfile(handles.config_file, [mfilename '_config.xml']);
 handles.config = config_read(handles.config_file);
 [~, cfg_name, cfg_ext] = fileparts(handles.config_file);
-handles.config_default = config_read(fullfile(fileparts(mfilename('fullpath')), [cfg_name cfg_ext]));
-if ispc
-	handles.config_default.thresholds.report_path = getenv('USERPROFILE');
-else % if isunix
-	handles.config_default.thresholds.report_path = getenv('HOME');
-end
+handles.config_default = config_read(fullfile('?', [cfg_name cfg_ext]));
 
 imshow(ones(10,10,3), 'Parent',handles.work_img_orig);
 imshow(ones(10,10,3), 'Parent',handles.work_img_bw);
@@ -149,12 +144,15 @@ end
 
 function config = config_read(cfg_filename)
 try
+	reset_report_path = false;
 	[~, cfg_name, cfg_ext] = fileparts(cfg_filename);
 	if ~exist(cfg_filename,'file')
 		cfg_filename = fullfile(fileparts(mfilename('fullpath')), [cfg_name cfg_ext]);
+		reset_report_path = true;
 	end
 	if ~exist(cfg_filename,'file')
 		cfg_filename = fullfile(fileparts(mfilename('fullpath')), [cfg_name '.xml']);
+		reset_report_path = true;
 	end
 	if strcmp(cfg_ext,'.xml')
 		config = xml_read(cfg_filename);
@@ -179,6 +177,13 @@ try
 	end
 catch ME %#ok<*NASGU>
 	config = struct();
+end
+if reset_report_path && ~isempty(fieldnames(config))
+	if ispc
+		config.thresholds.report_path = getenv('USERPROFILE');
+	else % if isunix
+		config.thresholds.report_path = getenv('HOME');
+	end
 end
 
 
@@ -391,6 +396,9 @@ if isfield(handles,'video')
 			stop(handles.video.timer);
 
 			if isfield(handles_video,'report') && isfield(handles_video.report,'fh')
+				handles.video.report = handles_video.report;
+				guidata(hObject, handles);
+
 				if handles_video.report.fh~=-1
 					try
 						fclose(handles_video.report.fh);
@@ -432,10 +440,10 @@ if isfield(handles,'video')
 										'<tbody>\n']);
 
 							fprintf(fh, ['<tr><th rowspan="2">Путь к каталогу аномалии</th>' ...
-										'<th colspan="3">Начало аномалии</th>' ...
-										'<th colspan="3">Окончание аномалии</th></tr>\n' ...
-										'<tr><th>Дата и время</th><th>С начала работы</th><th>Номер кадра</th>' ...
-										    '<th>Дата и время</th><th>С начала работы</th><th>Номер кадра</th></tr>\n']);
+										'<th colspan="4">Начало аномалии</th>' ...
+										'<th colspan="4">Окончание аномалии</th></tr>\n' ...
+										'<tr><th>Дата и время</th><th>С начала работы</th><th>Номер кадра</th><th>Генератор ЭМВ</th>' ...
+										    '<th>Дата и время</th><th>С начала работы</th><th>Номер кадра</th><th>Генератор ЭМВ</th></tr>\n']);
 										
 							for i=1:size(handles_video.report.overall,1)
 								rel_path = char(handles_video.report.overall{i,1});
@@ -464,6 +472,16 @@ if isfield(handles,'video')
 		end
 	end
 end
+
+y_lim = ylim(handles.work_graph_pix_num);
+ylim(handles.work_graph_pix_num,y_lim);
+handles.caret_pix_num = line([0 0],y_lim, 'Color','r', 'LineWidth',1.5, 'Parent',handles.work_graph_pix_num);
+
+y_lim = ylim(handles.work_graph_pix_part);
+ylim(handles.work_graph_pix_part,y_lim);
+handles.caret_pix_part = line([0 0],y_lim, 'Color','r', 'LineWidth',1.5, 'Parent',handles.work_graph_pix_part);
+
+guidata(hObject, handles);
 
 
 % --- Executes on button press in work_start_btn.
@@ -516,6 +534,13 @@ handles_video = handles.video;
 handles_video.handles = handles;
 handles_video.palette = uint8(255 * ir_colormap(handles_video.handles.work_img_orig, handles_video.config.video_device.palette));
 set(handles.video.timer, 'UserData',handles_video);
+
+imshow(ones(10,10,3), 'Parent',handles.work_img_bw);
+cla(handles.work_graph_pix_num);
+cla(handles.work_graph_pix_part);
+if isfield_ex(handles,'video.report')
+	handles.video = rmfield(handles.video,'report');
+end
 
 guidata(handles.figure1, handles);
 
@@ -759,7 +784,7 @@ function player_timer_func(timer_handle, eventdata)
 try
 	if not(playrec('isInitialised'))
 		stop(timer_handle);
-		return;
+		return
 	end
 
 	handles_play = get(timer_handle, 'UserData');
@@ -811,7 +836,7 @@ try
 	handles = guidata(hndl_ud.figure1);
 	if strcmp(get(handles.work_abort_btn,'Visible'),'off')
 		stop(timer_handle);
-		return;
+		return
 	end
 
 	[~, dos_result] = dos('tasklist /FI "IMAGENAME eq Lobanov_mark.exe"');
@@ -880,7 +905,7 @@ try
 	% For DEBUG ONLY
 	if isfield(handles_video.config,'debug_saveframes') && handles_video.config.debug_saveframes && not(isempty(handles_video.config.thresholds.report_path))
 		if not(isfield(handles_video,'report'))
-			handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%d.%d_%02d.%02d.%02d', mfilename, fix(clock)), filesep);
+			handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%02d.%02d_%02d.%02d.%02d', mfilename, fix(clock)), filesep);
 			[mk_status, mk_message] = mkdir(fullfile(handles_video.report.path,'raw_frames'));
 			if mk_status~=1
 				error('disp:report',['Ошибка создания каталога "' fullfile(handles_video.report.path,'raw_frames') '" протокола: ' mk_message]);
@@ -1041,12 +1066,13 @@ try
 				else
 					handles_video_report_path = nan;
 				end
-				handles_video.report = struct(	'fh',-1, 'prebuf_img',{{}}, 'prebuf_toc',zeros(0,2), ...
-												'normal_img_cnt',0, 'normal_img_toc',-inf, 'overall',{{}});
+				handles_video.report = struct(	'fh',-1, 'prebuf_img',{{}}, 'prebuf_toc',zeros(0,2), 'prebuf_emi',{{}}, ...
+												'normal_img_cnt',0, 'normal_img_toc',-inf, 'overall',{{}}, ...
+												'imagelist',struct('filename',{},'frame',{},'time',{},'emi_state',{}));
 
 				if not(isempty(handles_video.config.thresholds.report_path))
 					if isnan(handles_video_report_path)
-						handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%d.%d_%02d.%02d.%02d', mfilename, fix(clock)), filesep);
+						handles_video.report.path = fullfile(handles_video.config.thresholds.report_path, sprintf('%s_%d.%02d.%02d_%02d.%02d.%02d', mfilename, fix(clock)), filesep);
 						[mk_status, mk_message] = mkdir(handles_video.report.path);
 						if mk_status~=1
 							error('disp:report',['Ошибка создания каталога "' handles_video.report.path '" протокола: ' mk_message]);
@@ -1109,7 +1135,7 @@ try
 			% Detector switch on|off logic
 			if handles_video.detector.state~=new_st
 				if new_st % Detector just turn ON - make anomaly report
-					handles_video.report.overall(end+1,2:4) = {datestr(now) toc2str(toc_t,':') sprintf('%d',handles_video.toc_frames)};
+					handles_video.report.overall(end+1,2:5) = {datestr(now) toc2str(toc_t,':') sprintf('%d',handles_video.toc_frames) get(handles.state_emi,'String')};
 
 					show_image(handles_video.handles.detector_lamp, fullfile('icons','light_red.png'));
 
@@ -1127,10 +1153,13 @@ try
 						handles_video.report.anomaly_img_toc = -inf;
 
 						for ii = 1:handles_video.report.anomaly_img_cnt
-							imwrite(handles_video.report.prebuf_img{ii}, sprintf('%simage_%06d_%s.png',handles_video.report.anomaly_path, handles_video.report.prebuf_toc(ii,1), toc2str(handles_video.report.prebuf_toc(ii,2),'.')), 'png');
+							img_filename = sprintf('%simage_%06d_%s.png',handles_video.report.anomaly_path, handles_video.report.prebuf_toc(ii,1), toc2str(handles_video.report.prebuf_toc(ii,2),'.'));
+							imwrite(handles_video.report.prebuf_img{ii}, img_filename, 'png');
+							handles_video.report.imagelist(end+1,1) = struct('filename',img_filename, 'frame',handles_video.report.prebuf_toc(ii,1), 'time',handles_video.report.prebuf_toc(ii,2), 'emi_state',handles_video.report.prebuf_emi{ii});
 						end
 						handles_video.report.prebuf_img = {};
 						handles_video.report.prebuf_toc = zeros(0,2);
+						handles_video.report.prebuf_emi = {};
 
 						% Save Generators state
 						fh_emi = fopen(fullfile(handles_video.report.anomaly_path,'emi_state.txt'), 'wt');
@@ -1139,7 +1168,7 @@ try
 					end
 
 				else % Detector just turn OFF
-					handles_video.report.overall(end,5:7) = {datestr(now) toc2str(toc_t,':') sprintf('%d',handles_video.toc_frames)};
+					handles_video.report.overall(end,6:9) = {datestr(now) toc2str(toc_t,':') sprintf('%d',handles_video.toc_frames) get(handles.state_emi,'String')};
 
 					show_image(handles_video.handles.detector_lamp, fullfile('icons','light_green.png'));
 
@@ -1152,9 +1181,11 @@ try
 			if	handles_video.detector.state && handles_video.report.fh~=-1 && handles_video.config.thresholds.report_deton_img_number>0
 				if handles_video.report.anomaly_img_cnt < handles_video.config.thresholds.report_deton_img_number && ...
 						toc_t-handles_video.report.anomaly_img_toc >= handles_video.config.thresholds.report_deton_img_interval
-					imwrite([frame_cur_rgb frame_cur_bw], sprintf('%simage_%06d_%s.png',handles_video.report.anomaly_path, handles_video.toc_frames, toc2str(toc_t,'.')), 'png');
+					img_filename = sprintf('%simage_%06d_%s.png',handles_video.report.anomaly_path, handles_video.toc_frames, toc2str(toc_t,'.'));
+					imwrite([frame_cur_rgb frame_cur_bw], img_filename, 'png');
 					handles_video.report.anomaly_img_cnt = handles_video.report.anomaly_img_cnt+1;
 					handles_video.report.anomaly_img_toc = toc_t;
+					handles_video.report.imagelist(end+1,1) = struct('filename',img_filename, 'frame',handles_video.toc_frames, 'time',toc_t, 'emi_state',get(handles.state_emi,'String'));
 				end
 			end
 
@@ -1169,12 +1200,14 @@ try
 				if handles_video.config.thresholds.detector_pre_buff>0 && handles_video.config.thresholds.report_deton_img_number>0
 					handles_video.report.prebuf_img{end+1} = [frame_cur_rgb frame_cur_bw];
 					handles_video.report.prebuf_toc(end+1,:) = [handles_video.toc_frames toc_t];
+					handles_video.report.prebuf_emi{end+1} = get(handles.state_emi,'String');
 
 					kill_mask = handles_video.report.prebuf_toc(:,2) < toc_t-handles_video.config.thresholds.detector_pre_buff;
 					kill_mask(1 : end-max(0,handles_video.config.thresholds.report_deton_img_number-1)) = true;
 
 					handles_video.report.prebuf_img(kill_mask) = [];
 					handles_video.report.prebuf_toc(kill_mask,:) = [];
+					handles_video.report.prebuf_emi(kill_mask) = [];
 				end
 			end
 
@@ -1358,3 +1391,119 @@ if obj_ind<=numel(msglist)
 		set(msglist(ii), 'Position',cur_pos);
 	end
 end
+
+
+% --- Executes on mouse press over figure background, over a disabled or
+% --- inactive control, or over an axes background.
+function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+mouse_pos = get(hObject, 'CurrentPoint');
+check_pos(handles, mouse_pos, handles.work_graph_pix_num);
+check_pos(handles, mouse_pos, handles.work_graph_pix_part);
+
+
+function check_pos(handles, mouse_pos, hObject)
+ui_pos = get(hObject, 'Position');
+par_pos = get(handles.work_uipanel,'Position');
+ui_pos([1 2]) = ui_pos([1 2]) + par_pos([1 2]);
+if  mouse_pos(1)>ui_pos(1) && mouse_pos(1)<ui_pos(1)+ui_pos(3) && ...
+	mouse_pos(2)>ui_pos(2) && mouse_pos(2)<ui_pos(2)+ui_pos(4)
+		ui_lim = get(hObject, 'XLim');
+		x_pos = diff(ui_lim)*(mouse_pos(1)-ui_pos(1))/ui_pos(3)+ui_lim(1);
+		work_graph_ButtonDownFcn(handles, x_pos);
+end
+
+
+function work_graph_ButtonDownFcn(handles, mouse_x)
+if strcmp(get(handles.work_abort_btn,'Visible'),'on')
+	return
+end
+if ~isfield_ex(handles,'video.report.imagelist')
+	return
+end
+imlist = handles.video.report.imagelist;
+if isempty(imlist)
+	return
+end
+[mv,mi]=min(abs(mouse_x-[imlist.time]));
+if mv>0.2
+	imshow(ones(10,10,3), 'Parent',handles.work_img_orig);
+	imshow(ones(10,10,3), 'Parent',handles.work_img_bw);
+	set(handles.state_emi, 'String','ЭМВ:');
+	set(handles.state_timer,'String','');
+	show_image(handles.detector_lamp, fullfile('icons','light_green.png'));
+	return
+end
+
+caret_move_on_ind(handles, imlist(mi));
+
+
+function caret_move_on_ind(handles, imlist_mi)
+if isempty(imlist_mi)
+	return
+end
+img = imread(imlist_mi.filename);
+image(img(:,1:size(img,2)/2,:), 'Parent',handles.work_img_orig);
+axis(handles.work_img_orig,'equal');
+set(handles.work_img_orig, 'XTick',[], 'YTick',[]);
+image(img(:,size(img,2)/2+1:end,:), 'Parent',handles.work_img_bw);
+axis(handles.work_img_bw,'equal');
+set(handles.work_img_bw, 'XTick',[], 'YTick',[]);
+
+set(handles.state_emi, 'String',imlist_mi.emi_state);
+set(handles.state_timer,'String', [toc2str(imlist_mi.time,':') sprintf('\n(%d)', imlist_mi.frame)]);
+
+show_image(handles.detector_lamp, fullfile('icons','light_red.png'));
+
+set(handles.caret_pix_num,'XData',imlist_mi.time+[0 0]);
+set(handles.caret_pix_part,'XData',imlist_mi.time+[0 0]);
+
+
+% --- Executes on key press with focus on figure1 or any of its controls.
+function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  structure with the following fields (see FIGURE)
+%	Key: name of the key that was pressed, in lower case
+%	Character: character interpretation of the key(s) that was pressed
+%	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
+% handles    structure with handles and user data (see GUIDATA)
+switch eventdata.Key
+	case 'leftarrow'
+		shift_steps=-1;
+	case 'rightarrow'
+		shift_steps=1;
+	case 'pageup'
+		shift_steps=-10;
+	case 'pagedown'
+		shift_steps=10;
+	case 'home'
+		shift_steps=-inf;
+	case 'end'
+		shift_steps=inf;
+	otherwise
+		return
+end
+if any(strcmp(eventdata.Modifier,'shift'))
+	shift_steps=shift_steps*5;
+end
+if any(strcmp(eventdata.Modifier,'control'))
+	shift_steps=shift_steps*20;
+end
+if strcmp(get(handles.work_abort_btn,'Visible'),'on')
+	return
+end
+if ~isfield_ex(handles,'video.report.imagelist')
+	return
+end
+imlist = handles.video.report.imagelist;
+if isempty(imlist)
+	return
+end
+cur_pos = get(handles.caret_pix_num,'XData');
+[~,mi]=min(abs(cur_pos(1)-[imlist.time]));
+mi = max(1,min(numel(imlist), mi + shift_steps));
+
+caret_move_on_ind(handles, imlist(mi));
+
