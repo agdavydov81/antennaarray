@@ -22,7 +22,7 @@ function varargout = ir_stand(varargin)
 
 % Edit the above text to modify the response to help ir_stand
 
-% Last Modified by GUIDE v2.5 21-May-2015 06:54:33
+% Last Modified by GUIDE v2.5 22-May-2015 04:38:50
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -396,8 +396,7 @@ if isfield(handles,'video')
 			stop(handles.video.timer);
 
 			if isfield(handles_video,'report') && isfield(handles_video.report,'fh')
-				handles.video.report = handles_video.report;
-				guidata(hObject, handles);
+				set(handles.work_graph_pix_num, 'UserData',struct('report',handles_video.report));
 				
 				if handles_video.report.fh_emi~=-1
 					try
@@ -479,16 +478,17 @@ if isfield(handles,'video')
 		end
 	end
 end
+rep_ud = get(handles.work_graph_pix_num, 'UserData');
 
 y_lim = ylim(handles.work_graph_pix_num);
 ylim(handles.work_graph_pix_num,y_lim);
-handles.caret_pix_num = line([0 0],y_lim, 'Color','r', 'LineWidth',1.5, 'Parent',handles.work_graph_pix_num);
+rep_ud.caret_pix_num = line([0 0],y_lim, 'Color','r', 'LineWidth',1.5, 'Parent',handles.work_graph_pix_num);
 
 y_lim = ylim(handles.work_graph_pix_part);
 ylim(handles.work_graph_pix_part,y_lim);
-handles.caret_pix_part = line([0 0],y_lim, 'Color','r', 'LineWidth',1.5, 'Parent',handles.work_graph_pix_part);
+rep_ud.caret_pix_part = line([0 0],y_lim, 'Color','r', 'LineWidth',1.5, 'Parent',handles.work_graph_pix_part);
 
-guidata(hObject, handles);
+set(handles.work_graph_pix_num, 'UserData',rep_ud);
 
 
 % --- Executes on button press in work_start_btn.
@@ -498,10 +498,11 @@ function work_start_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 try
-	if isfield_ex(handles,'video.report.imagelist')
-		imlist = handles.video.report.imagelist;
+	rep_ud = get(handles.work_graph_pix_num, 'UserData');
+	if isfield_ex(rep_ud,'report.imagelist')
+		imlist = rep_ud.report.imagelist;
 		if ~isempty(imlist)
-			cur_pos = get(handles.caret_pix_num,'XData');
+			cur_pos = get(rep_ud.caret_pix_num,'XData');
 			[~,mi]=min(abs(cur_pos(1)-[imlist.time]));
 			mi = max(1,min(numel(imlist), mi));
 			tokn = regexp(imlist(mi).emi_state,'ЭМВ: Программа=(\d+); Повтор=(\d+); Seq=(\d+); Reg=(\d+);','tokens');
@@ -571,9 +572,7 @@ set(handles.video.timer, 'UserData',handles_video);
 imshow(ones(10,10,3), 'Parent',handles.work_img_bw);
 cla(handles.work_graph_pix_num);
 cla(handles.work_graph_pix_part);
-if isfield_ex(handles,'video.report')
-	handles.video = rmfield(handles.video,'report');
-end
+set(handles.work_graph_pix_num, 'UserData',struct());
 
 guidata(handles.figure1, handles);
 
@@ -769,7 +768,7 @@ catch ME
 		disp(ME.message);
 		disp(ME.stack(1));
 		msgbox(ME.message, 'Ошибка генератора ЭМВ', 'error');
-		work_abort_btn_Callback(handles.work_abort_btn, [], handles);
+%@@@debug		work_abort_btn_Callback(handles.work_abort_btn, [], handles);
 %	end
 end
 
@@ -1457,10 +1456,11 @@ function work_graph_ButtonDownFcn(handles, mouse_x)
 if strcmp(get(handles.work_abort_btn,'Visible'),'on')
 	return
 end
-if ~isfield_ex(handles,'video.report.imagelist')
+rep_ud = get(handles.work_graph_pix_num, 'UserData');
+if ~isfield_ex(rep_ud,'report.imagelist')
 	return
 end
-imlist = handles.video.report.imagelist;
+imlist = rep_ud.report.imagelist;
 if isempty(imlist)
 	return
 end
@@ -1474,10 +1474,10 @@ if mv>0.2
 	return
 end
 
-caret_move_on_ind(handles, imlist(mi));
+caret_move_on_ind(handles, rep_ud, imlist(mi));
 
 
-function caret_move_on_ind(handles, imlist_mi)
+function caret_move_on_ind(handles, rep_ud, imlist_mi)
 if isempty(imlist_mi)
 	return
 end
@@ -1494,8 +1494,8 @@ set(handles.state_timer,'String', [toc2str(imlist_mi.time,':') sprintf('\n(%d)',
 
 show_image(handles.detector_lamp, fullfile('icons','light_red.png'));
 
-set(handles.caret_pix_num,'XData',imlist_mi.time+[0 0]);
-set(handles.caret_pix_part,'XData',imlist_mi.time+[0 0]);
+set(rep_ud.caret_pix_num,'XData',imlist_mi.time+[0 0]);
+set(rep_ud.caret_pix_part,'XData',imlist_mi.time+[0 0]);
 
 
 % --- Executes on key press with focus on figure1 or any of its controls.
@@ -1531,16 +1531,16 @@ end
 if strcmp(get(handles.work_abort_btn,'Visible'),'on')
 	return
 end
-if ~isfield_ex(handles,'video.report.imagelist')
+rep_ud = get(handles.work_graph_pix_num, 'UserData');
+if ~isfield_ex(rep_ud,'report.imagelist')
 	return
 end
-imlist = handles.video.report.imagelist;
+imlist = rep_ud.report.imagelist;
 if isempty(imlist)
 	return
 end
-cur_pos = get(handles.caret_pix_num,'XData');
+cur_pos = get(rep_ud.caret_pix_num,'XData');
 [~,mi]=min(abs(cur_pos(1)-[imlist.time]));
 mi = max(1,min(numel(imlist), mi + shift_steps));
 
-caret_move_on_ind(handles, imlist(mi));
-
+caret_move_on_ind(handles, rep_ud, imlist(mi));
