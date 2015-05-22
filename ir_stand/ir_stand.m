@@ -768,7 +768,7 @@ catch ME
 		disp(ME.message);
 		disp(ME.stack(1));
 		msgbox(ME.message, 'Ошибка генератора ЭМВ', 'error');
-%@@@debug		work_abort_btn_Callback(handles.work_abort_btn, [], handles);
+		work_abort_btn_Callback(handles.work_abort_btn, [], handles);
 %	end
 end
 
