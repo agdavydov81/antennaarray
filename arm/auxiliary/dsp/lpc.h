@@ -98,7 +98,7 @@ namespace dsp {
 				return false;
 			}
 
-			for(size_t j=1; j<=(i/2); ++j) {
+			for (size_t j=1; j<=(i/2); ++j) {
 				size_t l = i-j;
 				_data_internal_t_ at = a[j] + rc[i-1]*a[l];
 				a[l] += rc[i-1]*a[j];
@@ -120,7 +120,7 @@ namespace dsp {
 	template<typename _data_internal_t_, typename _DataIt>
 	std::vector<_data_internal_t_> autocorr(_DataIt x_beg, _DataIt x_end, size_t order) {
 		std::vector<_data_internal_t_> R(order + 1);
-		for(size_t i=0; i<=order; ++i)
+		for (size_t i=0; i<=order; ++i)
 			R[i]=std::inner_product(x_beg+i, x_end, x_beg, (_data_internal_t_)0);
 		std::transform(R.begin(), R.end(), R.begin(), std::bind2nd(std::divides<_data_internal_t_>(), x_end-x_beg) );
 		return R;
@@ -153,10 +153,10 @@ namespace dsp {
 			return false;
 
 		if(a_out)
-			for(size_t i=1; i<a.size(); ++i)
+			for (size_t i=1; i<a.size(); ++i)
 				(*a_out)[i]=(float)a[i];
 		if(rc_out)
-			for(size_t i=0; i<rc.size(); ++i)
+			for (size_t i=0; i<rc.size(); ++i)
 				(*rc_out)[i]=(float)rc[i];
 		if(err_power)
 			*err_power=(float)err;
@@ -199,29 +199,29 @@ namespace dsp {
 		}
 
 		fa[0] = (_data_t_)1.0;
-		for(size_t i = 1, j = np; i < na; ++i, --j)
+		for (size_t i = 1, j = np; i < na; ++i, --j)
 			fa[i] = pc[i] + pc[j];
 
 		fb[0] = (_data_t_)1.0;
-		for(size_t i = 1, j = np; i < nb; ++i, --j)
+		for (size_t i = 1, j = np; i < nb; ++i, --j)
 			fb[i] = pc[i] - pc[j];
 
 		if (odd) {
-			for(size_t i = 2; i < nb; ++i)
+			for (size_t i = 2; i < nb; ++i)
 				fb[i] = fb[i] + fb[i-2];
 		} else {
-			for(size_t i = 1; i < na; ++i) {
+			for (size_t i = 1; i < na; ++i) {
 				fa[i] = fa[i] - fa[i-1];
 				fb[i] = fb[i] + fb[i-1];
 			}
 		}
 
 		ta[0] = fa[na-1];
-		for(size_t i = 1, j = na - 2; i < na; ++i, --j)
+		for (size_t i = 1, j = na - 2; i < na; ++i, --j)
 			ta[i] = (_data_t_)2.0 * fa[j];
 
 		tb[0] = fb[nb-1];
-		for(size_t i = 1, j = nb - 2; i < nb; ++i, --j)
+		for (size_t i = 1, j = nb - 2; i < nb; ++i, --j)
 			tb[i] = (_data_t_)2.0 * fb[j];
 
 		const size_t NBIS = 4;
@@ -244,7 +244,7 @@ namespace dsp {
 			ylow = FNevChebP(xlow, t, n);
 			if (ylow * yhigh <= 0.0) {
 				dx = xhigh - xlow;
-				for(size_t i = 1; i <= NBIS; ++i) {
+				for (size_t i = 1; i <= NBIS; ++i) {
 					dx = (_data_t_)0.5 * dx;
 					xmid = xlow + dx;
 					ymid = FNevChebP(xmid, t, n);
@@ -299,11 +299,11 @@ namespace dsp {
 		a = &pc[1];
 		size_t mq = m >> 1;
 		p[0] = q[0] = (_data_t_)1;
-		for(size_t n = 1; n <= mq; ++n) {
+		for (size_t n = 1; n <= mq; ++n) {
 			size_t nor = n<<1;
 			c1 = (_data_t_)2 * std::cos(f[nor-1]);
 			c2 = (_data_t_)2 * std::cos(f[nor-2]);
-			for(size_t i = nor; i >= 2; --i) {
+			for (size_t i = nor; i >= 2; --i) {
 				q[i] += q[i-2] - c1 * q[i-1];
 				p[i] += p[i-2] - c2 * p[i-1];
 			}
@@ -311,7 +311,7 @@ namespace dsp {
 			p[1] -= c2;
 		}
 		a[0] = (_data_t_)0.5 * (p[1] + q[1]);
-		for(size_t i = 1, n = 2; i < m; ++i, ++n)
+		for (size_t i = 1, n = 2; i < m; ++i, ++n)
 			a[i] = (_data_t_)0.5 * (p[i] + p[n] + q[n] - q[i]);
 
 		return pc;
@@ -339,16 +339,16 @@ namespace dsp {
 			a=&lpc_a_norm[0];
 		}
 
-		for(size_t m=1, me=std::min(lpc_a_sz,lpcc_order); m<me; ++m) {
+		for (size_t m=1, me=std::min(lpc_a_sz,lpcc_order); m<me; ++m) {
 			_data_t_ sum=0;
-			for(size_t k=1; k<m; ++k)
+			for (size_t k=1; k<m; ++k)
 				sum+=(m-k)*a[k]*cc[m-k];
 			cc[m]=-a[m]-sum/m;
 		}
 
-		for(size_t m=lpc_a_sz; m<lpcc_order; ++m) {
+		for (size_t m=lpc_a_sz; m<lpcc_order; ++m) {
 			_data_t_ sum=0;
-			for(size_t k=1; k<lpc_a_sz; ++k)
+			for (size_t k=1; k<lpc_a_sz; ++k)
 				sum+=(m-k)*a[k]*cc[m-k];
 			cc[m]=-sum/m;
 		}

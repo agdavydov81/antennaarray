@@ -58,7 +58,7 @@ namespace dsp {
 	template<typename _data_t_>
 	inline std::vector<_data_t_> hamming(size_t order) {
 		std::vector<_data_t_> w(order);
-		for(size_t i=0; i<=order/2; ++i)
+		for (size_t i=0; i<=order/2; ++i)
 			w[order-1-i] = w[i] = (_data_t_)(0.54-0.46*std::cos(2*M_PI*i/(order-1)));
 		return w;
 	}
@@ -68,7 +68,7 @@ namespace dsp {
 		double a = 2.5;
 		std::vector<_data_t_> w(order);
 		double n2 = (double)(order-1)/2;
-		for(size_t i=0; i<=order/2; ++i) {
+		for (size_t i=0; i<=order/2; ++i) {
 			double t = a*(i-n2)/n2;
 			w[order-1-i] = w[i] = (_data_t_)std::exp(-0.5*t*t);
 		}
@@ -79,7 +79,7 @@ namespace dsp {
 	inline std::vector<_data_t_> blackman(size_t order) {
 		std::vector<_data_t_> w(order);
 		w[order-1] = w[0] = 0;
-		for(size_t i = 1; i<=order/2; ++i)
+		for (size_t i = 1; i<=order/2; ++i)
 			w[order-1-i] = w[i] = (_data_t_)(0.42 - 0.5 * std::cos(2.0 * M_PI * i / (order - 1)) + 0.08 * std::cos(4.0 * M_PI * i / (order - 1)));
 		return w;
 	}
@@ -87,7 +87,7 @@ namespace dsp {
 	template<typename _data_t_>
 	inline std::vector<_data_t_> blackmanharris(size_t order) {
 		std::vector<_data_t_> w(order);
-		for(size_t i = 0; i<=order/2; ++i)
+		for (size_t i = 0; i<=order/2; ++i)
 			w[order-1-i] = w[i] = (_data_t_)(0.35875 - 0.48829*std::cos(2*M_PI*i/(order-1)) + 0.14128*std::cos(4*M_PI*i/(order-1)) - 0.01168*std::cos(6*M_PI*i/(order-1)));
 		return w;
 	}
@@ -132,7 +132,7 @@ namespace dsp {
 		size_t best_prod=std::numeric_limits<size_t>::max();
 		cur_x=x_;
 		cur_prod=1;
-		for(size_t i=0; i<=cur_bits; ++i) {
+		for (size_t i=0; i<=cur_bits; ++i) {
 			best_prod=std::min(best_prod, cur_prod*nextfactor(cur_x,factors+1,factors_sz-1));
 			cur_x=(cur_x+cur_fact-1)/cur_fact;
 			cur_prod*=cur_fact;
@@ -161,7 +161,7 @@ namespace dsp {
 		double pi_n;
 		typename std::vector<_data_t_>::iterator h_out_it=out_h.begin()+order2;
 		*h_out_it++=(_data_t_)fc;
-		for(size_t n=1; n<=order2; ++n, ++h_out_it) {
+		for (size_t n=1; n<=order2; ++n, ++h_out_it) {
 			pi_n = M_PI * n;
 			*h_out_it=(_data_t_)( (0.54+0.46*cos(pi_n/order2)) * sin(pi_n*fc)/pi_n );
 		}
@@ -187,7 +187,7 @@ namespace dsp {
 		double pi_n;
 		typename std::vector<_data_t_>::iterator h_out_it=out_h.begin()+order2;
 		*h_out_it++=(_data_t_)(1.0-fc);
-		for(size_t n=1; n<=order2; ++n, ++h_out_it) {
+		for (size_t n=1; n<=order2; ++n, ++h_out_it) {
 			pi_n = M_PI * n;
 			*h_out_it=(_data_t_)( (0.54+0.46*cos(pi_n/order2)) * -sin(pi_n*fc)/pi_n );
 		}
@@ -214,7 +214,7 @@ namespace dsp {
 		double pi_n;
 		typename std::vector<_data_t_>::iterator h_out_it=out_h.begin()+order2;
 		*h_out_it++=(_data_t_)(fc2-fc1);
-		for(size_t n=1; n<=order2; ++n, ++h_out_it) {
+		for (size_t n=1; n<=order2; ++n, ++h_out_it) {
 			pi_n = M_PI * n;
 			*h_out_it=(_data_t_)( (0.54+0.46*cos(pi_n/order2)) * (sin(pi_n*fc2)-sin(pi_n*fc1))/pi_n );
 		}
@@ -241,7 +241,7 @@ namespace dsp {
 		double pi_n;
 		typename std::vector<_data_t_>::iterator h_out_it=out_h.begin()+order2;
 		*h_out_it++=(_data_t_)(1.0-(fc2-fc1));
-		for(size_t n=1; n<=order2; ++n, ++h_out_it) {
+		for (size_t n=1; n<=order2; ++n, ++h_out_it) {
 			pi_n = M_PI * n;
 			*h_out_it=(_data_t_)( (0.54+0.46*cos(pi_n/order2)) * (sin(pi_n*fc1)-sin(pi_n*fc2))/pi_n );
 		}
@@ -308,6 +308,13 @@ namespace dsp {
 			y_mem[mem_pos]=y;
 		}
 
+		void x_fill(_data_t_ x) {
+			std::fill(x_mem.begin(), x_mem.end(), x);
+		}
+		void y_fill(_data_t_ y) {
+			std::fill(y_mem.begin(), y_mem.end(), y);
+		}
+
 		void mem_shift() {
 			if(mem_pos)
 				mem_pos--;
@@ -331,16 +338,16 @@ namespace dsp {
 	};
 
 	template <typename _in_t_, typename _out_t_>
-	void filter_out_type_cast(_in_t_ x, _out_t_ &y) {
-		y=static_cast<_out_t_>( std::min(std::max(x, (_in_t_)std::numeric_limits<_out_t_>::min()), (_in_t_)std::numeric_limits<_out_t_>::max()) );
+	void filter_out_type_cast(_in_t_ const &x_, _out_t_ &y_) {
+		y_ = static_cast<_out_t_>( std::min(std::max(x_, (_in_t_)std::numeric_limits<_out_t_>::min()), (_in_t_)std::numeric_limits<_out_t_>::max()) );
 	}
 	template <typename _in_t_>
-	void filter_out_type_cast(_in_t_ x, float &y) {
-		y=static_cast<float>(x);
+	void filter_out_type_cast(_in_t_ const &x_, float &y_) {
+		y_ = static_cast<float>(x_);
 	}
 	template <typename _in_t_>
-	void filter_out_type_cast(_in_t_ x, double &y) {
-		y=static_cast<double>(x);
+	void filter_out_type_cast(_in_t_ const &x_, double &y_) {
+		y_ = static_cast<double>(x_);
 	}
 
 	template<typename _data_internal_t_, typename _InIt, typename _OutIt>
@@ -358,7 +365,7 @@ namespace dsp {
 
 		if(a.empty() && b.empty()) {
 			filt_mem.clear();
-			for(; x_beg!=x_end; ++x_beg, ++y_beg)
+			for (; x_beg!=x_end; ++x_beg, ++y_beg)
 				filter_out_type_cast(*x_beg, *y_beg);
 			return;
 		}
@@ -377,7 +384,7 @@ namespace dsp {
 			/* FIR filter                                                           */
 			/************************************************************************/
 			// FIR filter
-			for(; x_beg!=x_end; ++x_beg, ++y_beg) {
+			for (; x_beg!=x_end; ++x_beg, ++y_beg) {
 				filt_mem.x_set((_data_internal_t_)*x_beg);
 				filter_out_type_cast(std::inner_product(b.begin(), b.end(), filt_mem.x_begin(), (_data_internal_t_)0), *y_beg);
 				filt_mem.mem_shift();
@@ -387,7 +394,7 @@ namespace dsp {
 			/* Allpole filter                                                       */
 			/************************************************************************/
 			if(b.empty() || b[0]==(_data_internal_t_)1) { // Allpole filter and b[0]==1
-				for(; x_beg!=x_end; ++x_beg, ++y_beg) {
+				for (; x_beg!=x_end; ++x_beg, ++y_beg) {
 					_data_internal_t_ y_val=(_data_internal_t_)(*x_beg-std::inner_product(a.begin()+1, a.end(), filt_mem.y_begin(), (_data_internal_t_)0));
 					filt_mem.y_set(y_val);
 					filter_out_type_cast(y_val,*y_beg);
@@ -395,7 +402,7 @@ namespace dsp {
 				}
 			}
 			else { // Allpole filter, but b[0]!=1
-				for(; x_beg!=x_end; ++x_beg, ++y_beg) {
+				for (; x_beg!=x_end; ++x_beg, ++y_beg) {
 					_data_internal_t_ y_val=(_data_internal_t_)(*x_beg*b[0]-std::inner_product(a.begin()+1, a.end(), filt_mem.y_begin(), (_data_internal_t_)0));
 					filt_mem.y_set(y_val);
 					filter_out_type_cast(y_val,*y_beg);
@@ -406,7 +413,7 @@ namespace dsp {
 			/************************************************************************/
 			/* Common case filter                                                   */
 			/************************************************************************/
-			for(; x_beg!=x_end; ++x_beg, ++y_beg) {
+			for (; x_beg!=x_end; ++x_beg, ++y_beg) {
 				filt_mem.x_set((_data_internal_t_)*x_beg);
 				_data_internal_t_ y_val=(_data_internal_t_)(
 								 std::inner_product(b.begin(),  b.end(), filt_mem.x_begin(),
@@ -440,7 +447,7 @@ namespace dsp {
 
 		filt_mem.check_size(order, 1);
 
-		for(; x_beg!=x_end; ++x_beg, ++y_beg) {
+		for (; x_beg!=x_end; ++x_beg, ++y_beg) {
 			filt_mem.x_set((_data_internal_t_)*x_beg);
 			*y_beg=	filter_out_type_cast<_data_internal_t_,typename _OutIt::value_type>()(
 				median(filt_mem.x_begin(), filt_mem.x_begin()+order));
@@ -464,7 +471,7 @@ namespace dsp {
 		typename std::vector<_data_t_>::const_iterator it_x1=x1.begin();
 		typename std::vector<_data_t_>::const_reverse_iterator it_x2=x2.rend()-1;
 		size_t min_sz=std::min(x1.size(), x2.size()), x1_bord=x2.size()-1;
-		for(size_t i=0, y_sz=y.size(); i<y_sz; ++i) {
+		for (size_t i=0, y_sz=y.size(); i<y_sz; ++i) {
 			y[i]=inner_product(it_x1, it_x1+std::min(min_sz,std::min(i+1,y_sz-i)), it_x2, (_data_t_)0);
 			if(i>=x1_bord)
 				++it_x1;

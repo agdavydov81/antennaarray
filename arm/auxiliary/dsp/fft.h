@@ -1,6 +1,7 @@
 #ifndef DSP_FFT_H
 #define DSP_FFT_H
 
+#include <cstddef>
 #include <vector>
 #include <complex>
 #include <algorithm>
@@ -654,7 +655,7 @@ namespace dsp {
 
 		y[0]=std::complex<float>(plan.x_copy[0]);
 		std::vector<float>::const_iterator it_re=plan.x_copy.begin()+1, it_im=plan.x_copy.end()-1;
-		for(size_t i=1, ie=n/2; i<ie; ++i, ++it_re, --it_im)
+		for (size_t i=1, ie=n/2; i<ie; ++i, ++it_re, --it_im)
 			y[i]=std::complex<float>(*it_re, *it_im);
 		y[n/2]=(n&1) ? std::complex<float>(*it_re,*it_im) : std::complex<float>(*it_re);
 	}
@@ -680,7 +681,7 @@ namespace dsp {
 
 		y[0]=std::complex<double>(plan.x_copy[0]);
 		std::vector<double>::const_iterator it_re=plan.x_copy.begin()+1, it_im=plan.x_copy.end()-1;
-		for(size_t i=1, ie=n/2; i<ie; ++i, ++it_re, --it_im)
+		for (size_t i=1, ie=n/2; i<ie; ++i, ++it_re, --it_im)
 			y[i]=std::complex<double>(*it_re, *it_im);
 		y[n/2]=(n&1) ? std::complex<double>(*it_re,*it_im) : std::complex<double>(*it_re);
 	}
@@ -702,7 +703,7 @@ namespace dsp {
 		plan.x_copy[0]=x_beg[0].real();
 		++x_beg;
 		std::vector<float>::iterator it_re=plan.x_copy.begin()+1, it_im=plan.x_copy.end()-1;
-		for(size_t i=1, ie=n/2; i<ie; ++i, ++it_re, --it_im, ++x_beg) {
+		for (size_t i=1, ie=n/2; i<ie; ++i, ++it_re, --it_im, ++x_beg) {
 			*it_re=x_beg->real();
 			*it_im=x_beg->imag();
 		}
@@ -737,7 +738,7 @@ namespace dsp {
 		plan.x_copy[0]=x_beg[0].real();
 		++x_beg;
 		std::vector<double>::iterator it_re=plan.x_copy.begin()+1, it_im=plan.x_copy.end()-1;
-		for(size_t i=1, ie=n/2; i<ie; ++i, ++it_re, --it_im, ++x_beg) {
+		for (size_t i=1, ie=n/2; i<ie; ++i, ++it_re, --it_im, ++x_beg) {
 			*it_re=x_beg->real();
 			*it_im=x_beg->imag();
 		}
@@ -974,10 +975,10 @@ namespace dsp {
 */		size_t filter(const _data_in_t_ * data_in_, size_t data_in_size_, _data_out_t_ * data_out_) {
 			if(h.size()<=1) {
 				if(h.empty() || (h.size()==1 && h.front()==(_fft_data_precision_)1))
-					for(size_t i=0; i<data_in_size_; ++i, ++data_in_, ++data_out_)
+					for (size_t i=0; i<data_in_size_; ++i, ++data_in_, ++data_out_)
 						filter_out_type_cast(*data_in_, *data_out_);
 				else
-					for(size_t i=0; i<data_in_size_; ++i, ++data_in_, ++data_out_)
+					for (size_t i=0; i<data_in_size_; ++i, ++data_in_, ++data_out_)
 						filter_out_type_cast(*data_in_*h.front(), *data_out_);
 				return data_in_size_;
 			}
@@ -1014,7 +1015,7 @@ namespace dsp {
 
 					ifft(X, FFT_N/2+1, y, plan_X2y);
 
-					for(const _fft_data_precision_ *ptr_beg=y+overlap_sz, *ptr_end=y+FFT_N; ptr_beg!=ptr_end; ++ptr_beg, ++data_out_)
+					for (const _fft_data_precision_ *ptr_beg=y+overlap_sz, *ptr_end=y+FFT_N; ptr_beg!=ptr_end; ++ptr_beg, ++data_out_)
 						filter_out_type_cast(*ptr_beg, *data_out_);
 
 					data_out_size+=delay_sz;
@@ -1143,7 +1144,7 @@ namespace dsp {
 				else {                                   // unnormalized FIR filter
 					typename std::vector< std::complex<_data_t_> >::iterator it_out=H.begin();
 					_data_t_ a_front=a.front();
-					for(const std::complex<_data_t_> *it=mem.X, *ie=mem.X+nfft; it!=ie; ++it, ++it_out)
+					for (const std::complex<_data_t_> *it=mem.X, *ie=mem.X+nfft; it!=ie; ++it, ++it_out)
 						*it_out = *it / a_front;
 //					std::transform(mem.X, mem.X+nfft, H.begin(), std::bind2nd(std::divides< std::complex<_data_t_> >(), a.front()) );
 //					the ABI of passing structure with complex float member has changed in GCC 4.4
@@ -1158,7 +1159,7 @@ namespace dsp {
 			if(b.size()<=1) {
 				typename std::vector< std::complex<_data_t_> >::iterator it_out=H.begin();
 				_data_t_ b_front=b.empty()?(_data_t_)1:b.front();
-				for(const std::complex<_data_t_> *it=mem.X, *ie=mem.X+nfft; it!=ie; ++it, ++it_out)
+				for (const std::complex<_data_t_> *it=mem.X, *ie=mem.X+nfft; it!=ie; ++it, ++it_out)
 					*it_out = b_front / *it;
 //				std::transform(mem.X, mem.X+nfft, H.begin(), std::bind1st(std::divides< std::complex<_data_t_> >(), b.empty()?(_data_t_)1:b.front()) );
 //				the ABI of passing structure with complex float member has changed in GCC 4.4
@@ -1225,11 +1226,11 @@ namespace dsp {
 					std::fill(lag_factors.begin(), lag_factors.end(), (_x_precision_)1/M);
 					break;
 				case exc_unbiased:		// scales the raw correlation by 1/(M-abs(lags))
-					for(ptrdiff_t l=min_lag; l<=max_lag; ++l, ++lag_it)
+					for (ptrdiff_t l=min_lag; l<=max_lag; ++l, ++lag_it)
 						*lag_it=(_x_precision_)1/(M-std::abs(l));
 					break;
 				case exc_unbiased_sqrt:	// scales the raw correlation by 1/sqrt(M-abs(lags))
-					for(ptrdiff_t l=min_lag; l<=max_lag; ++l, ++lag_it)
+					for (ptrdiff_t l=min_lag; l<=max_lag; ++l, ++lag_it)
 						*lag_it=std::sqrt((_x_precision_)1/(M-std::abs(l)));
 					break;
 				default:
@@ -1303,7 +1304,7 @@ namespace dsp {
 
 		if(!mem.lag_factors.empty()) {
 			ret_it=ret.begin();
-			for(typename std::vector<_data_t_>::iterator lag_it=mem.lag_factors.begin(); ret_it!=ret_end; ++ret_it, ++lag_it)
+			for (typename std::vector<_data_t_>::iterator lag_it=mem.lag_factors.begin(); ret_it!=ret_end; ++ret_it, ++lag_it)
 				*ret_it*=*lag_it;
 		}
 
