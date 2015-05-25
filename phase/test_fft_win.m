@@ -16,6 +16,7 @@ function test_fft_win
 	end
 end
 
+
 function res = win_analyse(win_name, cfg)
 	win_func = str2func(win_name);
 
@@ -36,3 +37,4 @@ function res = win_analyse(win_name, cfg)
 	res.w_main = w(mi);
 	res.p_main = Hc(mi);
 end
+
