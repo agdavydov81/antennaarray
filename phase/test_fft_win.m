@@ -36,3 +36,4 @@ function res = win_analyse(win_name, cfg)
 	res.w_main = w(mi);
 	res.p_main = Hc(mi);
 end
+
