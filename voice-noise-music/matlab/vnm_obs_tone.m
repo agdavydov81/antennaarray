@@ -41,7 +41,7 @@ function obs=vnm_obs_tone(x, alg, algs, etc_info)
 %		cur_x=cur_x.*wnd;
 
 %		lpc0=lpc(cur_x,1);
-%		cur_x=filter(lpc0,1,cur_x);
+%		cur_x=fftfilt(lpc0,cur_x);
 
 		% Normalized unbiased autocorrelation peak value
 %		cur_xc=xcorr(cur_x);

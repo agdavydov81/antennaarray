@@ -53,8 +53,8 @@ m=max(round(m),1);
 mm=m;
 wn=w(:).*(m-(1:lw))';
 x2=[x(:); zeros(m-1,1)].^2;
-yn=filter(wn,1,x2);
-yd=filter(w,1,x2);
+yn=fftfilt(wn,x2);
+yd=fftfilt(w,x2);
 yd(yd<eps)=1;
 y=yn(m:end)./yd(m:end);
 if nargout==0

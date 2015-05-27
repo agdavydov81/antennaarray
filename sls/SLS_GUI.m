@@ -97,7 +97,7 @@ function btn_FileOpen_Callback(hObject, eventdata, handles)
     handles.file.x(:,2:end)=[];
     handles.file.x=resample(handles.file.x, 11025, handles.file.fs_orig);
     handles.file.fs=11025;
-%    handles.file.x=filter([1 -0.95], 1, handles.file.x);
+%    handles.file.x=fftfilt([1 -0.95], handles.file.x);
     file_info=sprintf('‘айл:%s\n‘ормат: %d √ц, длинна %.3fс',handles.file.name, handles.file.fs, size(handles.file.x,1)/handles.file.fs);
     set(handles.txt_FileOpen,'String',file_info);
     set(handles.btn_SegmentConfig, 'Enable', 'on');

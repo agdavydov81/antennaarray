@@ -17,7 +17,7 @@ function obs=vnm_obs_hos(x, alg, algs, etc_info) %#ok<INUSL>
 		end
 
 		cur_a=vnm_lpc(cur_x, lpc_ord);
-		cur_e=filter(cur_a, 1, cur_x);
+		cur_e=fftfilt(cur_a, cur_x);
 
 		obs(obs_ind,:)=[skewness(cur_e) kurtosis(cur_e)];
 	end

@@ -60,7 +60,7 @@ sw=cw(end);
 y0=repmat(sw,lxx,1);
 lxw=min(lxx,lw);
 y0(1:lxw)=cw(1:lxw);
-y0(lx+1:lx+m-1)=y0(lx+1:lx+m-1)-cw(1:m-1);      % equivalent to y0=filter(w,1,xx^0);
+y0(lx+1:lx+m-1)=y0(lx+1:lx+m-1)-cw(1:m-1);      % equivalent to y0=fftfilt(w,xx^0);
 yd=y0(m:end);
 yd(abs(yd)<eps)=1;
 

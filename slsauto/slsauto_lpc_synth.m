@@ -77,13 +77,13 @@ function slsauto_lpc_synth(cfg, synth_t, border_type)
 			for ri = 1:numel(reg_list)-1
 				% Сглаживание LSF треков
 				cur_obs = [reg_list(ri).lpc_lsf(end-lsf_bn+2:end,:); reg_list(ri+1).lpc_lsf(1:lsf_bn-1,:)];
-				cur_obs = filter(lsf_b,1,cur_obs);
+				cur_obs = fftfilt(lsf_b,cur_obs);
 				reg_list(ri).lpc_lsf(end-lsf_bn2+1:end,:) = cur_obs(end-lsf_bn2+1-lsf_bn2:end-lsf_bn2,:);
 				reg_list(ri+1).lpc_lsf(1:lsf_bn2,:) =       cur_obs(end-lsf_bn2+1        :end        ,:);
 
 				% Сглаживание коэффициента усиления
 				cur_obs = [reg_list(ri).lpc_b(end-lsf_bn+2:end); reg_list(ri+1).lpc_b(1:lsf_bn-1)];
-				cur_obs = filter(lsf_b,1,cur_obs);
+				cur_obs = fftfilt(lsf_b,cur_obs);
 				reg_list(ri).lpc_b(end-lsf_bn2+1:end) = cur_obs(end-lsf_bn2+1-lsf_bn2:end-lsf_bn2);
 				reg_list(ri+1).lpc_b(1:lsf_bn2) =       cur_obs(end-lsf_bn2+1        :end        );
 			end

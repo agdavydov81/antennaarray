@@ -45,7 +45,7 @@ elseif length(dc)==1
    dc=dc(ones(nf,1));
 end
 if nf==1
-   u=filter(ar,1,s-dc);
+   u=fftfilt(ar,s-dc);
 else
    p=p1-1;
    ns=length(s);

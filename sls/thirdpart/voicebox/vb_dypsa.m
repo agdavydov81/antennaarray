@@ -295,7 +295,7 @@ w(1:p)=1:p;
 w(m+1:p+m)=p:-1:1;
 
 w=w./(p+1); 
-frob=filter(w,1,sp.^2);
+frob=fftfilt(w,sp.^2);
 frob(1:(round((p+m-1)/2) + offset))=[];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -332,8 +332,8 @@ ghw = ghw(:);                           % force to be a column (dmb thinks windo
 ghwn=ghw'.*(gw-1:-2:1-gw)/2;            % weighted window: zero in middle
 
 u2=u.^2;
-yn=filter(ghwn,1,u2);
-yd=filter(ghw,1,u2);
+yn=fftfilt(ghwn,u2);
+yd=fftfilt(ghw,u2);
 yd(abs(yd)<eps)=10*eps;                 % prevent infinities
 y=yn(gw:end)./yd(gw:end);               % delete filter startup transient
 toff=(gw-1)/2;

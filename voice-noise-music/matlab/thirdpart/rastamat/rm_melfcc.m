@@ -57,7 +57,7 @@ if nargin < 2;   sr = 16000;    end
 	  'fbtype', 'mel', 'usecmp', 0, 'modelorder', 0);
 
 if preemph ~= 0
-  samples = filter([1 -preemph], 1, samples);
+  samples = fftfilt([1 -preemph], samples);
 end
 
 % Compute FFT power spectrum

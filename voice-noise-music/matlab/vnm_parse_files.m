@@ -123,7 +123,7 @@ function flist_i=parfor_for_body(flist_i, fs, rand_ampl, snr, preemphasis, filt_
 		cur_x=awgn(cur_x, snr, 'measured');
 	end
 	if preemphasis>0
-		cur_x=filter([1 -preemphasis], 1, cur_x);
+		cur_x=fftfilt([1 -preemphasis], cur_x);
 	end
 	if filt_ord>0
 		if size(cur_x,1)<length(filt_b)*3/2

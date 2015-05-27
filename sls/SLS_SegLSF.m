@@ -5,7 +5,7 @@ function [segments, dist_raw, dist_filt, dist_norm, dist_time]=SLS_SegLSF(file)
     win_size=round(seg_config.frame_size*file.fs);
     win_step=round(seg_config.frame_step*file.fs);
     
-    file_x=filter([1 -0.95],1,file.x);
+    file_x=fftfilt([1 -0.95],file.x);
 
     LSF_tracks=zeros(LPC_order, fix((length(file_x)-win_size)/win_step));
     for win_ind=1:size(LSF_tracks,2)

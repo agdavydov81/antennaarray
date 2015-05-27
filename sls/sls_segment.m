@@ -202,7 +202,7 @@ function obs=sls_seg_obs_tone(x, alg)
 		cur_x=x(i:i+fr_sz(2)-1);
 		if alg.obs.tone.do_lpc
 			cur_a=safe_lpc(cur_x, x_ord);
-			cur_x=filter(cur_a, 1, cur_x);
+			cur_x=fftfilt(cur_a, cur_x);
 		end
 		cur_xc=xcorr(cur_x);
 		cur_xc=cur_xc./sqrt(triang(length(cur_xc)));
