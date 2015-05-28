@@ -371,6 +371,31 @@ guidata(hObject, handles);
 check_config(handles);
 
 
+function [is_disp, is_msgbox] = disp_exception(config, ME, msgbox_title)
+is_disp = isfield(config,'debug_messages') && config.debug_messages;
+if is_disp
+	disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
+	disp(ME.message);
+	if isempty(ME.stack)
+		return
+	end
+	mname = mfilename('fullpath');
+	stack_ind = find( strncmp(mname, {ME.stack.file}, numel(mname)), 1);
+	if isempty(stack_ind)
+		stack_ind = 1;
+	end
+	disp(ME.stack(stack_ind));
+end
+
+is_msgbox = isfield(config,'debug_msgbox') && config.debug_msgbox;
+if is_msgbox
+	if nargin<3
+		msgbox_title = 'Îøèáêà';
+	end
+	errordlg(ME.message,msgbox_title);
+end
+
+
 % --- Executes on button press in work_abort_btn.
 function work_abort_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to work_abort_btn (see GCBO)
