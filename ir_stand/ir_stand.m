@@ -133,7 +133,6 @@ try
 		pause(10/100);
 		waitbar(i,h,sprintf('Start AgilentIOLibrariesService %d%%',i));
 	end
-	pause(10);
 	close(h);
 catch
 end
