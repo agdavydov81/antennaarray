@@ -1483,15 +1483,7 @@ imlist = rep_ud.report.imagelist;
 if isempty(imlist)
 	return
 end
-[mv,mi]=min(abs(mouse_x-[imlist.time]));
-if mv>0.2
-	imshow(ones(10,10,3), 'Parent',handles.work_img_orig);
-	imshow(ones(10,10,3), 'Parent',handles.work_img_bw);
-	set(handles.state_emi, 'String','İÌÂ:');
-	set(handles.state_timer,'String','');
-	show_image(handles.detector_lamp, fullfile('icons','light_green.png'));
-	return
-end
+[~,mi]=min(abs(mouse_x-[imlist.time]));
 
 caret_move_on_ind(handles, rep_ud, imlist(mi));
 
