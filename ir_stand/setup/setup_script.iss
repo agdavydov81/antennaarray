@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "IR Stand"
-#define MyAppVersion "1.0.129"
+#define MyAppVersion "1.0.130"
 #define MyAppPublisher "Belarusian State University of Informatics and Radioelectronics (BSUIR)"
 #define MyAppURL "http://www.bsuir.by/"
 #define MyAppExeName "ir_stand.m"
