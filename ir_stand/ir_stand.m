@@ -118,6 +118,26 @@ set(pan , 'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
 
 guidata(hObject, handles);
 
+AgilentIOLibrariesService_check();
+
+
+function AgilentIOLibrariesService_check()
+try
+	[~, dosout] = dos('sc query AgilentIOLibrariesService');
+	if ~isempty( strfind(dosout, ': 4  RUNNING') )
+		return
+	end
+	[~, dosout] = dos('sc start AgilentIOLibrariesService');
+	h = waitbar(0, 'Start AgilentIOLibrariesService', 'Name','Start AgilentIOLibrariesService');
+	for i = 1:100
+		pause(10/100);
+		waitbar(i,h,sprintf('Start AgilentIOLibrariesService %d%%',i));
+	end
+	pause(10);
+	close(h);
+catch
+end
+
 
 function show_image(image_axes, image_filename)
 [logo_image, logo_map, logo_alpha] = imread(fullfile(fileparts(mfilename('fullpath')), image_filename));
