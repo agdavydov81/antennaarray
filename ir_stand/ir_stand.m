@@ -131,7 +131,7 @@ try
 	h = waitbar(0, 'Start AgilentIOLibrariesService', 'Name','Start AgilentIOLibrariesService');
 	for i = 1:100
 		pause(10/100);
-		waitbar(i,h,sprintf('Start AgilentIOLibrariesService %d%%',i));
+		waitbar(i/100,h,sprintf('Start AgilentIOLibrariesService %d%%',i));
 	end
 	close(h);
 catch
