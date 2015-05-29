@@ -71,7 +71,7 @@ else
 	cfg = varargin{1};
 	cfg_def = varargin{2};
 end
-handles.config0 = struct('debug_messages',0, 'debug_saveframes',0, 'password','');
+handles.config0 = struct('debug_messages',0, 'debug_msgbox',0, 'debug_saveframes',0, 'password','');
 handles.config0.thresholds = struct('detector_on_points',100, 'detector_on_part',0.01, 'detector_off_points',80, ...
 									'detector_off_part',0.008, 'detector_pre_buff',0.5, 'detector_post_buff',0.8, ...
 									'start_delay',3, 'filter_no_median',1, 'filter_hp_factor',-0.97, 'filter_hp_initframes',200, ...
@@ -120,6 +120,7 @@ cfg = handles.config_orig;
 if handles.press_ok
 	cfg.thresholds = handles.config.thresholds;
 	cfg.debug_messages = handles.config.debug_messages;
+	cfg.debug_msgbox = handles.config.debug_msgbox;
 	cfg.debug_saveframes = handles.config.debug_saveframes;
 	cfg.password = handles.config.password;
 

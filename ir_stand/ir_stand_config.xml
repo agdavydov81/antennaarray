@@ -52,6 +52,7 @@
       <median_size_ispercent>0</median_size_ispercent>
    </thresholds>
    <debug_messages>0</debug_messages>
+   <debug_msgbox>0</debug_msgbox>
    <debug_saveframes>0</debug_saveframes>
    <password/>
 </ir_stand>

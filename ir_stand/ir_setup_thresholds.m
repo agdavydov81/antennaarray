@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 08-May-2015 03:04:27
+% Last Modified by GUIDE v2.5 29-May-2015 03:23:07
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -105,6 +105,7 @@ set(handles.report_deton_img_interval,	'String', num2str(cfg.thresholds.report_d
 set(handles.report_deton_img_number,	'String', num2str(cfg.thresholds.report_deton_img_number));
 set(handles.report_graph_time,			'String', num2str(cfg.thresholds.report_graph_time));
 set(handles.debug_messages,				'Value',  cfg.debug_messages);
+set(handles.debug_msgbox,				'Value',  cfg.debug_msgbox);
 set(handles.debug_saveframes,			'Value',  cfg.debug_saveframes);
 handles.password_string = cfg.password;
 
@@ -135,6 +136,7 @@ if handles.press_ok
 	cfg.thresholds.report_deton_img_number=		str2double(get(handles.report_deton_img_number,'String'));
 	cfg.thresholds.report_graph_time =			str2double(get(handles.report_graph_time,'String'));
 	cfg.debug_messages =						get(handles.debug_messages,'Value');
+	cfg.debug_msgbox =							get(handles.debug_msgbox,'Value');
 	cfg.debug_saveframes =						get(handles.debug_saveframes,'Value');
 	cfg.password =								handles.password_string;
 end
@@ -243,3 +245,5 @@ function reset_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 handles = set_controls(handles, struct_merge(handles.config_default));
 guidata(hObject, handles);
+
+
