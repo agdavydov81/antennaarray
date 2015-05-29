@@ -250,19 +250,19 @@ cfg = handles.config;
 is_ok = true;
 
 if is_ok && not(isfield(cfg,'emi_generator'))
-	msgbox('Настройте геренатор ЭМВ для начала работы.', 'Настройки', 'help', 'modal');
+	msgbox_my(handles, 'Настройте геренатор ЭМВ для начала работы.', 'Настройки', 'help', 'modal');
 	is_ok = false;
 end
 if is_ok && not(isfield(cfg,'acoustic_generator'))
-	msgbox('Настройте геренатор акустического воздействия для начала работы.', 'Настройки', 'help', 'modal');
+	msgbox_my(handles, 'Настройте геренатор акустического воздействия для начала работы.', 'Настройки', 'help', 'modal');
 	is_ok = false;
 end
 if is_ok && not(isfield(cfg,'video_device'))
-	msgbox('Настройте тепловизор для начала работы.', 'Настройки', 'help', 'modal');
+	msgbox_my(handles, 'Настройте тепловизор для начала работы.', 'Настройки', 'help', 'modal');
 	is_ok = false;
 end
 if is_ok && not(isfield(cfg,'thresholds'))
-	msgbox('Настройте пороги программы для начала работы.', 'Настройки', 'help', 'modal');
+	msgbox_my(handles, 'Настройте пороги программы для начала работы.', 'Настройки', 'help', 'modal');
 	is_ok = false;
 end
 
@@ -287,7 +287,7 @@ if isfield(cfg,'password') && ~isempty(cfg.password)
 	end
 	is_ok = strcmp(pass, cfg.password);
 	if ~is_ok
-		msgbox('Введен неверный пароль.','Пароль','error','modal');
+		msgbox_my(handles, 'Введен неверный пароль.','Пароль','error','modal');
 	end
 else
 	is_ok = true;
@@ -333,7 +333,7 @@ end
 
 ret_cfg = ir_setup_video(handles.config, handles.config_default);
 if isempty(ret_cfg)
-	errordlg('Не обнаружено подходящих видео устройств.', 'Ошибка видео', 'modal');
+	msgbox_my(handles, 'Не обнаружено подходящих видео устройств.', 'Ошибка видео', 'error', 'modal');
 	return
 end
 
@@ -371,10 +371,17 @@ guidata(hObject, handles);
 check_config(handles);
 
 
-function [is_disp, is_msgbox] = disp_exception(config, ME, msgbox_title)
-is_disp = isfield(config,'debug_messages') && config.debug_messages;
+function [is_disp, is_msgbox] = disp_exception(handles, config, ME, msgbox_title)
+if isstruct(config)
+	is_disp = isfield(config,'debug_messages') && config.debug_messages;
+	is_msgbox = isfield(config,'debug_msgbox') && config.debug_msgbox;
+else
+	is_disp = config;
+	is_msgbox = config;
+end
+
 if is_disp
-	disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
+	disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock))); %#ok<DSPS>
 	disp(ME.message);
 	if isempty(ME.stack)
 		return
@@ -387,12 +394,11 @@ if is_disp
 	disp(ME.stack(stack_ind));
 end
 
-is_msgbox = isfield(config,'debug_msgbox') && config.debug_msgbox;
 if is_msgbox
-	if nargin<3
+	if nargin<4
 		msgbox_title = 'Ошибка';
 	end
-	errordlg(ME.message,msgbox_title);
+	msgbox_my(handles, ME.message, msgbox_title);
 end
 
 
@@ -420,12 +426,7 @@ if isfield_ex(handles,'config.acoustic_generator.harm.enable') && handles.config
 			playrec('reset');
 		end
 	catch ME
-		if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-			disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock))); %#ok<*DSPS>
-			disp(ME.message);
-			disp(ME.stack(1));
-%			msgbox(ME.message,'Ошибка аудио');
-		end
+		disp_exception(handles, handles.config, ME, 'Ошибка аудио');
 	end
 end
 
@@ -458,12 +459,7 @@ if isfield(handles,'video')
 					try
 						config_write(handles.config_file, handles.config);
 					catch ME
-						if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-							disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
-							disp(ME.message);
-							disp(ME.stack(1));
-%							msgbox(ME.message,'Ошибка сохранения настроек');
-						end
+						disp_exception(handles, handles.config, ME, 'Ошибка сохранения настроек');
 					end
 
 					% Save overall report to file
@@ -514,12 +510,7 @@ if isfield(handles,'video')
 			end
 		end
 	catch ME
-		if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-			disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
-			disp(ME.message);
-			disp(ME.stack(1));
-%			msgbox(ME.message,'Ошибка остановки');
-		end
+		disp_exception(handles, handles.config, ME, 'Ошибка остановки');
 	end
 end
 rep_ud = get(handles.work_graph_pix_num, 'UserData');
@@ -572,7 +563,7 @@ end
 video_devices = imaqhwinfo('winvideo');
 cur_cam = find(strcmp(handles.config.video_device.name, {video_devices.DeviceInfo.DeviceName}),1);
 if isempty(cur_cam)
-	errordlg(['Не обнаружено видео устройство "' handles.config.video_device.name '".'], 'Ошибка видео', 'modal');
+	msgbox_my(handles, ['Не обнаружено видео устройство "' handles.config.video_device.name '".'], 'Ошибка видео', 'error', 'modal');
 	return
 end
 
@@ -583,7 +574,7 @@ triggerconfig(handles.video.vidobj, 'manual');
 try
 	start(handles.video.vidobj);
 catch
-	errordlg(['Ошибка получения изображения из "' handles.config.video_device.name '".'], 'Ошибка видео', 'modal');
+	msgbox_my(handles, ['Ошибка получения изображения из "' handles.config.video_device.name '".'], 'Ошибка видео', 'error', 'modal');
 	return
 end
 handles.video.config = handles.config;
@@ -635,7 +626,7 @@ if handles.config.acoustic_generator.harm.enable
 	harm_cfg = handles.config.acoustic_generator.harm;
 	harm_freq = [harm_cfg.freq_start harm_cfg.freq_finish];
 	if any(harm_freq<1 | harm_freq > play.fs*0.45)
-		errordlg(['Частоты синтеза сигнала выходят за допустимый диапазон [1,' num2str(round(play.fs*0.45)) '] Гц.'], 'Ошибка аудио', 'modal');
+		msgbox_my(handles, ['Частоты синтеза сигнала выходят за допустимый диапазон [1,' num2str(round(play.fs*0.45)) '] Гц.'], 'Ошибка аудио', 'error', 'modal');
 		return
 	end
 
@@ -807,13 +798,8 @@ try
 	fclose(obj1);
 catch ME
 	% Всегда отображать такую важную ошибку.
-%	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
-		disp(ME.message);
-		disp(ME.stack(1));
-		msgbox(ME.message, 'Ошибка генератора ЭМВ', 'error');
-		work_abort_btn_Callback(handles.work_abort_btn, [], handles);
-%	end
+	disp_exception(handles, true, ME, 'Ошибка генератора ЭМВ');
+	work_abort_btn_Callback(handles.work_abort_btn, [], handles);
 end
 
 
@@ -847,12 +833,7 @@ try
 
 	fclose(obj1);
 catch ME
-	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
-		disp(ME.message);
-		disp(ME.stack(1));
-		msgbox(ME.message,'Ошибка остановки генератора ЭМВ');
-	end
+	disp_exception(handles, handles.config, ME, 'Ошибка остановки генератора ЭМВ');
 end
 
 
@@ -897,12 +878,7 @@ try
 
 	set(timer_handle, 'UserData',handles_play);
 catch ME
-	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
-		disp(ME.message);
-		disp(ME.stack(1));
-%		msgbox(ME.message,'Ошибка генератора акустического воздействия');
-	end
+	disp_exception(handles, handles.config, ME, 'Ошибка генератора акустического воздействия');
 end
 
 
@@ -927,12 +903,7 @@ try
 		volume_slider_Callback(handles.volume_slider, [], handles);
 	end
 catch ME
-	if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
-		disp(ME.message);
-		disp(ME.stack(1));
-%		msgbox(ME.message,'Ошибка осторожевого таймера');
-	end
+	disp_exception(handles, handles.config, ME, 'Ошибка осторожевого таймера');
 end
 
 
@@ -967,14 +938,9 @@ try
 	try
 		frame_cur = getsnapshot(handles_video.vidobj);
 	catch ME
-%		if isfield(handles.config,'debug_messages') && handles.config.debug_messages
-			disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock))); %#ok<*DSPS>
-			disp(ME.message);
-			disp(ME.stack(1));
-			errordlg(ME.message, 'Ошибка видео', 'modal');
-			work_abort_btn_Callback(handles.work_abort_btn, [], handles);
-			return
-%		end
+		disp_exception(handles, handles.config, ME, 'Ошибка видео');
+		work_abort_btn_Callback(handles.work_abort_btn, [], handles);
+		return
 	end
 	frame_cur = frame_cur(1:end-3,1:end-3,1);
 
@@ -1293,20 +1259,19 @@ try
 
 		%% Program logic error trap
 		otherwise
-			disp('ERROR: Unknown work stage.');
-			error('ERROR: Unknown work stage.');
+			error('disp:report','ERROR: Unknown work stage.');
 	end
 
 	set(timer_handle, 'UserData',handles_video);
 
 	drawnow();
 catch ME
-	if strcmp(ME.identifier,'disp:report') || (isfield(handles_video.config,'debug_messages') && handles_video.config.debug_messages)
-		disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock)));
-		disp(ME.message);
-		disp(ME.stack(1));
-%		msgbox(ME.message,'Ошибка обработчика видео');
+	if strcmp(ME.identifier,'disp:report')
+		ME_cfg = true;
+	else
+		ME_cfg = handles_video.config;
 	end
+	disp_exception(handles, ME_cfg, ME, 'Ошибка обработчика видео');
 end
 
 
@@ -1432,11 +1397,14 @@ end
 
 
 function errordlg(varargin)
-msgbox(varargin{:});
+msgbox_my(guidata(gcf), varargin{:});
 
 
 function msgbox(msg, title, varargin)
-handles = guidata(gcf);
+msgbox_my(guidata(gcf), msg, title, varargin{:});
+
+
+function msgbox_my(handles, msg, title, varargin)
 msglist = get(handles.logo_axes, 'UserData');
 if isempty(msglist)
 	pos = [2 1 100 3.2];
