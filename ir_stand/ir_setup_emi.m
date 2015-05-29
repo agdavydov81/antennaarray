@@ -71,7 +71,7 @@ else
 	cfg = varargin{1};
 	cfg_def = varargin{2};
 end
-handles.config0.emi_generator = struct('program_list',[], 'continue_flag',true, 'continue_index',1, 'continue_counter',1, 'restart_list',true);
+handles.config0.emi_generator = struct('program_list',[], 'continue_flag',1, 'continue_index',1, 'continue_counter',1, 'restart_list',1);
 handles.config = cfg;
 handles.config_default = cfg_def;
 
