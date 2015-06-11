@@ -382,10 +382,14 @@ else
 	is_disp = config;
 	is_msgbox = config;
 end
+if ~is_disp && ~is_msgbox
+	return
+end
+
+ME_message = sprintf('%d.%02d.%02d %02d.%02d.%02d:\n%s',fix(clock),ME.message);
 
 if is_disp
-	disp(sprintf('%d.%02d.%02d %02d.%02d.%02d:',fix(clock))); %#ok<DSPS>
-	disp(ME.message);
+	disp(ME_message);
 	if isempty(ME.stack)
 		return
 	end
@@ -401,7 +405,7 @@ if is_msgbox
 	if nargin<4
 		msgbox_title = 'Ошибка';
 	end
-	msgbox_my(handles, ME.message, msgbox_title);
+	msgbox_my(handles, ME_message, msgbox_title, 'error');
 end
 
 
@@ -803,7 +807,7 @@ try
 catch ME
 	% Всегда отображать такую важную ошибку.
 	disp_exception(handles, true, ME, 'Ошибка генератора ЭМВ');
-%@@debug	work_abort_btn_Callback(handles.work_abort_btn, [], handles);
+	work_abort_btn_Callback(handles.work_abort_btn, [], handles);
 end
 
 
@@ -1403,15 +1407,18 @@ for i=1:length(list)
 end
 
 
-function errordlg(varargin)
-msgbox_my(guidata(gcf), varargin{:});
+% function errordlg(varargin)
+% msgbox_my(guidata(gcf), varargin{:});
 
 
-function msgbox(msg, title, varargin)
-msgbox_my(guidata(gcf), msg, title, varargin{:});
+% function msgbox(msg, title, varargin)
+% msgbox_my(guidata(gcf), msg, title, varargin{:});
 
 
 function msgbox_my(handles, msg, title, varargin)
+msgbox(msg, title, varargin{:});
+return
+
 msglist = get(handles.logo_axes, 'UserData');
 if isempty(msglist)
 	pos = [2 1 100 3.2];
