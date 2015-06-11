@@ -22,7 +22,7 @@ function varargout = ir_stand(varargin)
 
 % Edit the above text to modify the response to help ir_stand
 
-% Last Modified by GUIDE v2.5 22-May-2015 04:38:50
+% Last Modified by GUIDE v2.5 11-Jun-2015 12:27:45
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -112,6 +112,9 @@ set_icon(handles.setup_btn, 'pinion.png', true);
 set_icon(handles.setup_reset_btn, 'undo.png', true);
 set_icon(handles.work_start_btn, 'find.png', true);
 set_icon(handles.work_abort_btn, 'stop_sign.png', true);
+set_icon(handles.tool_zoomin_btn, 'zoom_in.png', false);
+set_icon(handles.tool_zoomout_btn, 'zoom_out.png', false);
+set_icon(handles.tool_pan_btn, 'hand.png', false);
 
 set(zoom, 'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
 set(pan , 'ActionPostCallback',@on_zoom_pan, 'Motion','horizontal');
@@ -939,7 +942,7 @@ try
 	try
 		frame_cur = getsnapshot(handles_video.vidobj);
 	catch ME
-		disp_exception(handles, handles.config, ME, 'Ошибка видео');
+		disp_exception(handles, true, ME, 'Ошибка видео');
 		work_abort_btn_Callback(handles.work_abort_btn, [], handles);
 		return
 	end
@@ -1552,3 +1555,47 @@ cur_pos = get(rep_ud.caret_pix_num,'XData');
 mi = max(1,min(numel(imlist), mi + shift_steps));
 
 caret_move_on_ind(handles, rep_ud, imlist(mi));
+
+
+% --- Executes on button press in tool_zoomin_btn.
+function tool_zoomin_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to tool_zoomin_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if get(hObject,'Value')
+	zoom('xon');
+	set(zoom,'Direction','in');
+	set(handles.tool_zoomout_btn,'Value',0);
+	set(handles.tool_pan_btn,'Value',0);
+else
+	zoom('off');
+end
+
+
+% --- Executes on button press in tool_zoomout_btn.
+function tool_zoomout_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to tool_zoomout_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if get(hObject,'Value')
+	zoom('xon');
+	set(zoom,'Direction','out');
+	set(handles.tool_zoomin_btn,'Value',0);
+	set(handles.tool_pan_btn,'Value',0);
+else
+	zoom('off');
+end
+
+
+% --- Executes on button press in tool_pan_btn.
+function tool_pan_btn_Callback(hObject, eventdata, handles)
+% hObject    handle to tool_pan_btn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if get(hObject,'Value')
+	pan('xon');
+	set(handles.tool_zoomin_btn,'Value',0);
+	set(handles.tool_zoomout_btn,'Value',0);
+else
+	pan('off');
+end
