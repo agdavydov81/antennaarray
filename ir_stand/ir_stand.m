@@ -212,10 +212,10 @@ if isfield(config,'password')
 end
 [~, ~, cfg_ext] = fileparts(cfg_filename);
 if strcmp(cfg_ext,'.xml')
-	xml_write(cfg_filename, config, 'ir_stand', struct('StructItem',false));
+	xml_write(cfg_filename, config, 'ir_stand', struct('CellItem',false, 'StructItem',false));
 else
 	tmp_file = tempname();
-	xml_write(tmp_file, config, 'ir_stand', struct('StructItem',false));
+	xml_write(tmp_file, config, 'ir_stand', struct('CellItem',false, 'StructItem',false));
 
 	fh = fopen(tmp_file,'r');
 	data = fread(fh);
@@ -727,7 +727,7 @@ guidata(figure1_handle, handles);
 
 handles_video  = get(handles.video.timer, 'UserData');
 config_write(handles.config_file, handles.config);
-xml_write(fullfile(handles_video.report.path,'config.xml'), handles.config, 'ir_stand', struct('StructItem',false));
+xml_write(fullfile(handles_video.report.path,'config.xml'), handles.config, 'ir_stand', struct('CellItem',false, 'StructItem',false));
 
 emi_delay = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,3)*60;
 if emi_delay>0 && ~isinf(emi_delay)
@@ -761,6 +761,7 @@ try
 	state_emi_ud.sweep_f1f2 = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,[5 6]);
 	state_emi_ud.sweep_t = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,3)*60;
 	state_emi_ud.tic_id = tic();
+	state_emi_ud.comment = handles.config.emi_generator.program_comment{handles.config.emi_generator.continue_index,7};
 
 	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
 	% Create the VISA-USB object if it does not exist
@@ -1069,6 +1070,9 @@ try
 				if all(state_emi_ud.sweep_f1f2>0)
 					emi_str = [emi_str sprintf('; F~%.3f ÌÃö',10.^( min(fix(emi_t/state_emi_ud.sweep_t*11411),11410)/11410 * diff(log10(state_emi_ud.sweep_f1f2)) + log10(state_emi_ud.sweep_f1f2(1))))];
 				end
+				if ~isempty(state_emi_ud.comment)
+					emi_str = [emi_str ' (' state_emi_ud.comment ')'];
+				end
 				set(handles.state_emi, 'String', emi_str);
 			end
 			
@@ -1123,7 +1127,7 @@ try
 						handles_video.report.path = handles_video_report_path;
 					end
 					
-					xml_write(fullfile(handles_video.report.path,'config.xml'), handles_video.config, 'ir_stand', struct('StructItem',false));
+					xml_write(fullfile(handles_video.report.path,'config.xml'), handles_video.config, 'ir_stand', struct('CellItem',false, 'StructItem',false));
 
 					handles_video.report.fh = fopen(fullfile(handles_video.report.path,'graphs.txt'), 'wt');
 					if handles_video.report.fh==-1

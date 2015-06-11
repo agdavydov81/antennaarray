@@ -71,7 +71,9 @@ else
 	cfg = varargin{1};
 	cfg_def = varargin{2};
 end
-handles.config0.emi_generator = struct('program_list',[], 'continue_flag',1, 'continue_index',1, 'continue_counter',1, 'restart_list',1);
+tbl_cf = get(handles.emi_program_tbl,'ColumnFormat');
+handles.config0.emi_generator = struct(	'program_list',nan(1,sum(strcmp('numeric',tbl_cf))), 'program_comment',{{''}}, ...
+										'continue_flag',1, 'continue_index',1, 'continue_counter',1, 'restart_list',1);
 handles.config = cfg;
 handles.config_default = cfg_def;
 
@@ -95,14 +97,7 @@ uiwait(handles.figure1);
 
 
 function cfg = set_controls(handles, cfg)
-if size(cfg.emi_generator.program_list,2) == 3
-	cfg.emi_generator.program_list(:,4) = 1;
-end
-if size(cfg.emi_generator.program_list,2) == 4
-	cfg.emi_generator.program_list(:,[5 6]) = nan;
-end
-
-set(handles.emi_program_tbl, 'Data', [cfg.emi_generator.program_list; nan(1,numel(get(handles.emi_program_tbl,'ColumnWidth')))]);
+set(handles.emi_program_tbl, 'Data', [num2cell(cfg.emi_generator.program_list) cfg.emi_generator.program_comment(:)]);
 set(handles.emi_continue_flag, 'Value', cfg.emi_generator.continue_flag);
 set(handles.continue_index_ed,	'String', num2str(cfg.emi_generator.continue_index));
 set(handles.continue_counter_ed,'String', num2str(cfg.emi_generator.continue_counter));
@@ -120,9 +115,11 @@ function varargout = ir_setup_emi_OutputFcn(hObject, eventdata, handles)
 
 cfg = handles.config;
 if handles.press_ok
-	cfg.emi_generator.program_list = get(handles.emi_program_tbl, 'Data');
-	kill_ind = any(isnan(cfg.emi_generator.program_list(:,1:4)),2);
-	cfg.emi_generator.program_list(kill_ind, :) = [];
+	data = get(handles.emi_program_tbl, 'Data');
+	cfg.emi_generator.program_comment = data(:,7);
+	data(:,7) = [];
+	data(cellfun(@isempty, data)) = {nan};
+	cfg.emi_generator.program_list = cell2mat(data);
 	cfg.emi_generator.continue_flag = get(handles.emi_continue_flag, 'Value');
 	cfg.emi_generator.continue_index = str2double(get(handles.continue_index_ed,'String'));
 	cfg.emi_generator.continue_counter = str2double(get(handles.continue_counter_ed,'String'));
@@ -140,9 +137,24 @@ function ok_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to ok_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.press_ok = true;
-guidata(hObject, handles);
-uiresume(handles.figure1);
+data = get(handles.emi_program_tbl, 'Data');
+tbl_cf = get(handles.emi_program_tbl,'ColumnFormat');
+data_num = data(:,strcmp('numeric',tbl_cf));
+kill_ind = any( cellfun(@(x) isempty(x)||isnan(x), data_num(:,1:4)), 2);
+if any(kill_ind)
+	q_ans1 = 'Да, удалить строки с ошибками';
+	q_ans2 = 'Нет, вернуться к редактированию';
+	q_ans = questdlg({	'Некоторые обязательные ячейки таблицы не заполнены, либо содержат не корректные значения.' ...
+						'В случае продолжения строки с такими значениями будут удалены из таблицы.' ...
+						'Продолжить?'}, 'Ошибки в таблице', q_ans1, q_ans2, q_ans1);
+	if strcmp(q_ans, q_ans1)
+		set(handles.emi_program_tbl, 'Data',data(~kill_ind,:));
+	end
+else
+	handles.press_ok = true;
+	guidata(hObject, handles);
+	uiresume(handles.figure1);
+end
 
 
 % --- Executes on button press in cancel_btn.
@@ -191,23 +203,6 @@ if any(is_key_esc_ret)
 end
 
 
-% --- Executes when entered data in editable cell(s) in emi_program_tbl.
-function emi_program_tbl_CellEditCallback(hObject, eventdata, handles)
-% hObject    handle to emi_program_tbl (see GCBO)
-% eventdata  structure with the following fields (see UITABLE)
-%	Indices: row and column indices of the cell(s) edited
-%	PreviousData: previous data for the cell(s) edited
-%	EditData: string(s) entered by the user
-%	NewData: EditData or its converted form set on the Data property. Empty if Data was not changed
-%	Error: error string when failed to convert EditData to appropriate value for Data
-% handles    structure with handles and user data (see GUIDATA)
-data = get(hObject, 'Data');
-nan_rows = all(isnan(data),2);
-if any(nan_rows(1:end-1)) || not(nan_rows(end))
-	set(hObject, 'Data',[data(not(nan_rows),:); nan(1,size(data,2))]);
-end
-
-
 % --- Executes on button press in add_btn.
 function add_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to add_btn (see GCBO)
@@ -216,9 +211,12 @@ function add_btn_Callback(hObject, eventdata, handles)
 data = get(handles.emi_program_tbl, 'Data');
 sel = get(handles.emi_program_tbl, 'UserData');
 if isempty(sel)
-	return
+	sel = size(data,1)+1;
 end
-set(handles.emi_program_tbl, 'Data',[data(1:sel(1)-1,:); 1, nan(1,size(data,2)-1); data(sel(1):end,:)]);
+tbl_cf = get(handles.emi_program_tbl,'ColumnFormat');
+data_row = cell(1,numel(tbl_cf));
+data_row(strcmp('char',tbl_cf)) = {''};
+set(handles.emi_program_tbl, 'Data',[data(1:sel(1)-1,:); data_row; data(sel(1):end,:)]);
 
 
 % --- Executes on button press in del_btn.
@@ -228,7 +226,7 @@ function del_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 data = get(handles.emi_program_tbl, 'Data');
 sel = get(handles.emi_program_tbl, 'UserData');
-if size(data,1)<2 || isempty(sel) || sel(1)==size(data,1)
+if isempty(sel)
 	return
 end
 set(handles.emi_program_tbl, 'Data',data([1:sel(1)-1 sel(1)+1:end],:));
@@ -241,7 +239,7 @@ function up_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 data = get(handles.emi_program_tbl, 'Data');
 sel = get(handles.emi_program_tbl, 'UserData');
-if size(data,1)<2 || isempty(sel) || sel(1)==size(data,1) || sel(1)==1
+if isempty(sel) || sel(1)==1
 	return
 end
 set(handles.emi_program_tbl, 'Data',data([1:sel(1)-2 sel(1) sel(1)-1 sel(1)+1:end],:));
@@ -254,7 +252,7 @@ function down_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 data = get(handles.emi_program_tbl, 'Data');
 sel = get(handles.emi_program_tbl, 'UserData');
-if size(data,1)<2 || isempty(sel) || sel(1)>=size(data,1)-1
+if isempty(sel) || sel(1)>=size(data,1)
 	return
 end
 set(handles.emi_program_tbl, 'Data',data([1:sel(1)-1 sel(1)+1 sel(1) sel(1)+2:end],:));
@@ -267,7 +265,7 @@ function top_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 data = get(handles.emi_program_tbl, 'Data');
 sel = get(handles.emi_program_tbl, 'UserData');
-if size(data,1)<2 || isempty(sel) || sel(1)==size(data,1)
+if isempty(sel) || sel(1)==1
 	return
 end
 set(handles.emi_program_tbl, 'Data',data([sel(1) 1:sel(1)-1 sel(1)+1:end],:));
@@ -280,10 +278,10 @@ function bottom_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 data = get(handles.emi_program_tbl, 'Data');
 sel = get(handles.emi_program_tbl, 'UserData');
-if size(data,1)<2 || isempty(sel) || sel(1)==size(data,1)
+if isempty(sel) || sel(1)>=size(data,1)
 	return
 end
-set(handles.emi_program_tbl, 'Data',data([1:sel(1)-1 sel(1)+1:end-1 sel(1) end],:));
+set(handles.emi_program_tbl, 'Data',data([1:sel(1)-1 sel(1)+1:end sel(1)],:));
 
 
 % --- Executes on button press in reset_btn.

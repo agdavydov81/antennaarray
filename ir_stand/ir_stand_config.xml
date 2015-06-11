@@ -6,6 +6,19 @@
       <continue_index>1</continue_index>
       <continue_counter>1</continue_counter>
       <restart_list>1</restart_list>
+      <program_comment>SWEEP</program_comment>
+      <program_comment>SWEEP AM</program_comment>
+      <program_comment>SWEEP FM</program_comment>
+      <program_comment>SWEEP PM</program_comment>
+      <program_comment>SWEEP 4QAM</program_comment>
+      <program_comment>SWEEP PULSE</program_comment>
+      <program_comment>SWEEP 32QAM</program_comment>
+      <program_comment>IRIDIUM</program_comment>
+      <program_comment>GSM900</program_comment>
+      <program_comment>GSM1800</program_comment>
+      <program_comment>UMTS(3G)</program_comment>
+      <program_comment>CDMA</program_comment>
+      <program_comment>BLUETOOTH</program_comment>
    </emi_generator>
    <acoustic_generator>
       <sls>
