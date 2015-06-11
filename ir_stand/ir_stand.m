@@ -946,8 +946,10 @@ try
 	try
 		frame_cur = getsnapshot(handles_video.vidobj);
 	catch ME
-		disp_exception(handles, true, ME, 'Ошибка видео');
-		work_abort_btn_Callback(handles.work_abort_btn, [], handles);
+		if strcmp(get(handles.work_abort_btn,'Visible'),'on')
+			disp_exception(handles, true, ME, 'Ошибка видео');
+			work_abort_btn_Callback(handles.work_abort_btn, [], handles);
+		end
 		return
 	end
 	frame_cur = frame_cur(1:end-3,1:end-3,1);
