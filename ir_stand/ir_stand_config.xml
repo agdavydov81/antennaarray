@@ -36,7 +36,7 @@
    <video_device>
       <name>FLIR USB Video</name>
       <mode>F7M0_640x483</mode>
-      <axis>[87 527 51.0000000000001 412]</axis>
+      <axis>[0.5 637.5 0.5 480.5]</axis>
       <t_range>[-40 150]</t_range>
       <palette>FLIR</palette>
       <autobalance>1</autobalance>

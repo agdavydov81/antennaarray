@@ -761,7 +761,7 @@ try
 	state_emi_ud.sweep_f1f2 = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,[5 6]);
 	state_emi_ud.sweep_t = handles.config.emi_generator.program_list(handles.config.emi_generator.continue_index,3)*60;
 	state_emi_ud.tic_id = tic();
-	state_emi_ud.comment = handles.config.emi_generator.program_comment{handles.config.emi_generator.continue_index,7};
+	state_emi_ud.comment = handles.config.emi_generator.program_comment{handles.config.emi_generator.continue_index};
 
 	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
 	% Create the VISA-USB object if it does not exist
@@ -800,7 +800,7 @@ try
 catch ME
 	% Всегда отображать такую важную ошибку.
 	disp_exception(handles, true, ME, 'Ошибка генератора ЭМВ');
-	work_abort_btn_Callback(handles.work_abort_btn, [], handles);
+%@@debug	work_abort_btn_Callback(handles.work_abort_btn, [], handles);
 end
 
 
