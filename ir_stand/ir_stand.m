@@ -556,7 +556,7 @@ try
 				tokn(4)==handles.config.emi_generator.program_list(tokn(1),2)
 
 				if strcmp(questdlg('Попытаться продолжить работу с позиции курсора?','Продолжение работы','Да','Нет','Да'),'Да')
-					handles.config.emi_generator.continue_flag = true;
+					handles.config.emi_generator.startpoint_type = 2;
 					handles.config.emi_generator.continue_index = tokn(1);
 					handles.config.emi_generator.continue_counter = tokn(2);
 				end
@@ -690,11 +690,17 @@ handles.config.emi_generator.program_list(handles.config.emi_generator.program_l
 handles.emi_timer_handle = [];
 state_emi_ud = [];
 if ~isempty(handles.config.emi_generator.program_list) && sum(fix(handles.config.emi_generator.program_list(:,4)))>0
-	if handles.config.emi_generator.continue_flag
-		handles.config.emi_generator.continue_index = min(size(handles.config.emi_generator.program_list,1),max(1,handles.config.emi_generator.continue_index));
-	else
-		handles.config.emi_generator.continue_index = 1;
-		handles.config.emi_generator.continue_counter = 1;
+	switch handles.config.emi_generator.startpoint_type
+		case 1
+			handles.config.emi_generator.continue_index = 1;
+			handles.config.emi_generator.continue_counter = 1;
+		case 2
+			handles.config.emi_generator.continue_index = min(size(handles.config.emi_generator.program_list,1),max(1,handles.config.emi_generator.continue_index));
+		case 3
+			handles.config.emi_generator.continue_index = min(size(handles.config.emi_generator.program_list,1),max(1,handles.config.emi_generator.start_index));
+			handles.config.emi_generator.continue_counter = handles.config.emi_generator.start_counter;
+		otherwise
+			error('Unsupported handles.config.emi_generator.startpoint_type value (%d).',handles.config.emi_generator.startpoint_type);
 	end
 
 	[handles, state_emi_ud] = start_emi_generator(handles);

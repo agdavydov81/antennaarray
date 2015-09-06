@@ -22,7 +22,7 @@ function varargout = ir_setup_emi(varargin)
 
 % Edit the above text to modify the response to help ir_setup_emi
 
-% Last Modified by GUIDE v2.5 20-May-2015 12:57:36
+% Last Modified by GUIDE v2.5 07-Sep-2015 00:59:19
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -73,7 +73,8 @@ else
 end
 tbl_cf = get(handles.emi_program_tbl,'ColumnFormat');
 handles.config0.emi_generator = struct(	'program_list',nan(1,sum(strcmp('numeric',tbl_cf))), 'program_comment',{{''}}, ...
-										'continue_flag',1, 'continue_index',1, 'continue_counter',1, 'restart_list',1);
+										'startpoint_type',1, 'continue_index',1, 'continue_counter',1, ...
+										'start_index',1, 'start_counter',1, 'restart_list',1);
 handles.config = cfg;
 handles.config_default = cfg_def;
 
@@ -98,12 +99,15 @@ uiwait(handles.figure1);
 
 function cfg = set_controls(handles, cfg)
 set(handles.emi_program_tbl, 'Data', [num2cell(cfg.emi_generator.program_list) cfg.emi_generator.program_comment(:)]);
-set(handles.emi_continue_flag, 'Value', cfg.emi_generator.continue_flag);
-set(handles.continue_index_ed,	'String', num2str(cfg.emi_generator.continue_index));
-set(handles.continue_counter_ed,'String', num2str(cfg.emi_generator.continue_counter));
-emi_continue_flag_Callback(handles.emi_continue_flag, [], handles);
-set(handles.restart_list_1, 'Value', ~handles.config0.emi_generator.restart_list);
-set(handles.restart_list_2, 'Value', handles.config0.emi_generator.restart_list);
+set(handles.emi_startpoint_type_1, 'Value', cfg.emi_generator.startpoint_type==1);
+set(handles.emi_startpoint_type_2, 'Value', cfg.emi_generator.startpoint_type==2);
+set(handles.emi_startpoint_type_3, 'Value', cfg.emi_generator.startpoint_type==3);
+set(handles.emi_startpoint_type_2, 'String', sprintf('Продолжить работу с места остановки (программа %d, повтор %d)',cfg.emi_generator.continue_index,cfg.emi_generator.continue_counter));
+set(handles.start_index_ed,	'String', num2str(cfg.emi_generator.start_index));
+set(handles.start_counter_ed,'String', num2str(cfg.emi_generator.start_counter));
+uipanel3_SelectionChangeFcn([], [], handles);
+set(handles.restart_list_1, 'Value', ~cfg.emi_generator.restart_list);
+set(handles.restart_list_2, 'Value', cfg.emi_generator.restart_list);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -120,9 +124,10 @@ if handles.press_ok
 	data(:,7) = [];
 	data(cellfun(@isempty, data)) = {nan};
 	cfg.emi_generator.program_list = cell2mat(data);
-	cfg.emi_generator.continue_flag = get(handles.emi_continue_flag, 'Value');
-	cfg.emi_generator.continue_index = str2double(get(handles.continue_index_ed,'String'));
-	cfg.emi_generator.continue_counter = str2double(get(handles.continue_counter_ed,'String'));
+	cfg.emi_generator.startpoint_type = find(arrayfun(@(x) get(x,'Value'), ...
+		[handles.emi_startpoint_type_1, handles.emi_startpoint_type_2, handles.emi_startpoint_type_3]));
+	cfg.emi_generator.start_index = str2double(get(handles.start_index_ed,'String'));
+	cfg.emi_generator.start_counter = str2double(get(handles.start_counter_ed,'String'));
 	cfg.emi_generator.restart_list = get(handles.restart_list_2, 'Value');
 end
 
@@ -301,17 +306,18 @@ function emi_program_tbl_CellSelectionCallback(hObject, eventdata, handles)
 set(hObject, 'UserData', eventdata.Indices);
 
 
-% --- Executes on button press in emi_continue_flag.
-function emi_continue_flag_Callback(hObject, eventdata, handles)
-% hObject    handle to emi_continue_flag (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
+% --- Executes when selected object is changed in uipanel3.
+function uipanel3_SelectionChangeFcn(hObject, eventdata, handles)
+% hObject    handle to the selected object in uipanel3 
+% eventdata  structure with the following fields (see UIBUTTONGROUP)
+%	EventName: string 'SelectionChanged' (read only)
+%	OldValue: handle of the previously selected object or empty if none was selected
+%	NewValue: handle of the currently selected object
 % handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of emi_continue_flag
-if get(hObject, 'Value')
+if get(handles.emi_startpoint_type_3, 'Value')
 	is_enable = 'on';
 else
 	is_enable = 'off';
 end
-set(handles.continue_index_ed,	'Enable',is_enable);
-set(handles.continue_counter_ed,'Enable',is_enable);
+set(handles.start_index_ed,	'Enable',is_enable);
+set(handles.start_counter_ed,'Enable',is_enable);
