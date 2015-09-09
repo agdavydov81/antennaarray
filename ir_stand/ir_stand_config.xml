@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ir_stand>
    <emi_generator>
-      <program_list>[1 1 96.3417 1 10 3000; 1 2 96.3417 1 10 3000; 1 3 96.3417 1 10 3000; 1 4 96.3417 1 10 3000; 1 5 96.3417 1 10 3000; 1 6 96.3417 1 10 3000; 1 7 96.3417 1 10 3000; 1 8 10 1 NaN NaN; 1 9 10 1 NaN NaN; 1 10 10 1 NaN NaN; 1 11 10 1 NaN NaN; 1 12 10 1 NaN NaN; 1 13 10 1 NaN NaN]</program_list>
-      <continue_flag>0</continue_flag>
-      <continue_index>1</continue_index>
+      <program_list>[1 1 96.3417 1 10 3000; 1 2 96.3417 1 10 3000; 1 3 96.3417 1 10 3000; 1 4 96.3417 1 10 3000; 1 5 96.3417 1 10 3000; 1 6 96.3417 1 10 3000; 1 7 96.3417 1 10 3000; 1 8 10 1 NaN NaN; 1 9 10 1 NaN NaN; 1 10 10 1 NaN NaN; 1 11 10 1 NaN NaN; 1 12 10 1 NaN NaN; 1 13 10 1 NaN NaN; 1 14 10 1 NaN NaN; 1 15 10 1 NaN NaN]</program_list>
+      <startpoint_type>3</startpoint_type>
+      <continue_index>14</continue_index>
       <continue_counter>1</continue_counter>
+      <start_index>1</start_index>
+      <start_counter>1</start_counter>
       <restart_list>1</restart_list>
       <program_comment>SWEEP</program_comment>
       <program_comment>SWEEP AM</program_comment>
@@ -19,6 +21,8 @@
       <program_comment>UMTS(3G)</program_comment>
       <program_comment>CDMA</program_comment>
       <program_comment>BLUETOOTH</program_comment>
+      <program_comment>802.11B</program_comment>
+      <program_comment>802.11G</program_comment>
    </emi_generator>
    <acoustic_generator>
       <sls>
