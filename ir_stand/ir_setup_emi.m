@@ -22,7 +22,7 @@ function varargout = ir_setup_emi(varargin)
 
 % Edit the above text to modify the response to help ir_setup_emi
 
-% Last Modified by GUIDE v2.5 07-Sep-2015 00:59:19
+% Last Modified by GUIDE v2.5 07-Nov-2015 19:35:04
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -321,3 +321,66 @@ else
 end
 set(handles.start_index_ed,	'Enable',is_enable);
 set(handles.start_counter_ed,'Enable',is_enable);
+
+
+% --- Executes when entered data in editable cell(s) in emi_program_tbl.
+function emi_program_tbl_CellEditCallback(hObject, eventdata, handles)
+% hObject    handle to emi_program_tbl (see GCBO)
+% eventdata  structure with the following fields (see UITABLE)
+%	Indices: row and column indices of the cell(s) edited
+%	PreviousData: previous data for the cell(s) edited
+%	EditData: string(s) entered by the user
+%	NewData: EditData or its converted form set on the Data property. Empty if Data was not changed
+%	Error: error string when failed to convert EditData to appropriate value for Data
+% handles    structure with handles and user data (see GUIDATA)
+data = get(handles.emi_program_tbl,'Data');
+
+if any(eventdata.Indices(2)==[1 2]) % Try automatically fill from the default programs list
+	[ind, val]= find_default_program(eventdata, handles);
+	if ~isempty(ind)
+		data(eventdata.Indices(1),:) = val;
+		set(handles.emi_program_tbl,'Data',data);
+	end
+end
+
+ind_restore = [3 5 6 7];
+if any(eventdata.Indices(2)==ind_restore) % Try restore values for default programs
+	[ind, val] = find_default_program(eventdata, handles);
+	if ~isempty(ind)
+		data(eventdata.Indices(1),ind_restore) = val(ind_restore);
+		set(handles.emi_program_tbl,'Data',data);
+	end
+end
+
+
+function [ind, val] = find_default_program(eventdata, handles)
+ind = [];
+val = {};
+try
+	if	isfield_ex(handles,'config_default.emi_generator.program_list') && ...
+		isfield_ex(handles,'config_default.emi_generator.program_comment')
+
+		data = get(handles.emi_program_tbl,'Data');
+		cfg_def = handles.config_default;
+		ind = find(	cfg_def.emi_generator.program_list(:,1) == data{eventdata.Indices(1),1} & ...
+					cfg_def.emi_generator.program_list(:,2) == data{eventdata.Indices(1),2},1);
+
+		if ~isempty(ind)
+			val = [num2cell(cfg_def.emi_generator.program_list) cfg_def.emi_generator.program_comment(:)];
+			val = val(ind,:);
+		end
+	end
+catch
+end
+
+
+function ret = isfield_ex(obj, fl_name)
+ret = true;
+while ret && ~isempty(fl_name)
+	[cur_fl, fl_name] = strtok(fl_name,'.'); %#ok<STTOK>
+	ret = isfield(obj,cur_fl);
+	if ~ret
+		break
+	end
+	obj = obj.(cur_fl);
+end
