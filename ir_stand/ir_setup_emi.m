@@ -153,7 +153,9 @@ if any(kill_ind)
 						'В случае продолжения строки с такими значениями будут удалены из таблицы.' ...
 						'Продолжить?'}, 'Ошибки в таблице', q_ans1, q_ans2, q_ans1);
 	if strcmp(q_ans, q_ans1)
+		pos = java_scroll_getpos(handles.emi_program_tbl);
 		set(handles.emi_program_tbl, 'Data',data(~kill_ind,:));
+		java_scroll_setpos(pos);
 	end
 else
 	handles.press_ok = true;
@@ -221,7 +223,9 @@ end
 tbl_cf = get(handles.emi_program_tbl,'ColumnFormat');
 data_row = cell(1,numel(tbl_cf));
 data_row(strcmp('char',tbl_cf)) = {''};
+pos = java_scroll_getpos(handles.emi_program_tbl);
 set(handles.emi_program_tbl, 'Data',[data(1:sel(1)-1,:); data_row; data(sel(1):end,:)]);
+java_scroll_setpos(pos);
 
 
 % --- Executes on button press in del_btn.
@@ -234,7 +238,9 @@ sel = get(handles.emi_program_tbl, 'UserData');
 if isempty(sel)
 	return
 end
+pos = java_scroll_getpos(handles.emi_program_tbl);
 set(handles.emi_program_tbl, 'Data',data([1:sel(1)-1 sel(1)+1:end],:));
+java_scroll_setpos(pos);
 
 
 % --- Executes on button press in up_btn.
@@ -247,7 +253,9 @@ sel = get(handles.emi_program_tbl, 'UserData');
 if isempty(sel) || sel(1)==1
 	return
 end
+pos = java_scroll_getpos(handles.emi_program_tbl);
 set(handles.emi_program_tbl, 'Data',data([1:sel(1)-2 sel(1) sel(1)-1 sel(1)+1:end],:));
+java_scroll_setpos(pos);
 
 
 % --- Executes on button press in down_btn.
@@ -260,7 +268,9 @@ sel = get(handles.emi_program_tbl, 'UserData');
 if isempty(sel) || sel(1)>=size(data,1)
 	return
 end
+pos = java_scroll_getpos(handles.emi_program_tbl);
 set(handles.emi_program_tbl, 'Data',data([1:sel(1)-1 sel(1)+1 sel(1) sel(1)+2:end],:));
+java_scroll_setpos(pos);
 
 
 % --- Executes on button press in top_btn.
@@ -273,6 +283,7 @@ sel = get(handles.emi_program_tbl, 'UserData');
 if isempty(sel) || sel(1)==1
 	return
 end
+% No need to restore position
 set(handles.emi_program_tbl, 'Data',data([sel(1) 1:sel(1)-1 sel(1)+1:end],:));
 
 
@@ -286,7 +297,10 @@ sel = get(handles.emi_program_tbl, 'UserData');
 if isempty(sel) || sel(1)>=size(data,1)
 	return
 end
+pos = java_scroll_getpos(handles.emi_program_tbl);
 set(handles.emi_program_tbl, 'Data',data([1:sel(1)-1 sel(1)+1:end sel(1)],:));
+pos.jpos = pos.jpos + 1e+9;
+java_scroll_setpos(pos);
 
 
 % --- Executes on button press in reset_btn.
@@ -339,7 +353,9 @@ if any(eventdata.Indices(2)==[1 2]) % Try automatically fill from the default pr
 	[ind, val]= find_default_program(eventdata, handles);
 	if ~isempty(ind)
 		data(eventdata.Indices(1),:) = val;
+		pos = java_scroll_getpos(handles.emi_program_tbl);
 		set(handles.emi_program_tbl,'Data',data);
+		java_scroll_setpos(pos);
 	end
 end
 
@@ -348,9 +364,24 @@ if any(eventdata.Indices(2)==ind_restore) % Try restore values for default progr
 	[ind, val] = find_default_program(eventdata, handles);
 	if ~isempty(ind)
 		data(eventdata.Indices(1),ind_restore) = val(ind_restore);
+		pos = java_scroll_getpos(handles.emi_program_tbl);
 		set(handles.emi_program_tbl,'Data',data);
+		java_scroll_setpos(pos);
 	end
 end
+
+
+function pos = java_scroll_getpos(emi_program_tbl)
+pos.jobj = findjobj(emi_program_tbl);
+pos.jscroll = pos.jobj.getVerticalScrollBar();
+pos.jpos = pos.jscroll.getValue();
+
+
+function java_scroll_setpos(pos)
+drawnow();
+pos.jscroll.setValue(pos.jpos);
+pos.jobj.repaint();
+pos.jobj.revalidate();
 
 
 function [ind, val] = find_default_program(eventdata, handles)
