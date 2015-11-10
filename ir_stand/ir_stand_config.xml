@@ -1,29 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ir_stand>
    <emi_generator>
-      <program_list>[1 1 96.3417 1 10 3000; 1 2 96.3417 1 10 3000; 1 3 96.3417 1 10 3000; 1 4 96.3417 1 10 3000; 1 5 96.3417 1 10 3000; 1 6 96.3417 1 10 3000; 1 7 96.3417 1 10 3000; 1 8 10 1 NaN NaN; 1 9 10 1 NaN NaN; 1 10 10 1 NaN NaN; 1 11 10 1 NaN NaN; 1 12 10 1 NaN NaN; 1 13 10 1 NaN NaN; 1 14 10 1 NaN NaN; 1 15 10 1 NaN NaN]</program_list>
+      <program_list>[1 1 96.3417 1 10 3000; 1 2 96.3417 1 10 3000; 1 3 96.3417 1 10 3000; 1 4 96.3417 1 10 3000; 1 5 96.3417 1 10 3000; 1 6 96.3417 1 10 3000; 1 7 96.3417 1 10 3000; 1 8 10 1 NaN NaN; 1 9 10 1 NaN NaN; 1 10 10 1 NaN NaN; 1 11 10 1 NaN NaN; 1 12 10 1 NaN NaN; 1 13 10 1 NaN NaN; 1 14 10 1 NaN NaN; 1 15 10 1 NaN NaN; 2 1 96.3417 1 10 3000; 2 2 96.3417 1 10 3000; 2 3 96.3417 1 10 3000; 2 4 96.3417 1 10 3000; 2 5 96.3417 1 10 3000; 2 6 96.3417 1 10 3000; 2 7 96.3417 1 10 3000; 2 8 10 1 NaN NaN; 2 9 10 1 NaN NaN; 2 10 10 1 NaN NaN; 2 11 10 1 NaN NaN; 2 12 10 1 NaN NaN; 2 13 10 1 NaN NaN; 2 14 10 1 NaN NaN; 2 15 10 1 NaN NaN; 3 1 96.3417 1 10 3000; 3 2 96.3417 1 10 3000; 3 3 96.3417 1 10 3000; 3 4 96.3417 1 10 3000; 3 5 96.3417 1 10 3000; 3 6 96.3417 1 10 3000; 3 7 96.3417 1 10 3000; 3 8 10 1 NaN NaN; 3 9 10 1 NaN NaN; 3 10 10 1 NaN NaN; 3 11 10 1 NaN NaN; 3 12 10 1 NaN NaN; 3 13 10 1 NaN NaN; 3 14 10 1 NaN NaN; 3 15 10 1 NaN NaN]</program_list>
       <startpoint_type>1</startpoint_type>
       <continue_index>1</continue_index>
       <continue_counter>1</continue_counter>
       <start_index>1</start_index>
       <start_counter>1</start_counter>
       <restart_list>1</restart_list>
-      <program_comment>SWEEP</program_comment>
-      <program_comment>SWEEP AM</program_comment>
-      <program_comment>SWEEP FM</program_comment>
-      <program_comment>SWEEP PM</program_comment>
-      <program_comment>SWEEP 4QAM</program_comment>
-      <program_comment>SWEEP PULSE</program_comment>
-      <program_comment>SWEEP 32QAM</program_comment>
-      <program_comment>IRIDIUM</program_comment>
-      <program_comment>GSM900</program_comment>
-      <program_comment>GSM1800</program_comment>
-      <program_comment>UMTS(3G)</program_comment>
-      <program_comment>CDMA</program_comment>
-      <program_comment>BLUETOOTH</program_comment>
-      <program_comment>802.11B</program_comment>
-      <program_comment>802.11G</program_comment>
-   </emi_generator>
+      <program_comment>SWEEP -10dBm</program_comment>
+      <program_comment>SWEEP AM -10dBm</program_comment>
+      <program_comment>SWEEP FM -10dBm</program_comment>
+      <program_comment>SWEEP PM -10dBm</program_comment>
+      <program_comment>SWEEP 4QAM -10dBm</program_comment>
+      <program_comment>SWEEP PULSE -10dBm</program_comment>
+      <program_comment>SWEEP 32QAM -10dBm</program_comment>
+      <program_comment>IRIDIUM -10dBm</program_comment>
+      <program_comment>GSM900 -10dBm</program_comment>
+      <program_comment>GSM1800 -10dBm</program_comment>
+      <program_comment>UMTS(3G) -10dBm</program_comment>
+      <program_comment>CDMA -10dBm</program_comment>
+      <program_comment>BLUETOOTH -10dBm</program_comment>
+      <program_comment>802.11B -10dBm</program_comment>
+      <program_comment>802.11G -10dBm</program_comment>
+      <program_comment>SWEEP 0dBm</program_comment>
+      <program_comment>SWEEP AM 0dBm</program_comment>
+      <program_comment>SWEEP FM 0dBm</program_comment>
+      <program_comment>SWEEP PM 0dBm</program_comment>
+      <program_comment>SWEEP 4QAM 0dBm</program_comment>
+      <program_comment>SWEEP PULSE 0dBm</program_comment>
+      <program_comment>SWEEP 32QAM 0dBm</program_comment>
+      <program_comment>IRIDIUM 0dBm</program_comment>
+      <program_comment>GSM900 0dBm</program_comment>
+      <program_comment>GSM1800 0dBm</program_comment>
+      <program_comment>UMTS(3G) 0dBm</program_comment>
+      <program_comment>CDMA 0dBm</program_comment>
+      <program_comment>BLUETOOTH 0dBm</program_comment>
+      <program_comment>802.11B 0dBm</program_comment>
+      <program_comment>802.11G 0dBm</program_comment>
+      <program_comment>SWEEP +10dBm</program_comment>
+      <program_comment>SWEEP AM +10dBm</program_comment>
+      <program_comment>SWEEP FM +10dBm</program_comment>
+      <program_comment>SWEEP PM +10dBm</program_comment>
+      <program_comment>SWEEP 4QAM +10dBm</program_comment>
+      <program_comment>SWEEP PULSE +10dBm</program_comment>
+      <program_comment>SWEEP 32QAM +10dBm</program_comment>
+      <program_comment>IRIDIUM +10dBm</program_comment>
+      <program_comment>GSM900 +10dBm</program_comment>
+      <program_comment>GSM1800 +10dBm</program_comment>
+      <program_comment>UMTS(3G) +10dBm</program_comment>
+      <program_comment>CDMA +10dBm</program_comment>
+      <program_comment>BLUETOOTH +10dBm</program_comment>
+      <program_comment>802.11B +10dBm</program_comment>
+      <program_comment>802.11G +10dBm</program_comment>
+	  </emi_generator>
    <acoustic_generator>
       <sls>
          <enable>1</enable>
