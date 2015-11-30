@@ -1,10 +1,17 @@
 set(NAME monolog)
 
 set(${NAME}_SRCS
-	audiofront.cpp
+	monolog.cpp
+	text_generator.h
+	text_generator.cpp
+	allophone_tts.h
+	allophone_tts.cpp
+	../auxiliary/wav_markers_regions.h
+	../auxiliary/wav_markers_regions.cpp
 	)
 
 add_definitions(-DUNICODE -D_UNICODE)
+add_definitions(-DENABLE_SNDFILE_WINDOWS_PROTOTYPES=1)
 
 add_executable(${NAME} ${${NAME}_SRCS})
 target_link_libraries(${NAME} ${PORTAUDIO_LIBRARIES} ${SNDFILE_LIBRARIES} ${Boost_LIBRARIES})

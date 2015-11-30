@@ -139,6 +139,7 @@ endif()
 add_subdirectory(auxiliary)
 # add_subdirectory(vmorph)
 add_subdirectory(audiofront)
+add_subdirectory(monolog)
 
 
 ## build a CPack driven installer package

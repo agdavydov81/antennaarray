@@ -111,18 +111,10 @@ size_t chunk_search(std::ifstream &fh, const std::streampos &file_size, FILE_IDs
 	return 0;
 }
 
-void wav_markers_regions_read(
-#if defined(_MSC_VER) && (defined(UNICODE) || defined(_UNICODE))
-	const wchar_t *file_name,
-#else
-	const char *file_name,
-#endif
-	std::vector<WAV_MARKER> &markers, std::vector<WAV_REGION> &regions) {
-
+void wav_markers_regions_read_(std::ifstream &fh, std::vector<WAV_MARKER> &markers, std::vector<WAV_REGION> &regions) {
 	markers.clear();
 	regions.clear();
 
-	std::ifstream fh(file_name, std::ios_base::in | std::ios_base::binary);
 	if(!fh)
 		throw std::runtime_error(std::string(__FUNCTION__) + ": Can't open file.");
 
@@ -274,6 +266,14 @@ void wav_markers_regions_read(
 			}
 			markers.push_back(WAV_MARKER(CUE->table[i].position, cur_name));
 		}
+}
+
+void wav_markers_regions_read(const char *file_name, std::vector<WAV_MARKER> &markers, std::vector<WAV_REGION> &regions) {
+	wav_markers_regions_read_(std::ifstream(file_name, std::ios_base::in | std::ios_base::binary), markers, regions);
+}
+
+void wav_markers_regions_read(const wchar_t *file_name, std::vector<WAV_MARKER> &markers, std::vector<WAV_REGION> &regions) {
+	wav_markers_regions_read_(std::ifstream(file_name, std::ios_base::in | std::ios_base::binary), markers, regions);
 }
 
 std::streampos delete_markers_regions_from_file(std::fstream &fh, std::streampos file_size) {
@@ -437,35 +437,21 @@ std::streampos write_markers_regions_to_file(std::fstream &fh, std::streampos pu
 
 #ifdef _WIN32
 #include <windows.h>
-#ifdef _MSC_VER
-#define CreateFileFn	CreateFile
-#else
-#define CreateFileFn	CreateFileA
-#endif
 #elif defined(__linux__)
 #include <unistd.h>
 #include <sys/types.h>
 #endif
 
-void wav_markers_regions_write(
-#if defined(_MSC_VER) && (defined(UNICODE) || defined(_UNICODE))
-	const wchar_t *file_name,
-#else
-	const char *file_name,
-#endif
-	const std::vector<WAV_MARKER> &markers, const std::vector<WAV_REGION> &regions) {
-
-	std::fstream fh(file_name, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-
+std::streampos wav_markers_regions_write_(std::fstream &fh, const std::vector<WAV_MARKER> &markers, const std::vector<WAV_REGION> &regions) {
 	RIFF_CHUNK riff_head;
-	if(!fh.read((char *)&riff_head, sizeof(riff_head)))
+	if (!fh.read((char *)&riff_head, sizeof(riff_head)))
 		throw std::runtime_error(std::string(__FUNCTION__) + ": Incorrect file format.");
 
-	if(riff_head.name_id!=id_RIFF || riff_head.format!=id_WAVE)
+	if (riff_head.name_id != id_RIFF || riff_head.format != id_WAVE)
 		throw std::runtime_error(std::string(__FUNCTION__) + ": Unsupported file format: not RIFF-WAVE file.");
 
 	fh.seekg(0, fh.end);
-	std::streampos file_size = std::min(fh.tellg(), (std::streampos)(riff_head.size+sizeof(UNIVERSAL_CHUNK)));
+	std::streampos file_size = std::min(fh.tellg(), (std::streampos)(riff_head.size + sizeof(UNIVERSAL_CHUNK)));
 
 	// Delete old markers and regions ////////////////////////////////////////
 	std::streampos new_sz = delete_markers_regions_from_file(fh, file_size);
@@ -474,7 +460,7 @@ void wav_markers_regions_write(
 	new_sz = write_markers_regions_to_file(fh, new_sz, markers, regions);
 
 	// Update RIFF header ////////////////////////////////////////////////////
-	riff_head.size = (uint32_t)(new_sz-(std::streampos)sizeof(UNIVERSAL_CHUNK));
+	riff_head.size = (uint32_t)(new_sz - (std::streampos)sizeof(UNIVERSAL_CHUNK));
 	fh.seekp(0, fh.beg);
 	fh.write((const char *)&riff_head, sizeof(riff_head));
 	fh.seekg(0, fh.end);
@@ -482,10 +468,20 @@ void wav_markers_regions_write(
 	fh.close();
 
 	// Decrease file size ////////////////////////////////////////////////////
-	if(riff_head.size+(std::streampos)sizeof(UNIVERSAL_CHUNK) != real_size) {
+	if (riff_head.size + (std::streampos)sizeof(UNIVERSAL_CHUNK) != real_size)
+		return new_sz;
+
+	return std::streampos(-1);
+}
+
+void wav_markers_regions_write(const char *file_name, const std::vector<WAV_MARKER> &markers, const std::vector<WAV_REGION> &regions) {
+	std::streampos new_sz = wav_markers_regions_write_(std::fstream(file_name, std::ios_base::in | std::ios_base::out | std::ios_base::binary), markers, regions);
+
+	if(new_sz != std::streampos(-1))
+	{
 #ifdef _WIN32
-		HANDLE win_fh = CreateFileFn(file_name, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		if(win_fh==INVALID_HANDLE_VALUE)
+		HANDLE win_fh = CreateFileA(file_name, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (win_fh == INVALID_HANDLE_VALUE)
 			throw std::runtime_error(std::string(__FUNCTION__) + ": Can't shrink file.");
 		LARGE_INTEGER win_pos;
 		win_pos.QuadPart = new_sz;
@@ -493,7 +489,27 @@ void wav_markers_regions_write(
 		SetEndOfFile(win_fh);
 		CloseHandle(win_fh);
 #elif defined(__linux__)
-		truncate(file_name,	new_sz);
+		truncate(file_name, new_sz);
+#endif
+	}
+}
+
+void wav_markers_regions_write(const wchar_t *file_name, const std::vector<WAV_MARKER> &markers, const std::vector<WAV_REGION> &regions) {
+	std::streampos new_sz = wav_markers_regions_write_(std::fstream(file_name, std::ios_base::in | std::ios_base::out | std::ios_base::binary), markers, regions);
+
+	if (new_sz != std::streampos(-1))
+	{
+#ifdef _WIN32
+		HANDLE win_fh = CreateFileW(file_name, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (win_fh == INVALID_HANDLE_VALUE)
+			throw std::runtime_error(std::string(__FUNCTION__) + ": Can't shrink file.");
+		LARGE_INTEGER win_pos;
+		win_pos.QuadPart = new_sz;
+		SetFilePointerEx(win_fh, win_pos, NULL, FILE_BEGIN);
+		SetEndOfFile(win_fh);
+		CloseHandle(win_fh);
+#elif defined(__linux__)
+		truncate(file_name, new_sz);
 #endif
 	}
 }

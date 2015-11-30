@@ -1,21 +1,17 @@
-// lTTS.h: interface for the ClTTS class.
-//
-//////////////////////////////////////////////////////////////////////
+#ifndef ALLOPHONE_TTS_H
+#define ALLOPHONE_TTS_H
 
-#if !defined(AFX_LTTS_H__39187453_E147_46AD_8EE5_77739AF4F5E9__INCLUDED_)
-#define AFX_LTTS_H__39187453_E147_46AD_8EE5_77739AF4F5E9__INCLUDED_
+#include <deque>
+#include <vector>
 
-#include <SoundFile.h>
-#include <SoundOutputMME.h>
-
-#define lTTS_ALP_COUNT	336
-
+#ifndef uint
 typedef unsigned int uint;
+#endif
 
-class ClTTS
+class CAllophoneTTS
 {
 public:
-	union ALAPHONE{
+	union ALAPHONE {
 		uint alp_code;
 		char alp_name[8];
 	};
@@ -47,16 +43,27 @@ protected:
 		post_JA2
 	};
 
-public:
-	ClTTS();
-	~ClTTS();
-
 	char accent_text_symbol;
 
-	CSoundFile		alp_base[lTTS_ALP_COUNT];
-	CSoundOutputMME	dev_out;
+	std::deque<const char *> alp_name;
 
-	uint LoadBase(char *path);
+	size_t samplerate;
+	size_t channels;
+
+	struct ALLOPHONE_DATA
+	{
+		ALLOPHONE_DATA(size_t signal_size = 0) : signal(signal_size) {};
+		std::vector<int16_t> signal;
+		std::vector<size_t>  pitches;
+	};
+
+	std::deque<ALLOPHONE_DATA>	alp_base;
+
+public:
+	CAllophoneTTS(char accent_text_symbol_ = '\'');
+	CAllophoneTTS(const char *path, char accent_text_symbol_ = '\'');
+
+	void LoadBase(const char *path);
 
 	uint Speak(const char *text);
 
@@ -64,8 +71,6 @@ public:
 		success,
 		error_sign=	0x80000000
 	};
-
-	static const char alp_name[lTTS_ALP_COUNT][8];
 };
 
-#endif // !defined(AFX_LTTS_H__39187453_E147_46AD_8EE5_77739AF4F5E9__INCLUDED_)
+#endif

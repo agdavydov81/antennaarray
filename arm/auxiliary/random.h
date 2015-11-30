@@ -1,5 +1,5 @@
-#ifndef __RANDOM__
-#define __RANDOM__
+#ifndef RANDOM_H
+#define RANDOM_H
 
 //									Доступные функции
 //inline void   randomize(unsigned long i);

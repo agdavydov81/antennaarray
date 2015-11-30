@@ -1,5 +1,5 @@
 /********************************************************************
-	created:	13.12.2013 13:35
+	created:	30.11.2015 20:07
 	file base:	wav_markers_regions.h
 	author:		Andrei Davydov
 *********************************************************************/
@@ -29,20 +29,10 @@
 	std::string name;	/**< Имя региона. */
 };
 
-void wav_markers_regions_read(
-#if defined(_MSC_VER) && (defined(UNICODE) || defined(_UNICODE))
-	const wchar_t *file_name,
-#else
-	const char *file_name,
-#endif
-	std::vector<WAV_MARKER> &markers, std::vector<WAV_REGION> &regions);
+void wav_markers_regions_read(const char *file_name, std::vector<WAV_MARKER> &markers, std::vector<WAV_REGION> &regions);
+void wav_markers_regions_read(const wchar_t *file_name, std::vector<WAV_MARKER> &markers, std::vector<WAV_REGION> &regions);
 
-void wav_markers_regions_write(
-#if defined(_MSC_VER) && (defined(UNICODE) || defined(_UNICODE))
-	const wchar_t *file_name,
-#else
-	const char *file_name,
-#endif
-	const std::vector<WAV_MARKER> &markers, const std::vector<WAV_REGION> &regions);
+void wav_markers_regions_write(const char *file_name, const std::vector<WAV_MARKER> &markers, const std::vector<WAV_REGION> &regions);
+void wav_markers_regions_write(const wchar_t *file_name, const std::vector<WAV_MARKER> &markers, const std::vector<WAV_REGION> &regions);
 
 #endif // WAV_MARKERS_REGIONS_H
