@@ -10,26 +10,20 @@ typedef unsigned int uint;
 
 class CAllophoneTTS
 {
-public:
-	union ALAPHONE {
-		uint alp_code;
-		char alp_name[8];
-	};
-
 protected:
-	uint Word2Alaphones(char *word,bool last_word,ALAPHONE **queue,int *queue_size);
-	void GetAccent(char *word,int *preaccent_pos,int *accent_pos);
-	bool GroupWordChar(char c);
-	bool GroupVovel(char c);
-	bool GroupChar01(char c);
-	bool GroupChar02(char c);
-	bool GroupChar03(char c);
-	bool GroupChar04(char c);
-	bool GroupChar05(char c);
-	bool GroupChar06(char c);
-	bool GroupChar07(char c);
-	bool GroupChar08(char c);
-	void AddAlaphone(ALAPHONE **queue,int *queue_size,char *alp,char *ind);
+	void PushBackAlaphone(const char *alp, const char *ind, std::deque<size_t> &queue) const;
+	int Word2Alaphones(char *word,bool last_word, std::deque<size_t> &queue) const;
+	void GetAccent(char *word,int &preaccent_pos,int &accent_pos) const;
+	bool GroupWordChar(char c) const;
+	bool GroupVovel(char c) const;
+	bool GroupChar01(char c) const;
+	bool GroupChar02(char c) const;
+	bool GroupChar03(char c) const;
+	bool GroupChar04(char c) const;
+	bool GroupChar05(char c) const;
+	bool GroupChar06(char c) const;
+	bool GroupChar07(char c) const;
+	bool GroupChar08(char c) const;
 
 	enum{
 		post_pass,
@@ -45,19 +39,22 @@ protected:
 
 	char accent_text_symbol;
 
-	std::deque<const char *> alp_name;
+	struct ALLOPHONE_BASE {
+		ALLOPHONE_BASE();
 
-	size_t samplerate;
-	size_t channels;
+		std::deque<const char *> names;
 
-	struct ALLOPHONE_DATA
-	{
-		ALLOPHONE_DATA(size_t signal_size = 0) : signal(signal_size) {};
-		std::vector<int16_t> signal;
-		std::vector<size_t>  pitches;
-	};
+		size_t samplerate;
+		size_t channels;
 
-	std::deque<ALLOPHONE_DATA>	alp_base;
+		struct ALLOPHONE_DATA {
+			ALLOPHONE_DATA(size_t signal_size = 0) : signal(signal_size) {};
+			std::vector<int16_t> signal;
+			std::vector<size_t>  pitches;
+		};
+
+		std::deque<ALLOPHONE_DATA>	datas;
+	} base;
 
 public:
 	CAllophoneTTS(char accent_text_symbol_ = '\'');
@@ -65,12 +62,7 @@ public:
 
 	void LoadBase(const char *path);
 
-	uint Speak(const char *text);
-
-	enum{
-		success,
-		error_sign=	0x80000000
-	};
+	std::deque<size_t> Text2Allophones(const char *text) const;
 };
 
 #endif

@@ -7,8 +7,7 @@ int main(int argc, const char *argv[])
 	try
 	{
 		CTextGenerator text_gen("det_res.txt");
-		CAllophoneTTS tts;
-		tts.LoadBase("db_bor1");
+		CAllophoneTTS tts("db_bor1");
 
 		for (int i = 0; i < 10; ++i)
 			std::cout << text_gen.Generate() << std::endl;
@@ -17,7 +16,7 @@ int main(int argc, const char *argv[])
 	}
 	catch(const std::exception &err)
 	{
-		std::cerr << err.what() << std::endl;
+		std::cerr << "Exception: " << err.what() << std::endl;
 		return -1;
 	}
 }

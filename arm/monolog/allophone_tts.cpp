@@ -5,6 +5,7 @@
 #include "allophone_tts.h"
 #include <sstream>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 #include <wav_markers_regions.h>
 
 #if defined(_WIN32) && (defined(UNICODE) || defined(_UNICODE))
@@ -16,10 +17,12 @@ typedef std::basic_string<_tchar>	_tstring;
 
 #include <sndfile.hh>
 
-
 namespace bfs = boost::filesystem;
 
-CAllophoneTTS::CAllophoneTTS(char accent_text_symbol_) : accent_text_symbol(accent_text_symbol_), samplerate(0), channels(0) {
+CAllophoneTTS::ALLOPHONE_BASE::ALLOPHONE_BASE() : samplerate(0), channels(0) {
+}
+
+CAllophoneTTS::CAllophoneTTS(char accent_text_symbol_) : accent_text_symbol(accent_text_symbol_) {
 }
 
 CAllophoneTTS::CAllophoneTTS(const char *path_, char accent_text_symbol_) : CAllophoneTTS(accent_text_symbol_) {
@@ -86,46 +89,46 @@ void CAllophoneTTS::LoadBase(const char *path) {
 		"z'204",	"z'205",	"z204",		"z205",		"zh204",	"zh205"
 	};
 
-	samplerate = 0;
-	channels = 0;
-	alp_name.clear();
-	alp_base.clear();
+	base.samplerate = 0;
+	base.channels = 0;
+	base.names.clear();
+	base.datas.clear();
 
 	bfs::path current_path;
 
 	try
 	{
-		alp_name.assign(alp_name_init, alp_name_init + sizeof(alp_name_init) / sizeof(alp_name_init[0]));
-		std::sort(alp_name.begin(), alp_name.end());
+		base.names.assign(alp_name_init, alp_name_init + sizeof(alp_name_init) / sizeof(alp_name_init[0]));
+		std::sort(base.names.begin(), base.names.end());
 
 		bfs::path bpath(path);
-		for(const auto &current_name : alp_name) {
+		for (const auto &current_name : base.names) {
 			current_path = bpath / bfs::path(std::string(current_name) + ".wav");
 			auto current_cpath = current_path.c_str();
 
 			SndfileHandle file(current_cpath);
-			if (!file.frames())
+			if (!file.frames() || !base.samplerate || !base.channels)
 				throw std::runtime_error("Empty file.");
+			if (base.channels != 1)
+				throw std::runtime_error("Can't process multichannel data.");
 
-			if (!samplerate)
-				samplerate = file.samplerate();
-			if (!channels)
-				channels = file.channels();
+			if (!base.samplerate)
+				base.samplerate = file.samplerate();
+			if (!base.channels)
+				base.channels = file.channels();
 
-			if (file.samplerate() != samplerate)
-			{
+			if (file.samplerate() != base.samplerate) {
 				std::stringstream sstr;
-				sstr << "Incompatible sample rate " << file.samplerate() << "!=" << samplerate << ".";
+				sstr << "Incompatible sample rate " << file.samplerate() << "!=" << base.samplerate << ".";
 				throw std::runtime_error(sstr.str());
 			}
-			if (file.channels() != channels)
-			{
+			if (file.channels() != base.channels) {
 				std::stringstream sstr;
-				sstr << "Incompatible channels number " << file.channels() << "!=" << channels << ".";
+				sstr << "Incompatible channels number " << file.channels() << "!=" << base.channels << ".";
 				throw std::runtime_error(sstr.str());
 			}
 
-			ALLOPHONE_DATA data(static_cast<size_t>(file.frames() * file.channels()));
+			ALLOPHONE_BASE::ALLOPHONE_DATA data(static_cast<size_t>(file.frames() * file.channels()));
 			if (file.read(&data.signal[0], file.frames()) != file.frames())
 				throw std::runtime_error("Can't read all file.");
 
@@ -133,24 +136,26 @@ void CAllophoneTTS::LoadBase(const char *path) {
 			std::vector<WAV_REGION> regions;
 			wav_markers_regions_read(current_cpath, markers, regions);
 
-			data.pitches.resize(markers.size() + regions.size());
+			data.pitches.resize(markers.size());
 			std::transform(markers.cbegin(), markers.cend(), data.pitches.begin(), [](auto m) { return m.pos; });
-			std::transform(regions.cbegin(), regions.cend(), data.pitches.begin() + markers.size(), [](auto r) { return r.pos; });
+			for (const auto &r : regions)
+				if (!r.length)
+					data.pitches.push_back(r.pos);
 
 			std::sort(data.pitches.begin(), data.pitches.end());
 			for (size_t i = 1; i < data.pitches.size(); ++i)
-				if(data.pitches[i-1] == data.pitches[i])
+				if (data.pitches[i - 1] == data.pitches[i])
 					data.pitches.erase(data.pitches.begin() + i--);
 
-			alp_base.push_back(std::move(data));
+			base.datas.push_back(std::move(data));
 		}
 	}
 	catch (const std::exception &error)
 	{
-		samplerate = 0;
-		channels = 0;
-		alp_name.clear();
-		alp_base.clear();
+		base.samplerate = 0;
+		base.channels = 0;
+		base.names.clear();
+		base.datas.clear();
 
 		std::stringstream sstr;
 		sstr << __FUNCTION__ << ": Error in file " << current_path << ": " << error.what();
@@ -158,12 +163,22 @@ void CAllophoneTTS::LoadBase(const char *path) {
 	}
 }
 
-uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue, int *queue_size) {
-	char alp[4], ind[4] = "xxx";
+void CAllophoneTTS::PushBackAlaphone(const char *alp, const char *ind, std::deque<size_t> &queue) const {
+	char alp_name[32];
+	strcpy(alp_name, alp);
+	strcat(alp_name, ind);
+
+	auto pos = std::lower_bound(base.names.cbegin(), base.names.cend(), alp_name);
+	auto pos_ind = pos - base.names.cbegin();
+	queue.push_back(pos_ind);
+}
+
+int CAllophoneTTS::Word2Alaphones(char *word, bool last_word, std::deque<size_t> &queue) const {
+	char alp[8], ind[8] = "xxx";
 	char prev_symb = 0;
 
 	int preaccent_pos, accent_pos;
-	GetAccent(word, &preaccent_pos, &accent_pos);
+	GetAccent(word, preaccent_pos, accent_pos);
 
 	int word_len = 0;
 	while (GroupWordChar(word[word_len]))
@@ -174,50 +189,54 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 	for (int i = 0; i < word_len; i++) {
 		switch (word[i]) {
 		case 'à':	//////////////////////////////////////////////////////////////////////////
-			Place_A:		alp[0] = 'a';
-							alp[1] = 0;
-							if (i == accent_pos)
-								ind[0] = '0';
+			Place_A:
+				alp[0] = 'a';
+				alp[1] = 0;
+				if (i == accent_pos)
+					ind[0] = '0';
+				else
+					if (i == preaccent_pos)
+						ind[0] = '1';
+					else
+						ind[0] = '2';
+				if (!i)
+					ind[1] = '0';
+				else
+					if (GroupChar01(prev_symb))
+						ind[1] = '1';
+					else
+						if (GroupChar02(prev_symb))
+							ind[1] = '2';
+						else
+							if ((prev_symb == 'ê') || (prev_symb == 'ã') || (prev_symb == 'õ'))
+								ind[1] = '3';
 							else
-								if (i == preaccent_pos)
-									ind[0] = '1';
-								else
-									ind[0] = '2';
-							if (!i)
-								ind[1] = '0';
+								ind[1] = '4';
+				if (last_word && (i == word_len - 1))
+					ind[2] = '0';
+				else
+					if ((word[i + 1] == 'ê') || (word[i + 1] == 'ã') || (word[i + 1] == 'õ'))
+						if ((word[i + 2] == 'ó') || (word[i + 2] == 'î'))
+							ind[2] = '2';
+						else
+							ind[2] = '1';
+					else
+						if (GroupChar01(word[i + 1]) || (word[i + 1] == 'å'))
+							ind[2] = '1';
+						else
+							if (GroupChar02(word[i + 1]))
+								ind[2] = '2';
 							else
-								if (GroupChar01(prev_symb))
-									ind[1] = '1';
-								else
-									if (GroupChar02(prev_symb))
-										ind[1] = '2';
-									else
-										if ((prev_symb == 'ê') || (prev_symb == 'ã') || (prev_symb == 'õ'))
-											ind[1] = '3';
-										else
-											ind[1] = '4';
-							if (last_word && (i == word_len - 1))
-								ind[2] = '0';
-							else
-								if ((word[i + 1] == 'ê') || (word[i + 1] == 'ã') || (word[i + 1] == 'õ'))
-									if ((word[i + 2] == 'ó') || (word[i + 2] == 'î'))
-										ind[2] = '2';
-									else
-										ind[2] = '1';
-								else
-									if (GroupChar01(word[i + 1]) || (word[i + 1] == 'å'))
-										ind[2] = '1';
-									else
-										if (GroupChar02(word[i + 1]))
-											ind[2] = '2';
-										else
-											ind[2] = '3';
-							AddAlaphone(queue, queue_size, alp, ind);
-							break;
+								ind[2] = '3';
+
+
+				PushBackAlaphone(alp, ind, queue);
+				break;
 		case 'á':	//////////////////////////////////////////////////////////////////////////
 			if (GroupChar05(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar05(word[i + 2])))
 				goto Place_P;
-		Place_B:		alp[0] = 'b';
+		Place_B:
+			alp[0] = 'b';
 			alp[1] = 0;
 			if (GroupChar04(word[i + 1])) {
 				alp[1] = '\'';
@@ -229,12 +248,13 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '4';
 			else
 				ind[2] = '5';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'â':	//////////////////////////////////////////////////////////////////////////
 			if (GroupChar05(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar05(word[i + 2])))
 				goto Place_F;
-		Place_V:		alp[0] = 'v';
+		Place_V:
+			alp[0] = 'v';
 			alp[1] = 0;
 			if (GroupChar04(word[i + 1])) {
 				alp[1] = '\'';
@@ -252,14 +272,15 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 					ind[2] = '7';
 			else
 				ind[2] = '8';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ã':	//////////////////////////////////////////////////////////////////////////
 			if (GroupChar05(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar05(word[i + 2])))
 				goto Place_K;
 			if (word[i + 1] == 'ê')
 				goto Place_X;
-		Place_G:		alp[0] = 'g';
+		Place_G:
+			alp[0] = 'g';
 			alp[1] = 0;
 			if (GroupChar04(word[i + 1])) {
 				alp[1] = '\'';
@@ -276,14 +297,15 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				else
 					ind[2] = 3;
 			}
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ä':	//////////////////////////////////////////////////////////////////////////
 			if ((prev_symb == 'ç') && (word[i + 1] == 'í'))
 				break;
 			if (GroupChar05(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar05(word[i + 2])))
 				goto Place_T;
-		Place_D:		alp[0] = 'd';
+		Place_D:
+			alp[0] = 'd';
 			alp[1] = 0;
 			if (GroupChar04(word[i + 1])) {
 				alp[1] = '\'';
@@ -295,7 +317,7 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '4';
 			else
 				ind[2] = '5';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'å':	//////////////////////////////////////////////////////////////////////////
 			if ((word[i + 1] == 'ã') && (word[i + 2] == 'î') && (word[i + 3] == 0))
@@ -305,9 +327,11 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 
 			post_switch = post_JE1;
 			goto Place_J;
-		Place_JE1:		post_switch = post_JE2;
+		Place_JE1:
+			post_switch = post_JE2;
 			goto Place_E;
-		Place_JE2:		post_switch = 0;
+		Place_JE2:
+			post_switch = 0;
 			break;
 		case '¸':	//////////////////////////////////////////////////////////////////////////
 			if (!GroupChar03(prev_symb))
@@ -315,9 +339,11 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 
 			post_switch = post_JO1;
 			goto Place_J;
-		Place_JO1:		post_switch = post_JO2;
+		Place_JO1:
+			post_switch = post_JO2;
 			goto Place_O;
-		Place_JO2:		post_switch = 0;
+		Place_JO2:
+			post_switch = 0;
 			break;
 		case 'æ':	//////////////////////////////////////////////////////////////////////////
 			if (word[i + 1] == '÷') {
@@ -331,12 +357,13 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 					ind[2] = '0';
 				else
 					ind[2] = '1';
-				AddAlaphone(queue, queue_size, alp, ind);
+				PushBackAlaphone(alp, ind, queue);
 				break;
 			}
 			if (GroupChar05(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar05(word[i + 2])))
 				goto Place_SH;
-		Place_ZH:		alp[0] = 'z';
+		Place_ZH:
+			alp[0] = 'z';
 			alp[1] = 'h';
 			alp[2] = 0;
 			ind[0] = '2';
@@ -345,12 +372,13 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '4';
 			else
 				ind[2] = '5';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ç':	//////////////////////////////////////////////////////////////////////////
 			if (GroupChar05(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar05(word[i + 2])))
 				goto Place_S;
-		Place_Z:		alp[0] = 'z';
+		Place_Z:
+			alp[0] = 'z';
 			alp[1] = 0;
 			if (GroupChar04(word[i + 1])) {
 				alp[1] = '\'';
@@ -362,7 +390,7 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '4';
 			else
 				ind[2] = '5';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'è':	//////////////////////////////////////////////////////////////////////////
 			if ((prev_symb == 'ö') || (prev_symb == 'ø') || (prev_symb == 'æ'))
@@ -396,34 +424,36 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 							ind[2] = '2';
 						else
 							ind[2] = '3';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'é':	//////////////////////////////////////////////////////////////////////////
-			Place_J:		alp[0] = 'j';
-							alp[1] = '\'';
-							alp[2] = 0;
-							ind[0] = '3';
-							if (GroupChar07(prev_symb))
-								ind[1] = '1';
-							else
-								ind[1] = '2';
-							if (GroupChar07(word[i + 1]))
-								if (i + 1 == accent_pos)
-									ind[2] = '6';
-								else
-									ind[2] = '7';
-							else
-								ind[2] = '8';
-							if ((ind[0] == '3') && (ind[1] == '1') && (ind[2] == '8'))
-								ind[2] = '7';
-							if ((ind[0] == '3') && (ind[1] == '2') && (last_word && (i == word_len - 1)))
-								ind[2] = '0';
-							AddAlaphone(queue, queue_size, alp, ind);
-							break;
+			Place_J:
+				alp[0] = 'j';
+				alp[1] = '\'';
+				alp[2] = 0;
+				ind[0] = '3';
+				if (GroupChar07(prev_symb))
+					ind[1] = '1';
+				else
+					ind[1] = '2';
+				if (GroupChar07(word[i + 1]))
+					if (i + 1 == accent_pos)
+						ind[2] = '6';
+					else
+						ind[2] = '7';
+				else
+					ind[2] = '8';
+				if ((ind[0] == '3') && (ind[1] == '1') && (ind[2] == '8'))
+					ind[2] = '7';
+				if ((ind[0] == '3') && (ind[1] == '2') && (last_word && (i == word_len - 1)))
+					ind[2] = '0';
+				PushBackAlaphone(alp, ind, queue);
+				break;
 		case 'ê':	//////////////////////////////////////////////////////////////////////////
 			if (GroupChar08(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar08(word[i + 1])))
 				goto Place_G;
-		Place_K:		alp[0] = 'k';
+		Place_K:
+			alp[0] = 'k';
 			alp[1] = 0;
 			if (GroupChar04(word[i + 1])) {
 				alp[1] = '\'';
@@ -445,7 +475,7 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				if (last_word && (i == word_len - 1))
 					ind[2] = '0';
 			}
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ë':	//////////////////////////////////////////////////////////////////////////
 			alp[0] = 'l';
@@ -463,7 +493,7 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 					ind[2] = '4';
 				else
 					ind[2] = '5';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ì':	//////////////////////////////////////////////////////////////////////////
 			alp[0] = 'm';
@@ -481,7 +511,7 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 					ind[2] = '4';
 				else
 					ind[2] = '5';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'í':	//////////////////////////////////////////////////////////////////////////
 			alp[0] = 'n';
@@ -499,14 +529,15 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 					ind[2] = '4';
 				else
 					ind[2] = '5';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'î':	//////////////////////////////////////////////////////////////////////////
 			if (i != accent_pos)
 				goto Place_A;
 			if ((word[i + 1] == 'ã') && (word[i + 2] == 'î') && (word[i + 3] == 0))
-				word[i + 2] = 'â';
-		Place_O:		alp[0] = 'o';
+				word[i + 1] = 'â';
+		Place_O:
+			alp[0] = 'o';
 			alp[1] = 0;
 			if (i == accent_pos)
 				ind[0] = '0';
@@ -541,12 +572,13 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 							ind[2] = '2';
 						else
 							ind[2] = '3';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ï':	//////////////////////////////////////////////////////////////////////////
 			if (GroupChar08(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar08(word[i + 1])))
 				goto Place_B;
-		Place_P:		alp[0] = 'p';
+		Place_P:
+			alp[0] = 'p';
 			alp[1] = 0;
 			if (GroupChar04(word[i + 1])) {
 				alp[1] = '\'';
@@ -558,7 +590,7 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '0';
 			else
 				ind[2] = '1';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ð':	//////////////////////////////////////////////////////////////////////////
 			alp[0] = 'r';
@@ -577,7 +609,7 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '9';
 			else
 				ind[2] = 'r';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ñ':	//////////////////////////////////////////////////////////////////////////
 			if (word[i + 1] == '÷') {
@@ -589,12 +621,13 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 					ind[2] = 0;
 				else
 					ind[2] = 1;
-				AddAlaphone(queue, queue_size, alp, ind);
+				PushBackAlaphone(alp, ind, queue);
 				break;
 			}
 			if (GroupChar08(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar08(word[i + 2])))
 				goto Place_Z;
-		Place_S:		alp[0] = 's';
+		Place_S:
+			alp[0] = 's';
 			alp[1] = 0;
 			if (GroupChar04(word[i + 1])) {
 				alp[1] = '\'';
@@ -606,14 +639,15 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '0';
 			else
 				ind[2] = '1';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ò':	//////////////////////////////////////////////////////////////////////////
 			if ((prev_symb == 'ñ') && (word[i + 1] == 'í'))
 				break;
 			if (GroupChar08(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar08(word[i + 2])))
 				goto Place_D;
-		Place_T:		alp[0] = 't';
+		Place_T:
+			alp[0] = 't';
 			alp[1] = 0;
 			if (GroupChar04(word[i + 1])) {
 				alp[1] = '\'';
@@ -625,53 +659,55 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '0';
 			else
 				ind[2] = '1';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ó':	//////////////////////////////////////////////////////////////////////////
-			Place_U:		alp[0] = 'u';
-							alp[1] = 0;
-							if (i == accent_pos)
-								ind[0] = '0';
+			Place_U:
+				alp[0] = 'u';
+				alp[1] = 0;
+				if (i == accent_pos)
+					ind[0] = '0';
+				else
+					if (i == preaccent_pos)
+						ind[0] = '1';
+					else
+						ind[0] = '2';
+				if (!i)
+					ind[1] = '0';
+				else
+					if (GroupChar01(prev_symb))
+						ind[1] = '1';
+					else
+						if (GroupChar02(prev_symb))
+							ind[1] = '2';
+						else
+							if ((prev_symb == 'ê') || (prev_symb == 'ã') || (prev_symb == 'õ'))
+								ind[1] = '3';
 							else
-								if (i == preaccent_pos)
-									ind[0] = '1';
-								else
-									ind[0] = '2';
-							if (!i)
-								ind[1] = '0';
+								ind[1] = '4';
+				if (last_word && (i == word_len - 1))
+					ind[2] = '0';
+				else
+					if ((word[i + 1] == 'ê') || (word[i + 1] == 'ã') || (word[i + 1] == 'õ'))
+						if ((word[i + 2] == 'ó') || (word[i + 2] == 'î'))
+							ind[2] = '2';
+						else
+							ind[2] = '1';
+					else
+						if (GroupChar01(word[i + 1]) || (word[i + 1] == 'å'))
+							ind[2] = '1';
+						else
+							if (GroupChar02(word[i + 1]))
+								ind[2] = '2';
 							else
-								if (GroupChar01(prev_symb))
-									ind[1] = '1';
-								else
-									if (GroupChar02(prev_symb))
-										ind[1] = '2';
-									else
-										if ((prev_symb == 'ê') || (prev_symb == 'ã') || (prev_symb == 'õ'))
-											ind[1] = '3';
-										else
-											ind[1] = '4';
-							if (last_word && (i == word_len - 1))
-								ind[2] = '0';
-							else
-								if ((word[i + 1] == 'ê') || (word[i + 1] == 'ã') || (word[i + 1] == 'õ'))
-									if ((word[i + 2] == 'ó') || (word[i + 2] == 'î'))
-										ind[2] = '2';
-									else
-										ind[2] = '1';
-								else
-									if (GroupChar01(word[i + 1]) || (word[i + 1] == 'å'))
-										ind[2] = '1';
-									else
-										if (GroupChar02(word[i + 1]))
-											ind[2] = '2';
-										else
-											ind[2] = '3';
-							AddAlaphone(queue, queue_size, alp, ind);
-							break;
+								ind[2] = '3';
+				PushBackAlaphone(alp, ind, queue);
+				break;
 		case 'ô':	//////////////////////////////////////////////////////////////////////////
 			if (GroupChar08(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar08(word[i + 2])))
 				goto Place_V;
-		Place_F:		alp[0] = 'f';
+		Place_F:
+			alp[0] = 'f';
 			alp[1] = 0;
 			if (GroupChar04(word[i + 1])) {
 				alp[1] = '\'';
@@ -683,30 +719,31 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '0';
 			else
 				ind[2] = '1';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'õ':	//////////////////////////////////////////////////////////////////////////
-			Place_X:		alp[0] = 'x';
-							alp[1] = 0;
-							if (GroupChar04(word[i + 1])) {
-								alp[1] = '\'';
-								alp[2] = 0;
-								ind[0] = '0';
-								ind[1] = '0';
-								ind[2] = '1';
-							}
-							else {
-								ind[0] = '1';
-								ind[1] = '0';
-								if ((word[i + 1] == 'î') || (word[i + 1] == 'ó'))
-									ind[2] = '2';
-								else
-									ind[2] = '3';
-								if (last_word && (i == word_len - 1))
-									ind[2] = '0';
-							}
-							AddAlaphone(queue, queue_size, alp, ind);
-							break;
+			Place_X:
+				alp[0] = 'x';
+				alp[1] = 0;
+				if (GroupChar04(word[i + 1])) {
+					alp[1] = '\'';
+					alp[2] = 0;
+					ind[0] = '0';
+					ind[1] = '0';
+					ind[2] = '1';
+				}
+				else {
+					ind[0] = '1';
+					ind[1] = '0';
+					if ((word[i + 1] == 'î') || (word[i + 1] == 'ó'))
+						ind[2] = '2';
+					else
+						ind[2] = '3';
+					if (last_word && (i == word_len - 1))
+						ind[2] = '0';
+				}
+				PushBackAlaphone(alp, ind, queue);
+				break;
 		case 'ö':	//////////////////////////////////////////////////////////////////////////
 			alp[0] = 'c';
 			alp[1] = 0;
@@ -716,7 +753,7 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '0';
 			else
 				ind[2] = '1';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case '÷':	//////////////////////////////////////////////////////////////////////////
 			alp[0] = 'c';
@@ -729,12 +766,13 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '0';
 			else
 				ind[2] = '1';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ø':	//////////////////////////////////////////////////////////////////////////
 			if (GroupChar08(word[i + 1]) || ((word[i + 1] == 'ü') && GroupChar08(word[i + 2])))
 				goto Place_ZH;
-		Place_SH:		alp[0] = 's';
+		Place_SH:
+			alp[0] = 's';
 			alp[1] = 'h';
 			alp[2] = 0;
 			if (word[i + 1] == 'ü') {
@@ -747,7 +785,7 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '0';
 			else
 				ind[2] = '1';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ù':
 			alp[0] = 's';
@@ -760,106 +798,110 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 				ind[2] = '0';
 			else
 				ind[2] = '1';
-			AddAlaphone(queue, queue_size, alp, ind);
+			PushBackAlaphone(alp, ind, queue);
 			break;
 		case 'ú':
 			break;
 		case 'û':	//////////////////////////////////////////////////////////////////////////
-			Place_Y:		alp[0] = 'y';
-							alp[1] = 0;
-							if (i == accent_pos)
-								ind[0] = '0';
+			Place_Y:
+				alp[0] = 'y';
+				alp[1] = 0;
+				if (i == accent_pos)
+					ind[0] = '0';
+				else
+					if (i == preaccent_pos)
+						ind[0] = '1';
+					else
+						ind[0] = '2';
+				if (!i)
+					ind[1] = '0';
+				else
+					if (GroupChar01(prev_symb))
+						ind[1] = '1';
+					else
+						ind[1] = '2';
+				if (last_word && (i == word_len - 1) || (ind[1] == '0'))
+					ind[2] = '0';
+				else
+					if ((word[i + 1] == 'ê') || (word[i + 1] == 'ã') || (word[i + 1] == 'õ'))
+						if ((word[i + 2] == 'ó') || (word[i + 2] == 'î'))
+							ind[2] = '2';
+						else
+							ind[2] = '1';
+					else
+						if (GroupChar01(word[i + 1]) || (word[i + 1] == 'å'))
+							ind[2] = '1';
+						else
+							if (GroupChar02(word[i + 1]))
+								ind[2] = '2';
 							else
-								if (i == preaccent_pos)
-									ind[0] = '1';
-								else
-									ind[0] = '2';
-							if (!i)
-								ind[1] = '0';
-							else
-								if (GroupChar01(prev_symb))
-									ind[1] = '1';
-								else
-									ind[1] = '2';
-							if (last_word && (i == word_len - 1) || (ind[1] == '0'))
-								ind[2] = '0';
-							else
-								if ((word[i + 1] == 'ê') || (word[i + 1] == 'ã') || (word[i + 1] == 'õ'))
-									if ((word[i + 2] == 'ó') || (word[i + 2] == 'î'))
-										ind[2] = '2';
-									else
-										ind[2] = '1';
-								else
-									if (GroupChar01(word[i + 1]) || (word[i + 1] == 'å'))
-										ind[2] = '1';
-									else
-										if (GroupChar02(word[i + 1]))
-											ind[2] = '2';
-										else
-											ind[2] = '3';
-							AddAlaphone(queue, queue_size, alp, ind);
-							break;
+								ind[2] = '3';
+				PushBackAlaphone(alp, ind, queue);
+				break;
 		case 'ü':	//////////////////////////////////////////////////////////////////////////
 			break;
 		case 'ý':	//////////////////////////////////////////////////////////////////////////
-			Place_E:		alp[0] = 'e';
-							alp[1] = 0;
-							if (i == accent_pos)
-								ind[0] = '0';
+			Place_E:
+				alp[0] = 'e';
+				alp[1] = 0;
+				if (i == accent_pos)
+					ind[0] = '0';
+				else
+					if (i == preaccent_pos)
+						ind[0] = '1';
+					else
+						ind[0] = '2';
+				if (!i)
+					ind[1] = '0';
+				else
+					if (GroupChar01(prev_symb))
+						ind[1] = '1';
+					else
+						if (GroupChar02(prev_symb))
+							ind[1] = '2';
+						else
+							if ((prev_symb == 'ê') || (prev_symb == 'ã') || (prev_symb == 'õ'))
+								ind[1] = '3';
 							else
-								if (i == preaccent_pos)
-									ind[0] = '1';
-								else
-									ind[0] = '2';
-							if (!i)
-								ind[1] = '0';
+								ind[1] = '4';
+				if (last_word && (i == word_len - 1))
+					if (ind[0] == '2')
+						if ((ind[1] == '0') || (ind[1] == '1') || (ind[1] == '4'))
+							ind[2] = '0';
+						else
+							if (ind[1] == '2')
+								ind[2] = '1';
 							else
-								if (GroupChar01(prev_symb))
-									ind[1] = '1';
-								else
-									if (GroupChar02(prev_symb))
-										ind[1] = '2';
-									else
-										if ((prev_symb == 'ê') || (prev_symb == 'ã') || (prev_symb == 'õ'))
-											ind[1] = '3';
-										else
-											ind[1] = '4';
-							if (last_word && (i == word_len - 1))
-								if (ind[0] == '2')
-									if ((ind[1] == '0') || (ind[1] == '1') || (ind[1] == '4'))
-										ind[2] = '0';
-									else
-										if (ind[1] == '2')
-											ind[2] = '1';
-										else
-											ind[2] = '1';
-								else
-									ind[2] = '0';
+								ind[2] = '1';
+					else
+						ind[2] = '0';
+				else
+					if ((word[i + 1] == 'ê') || (word[i + 1] == 'ã') || (word[i + 1] == 'õ'))
+						if ((word[i + 2] == 'ó') || (word[i + 2] == 'î'))
+							ind[2] = '2';
+						else
+							ind[2] = '1';
+					else
+						if (GroupChar01(word[i + 1]) || (word[i + 1] == 'å'))
+							ind[2] = '1';
+						else
+							if (GroupChar02(word[i + 1]))
+								ind[2] = '2';
 							else
-								if ((word[i + 1] == 'ê') || (word[i + 1] == 'ã') || (word[i + 1] == 'õ'))
-									if ((word[i + 2] == 'ó') || (word[i + 2] == 'î'))
-										ind[2] = '2';
-									else
-										ind[2] = '1';
-								else
-									if (GroupChar01(word[i + 1]) || (word[i + 1] == 'å'))
-										ind[2] = '1';
-									else
-										if (GroupChar02(word[i + 1]))
-											ind[2] = '2';
-										else
-											ind[2] = '3';
-							AddAlaphone(queue, queue_size, alp, ind);
-							break;
+								ind[2] = '3';
+				PushBackAlaphone(alp, ind, queue);
+				break;
 		case 'þ':	//////////////////////////////////////////////////////////////////////////
 			if (!GroupChar03(prev_symb))
 				goto Place_U;
 
 			post_switch = post_JU1;
 			goto Place_J;
-		Place_JU1:		post_switch = post_JU2;
+		Place_JU1:
+			post_switch = post_JU2;
 			goto Place_U;
-		Place_JU2:		post_switch = 0;
+		Place_JU2:
+			post_switch = 0;
 			break;
 		case 'ÿ':	//////////////////////////////////////////////////////////////////////////
 			if (!GroupChar03(prev_symb))
@@ -867,9 +909,11 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 
 			post_switch = post_JA1;
 			goto Place_J;
-		Place_JA1:		post_switch = post_JA2;
+		Place_JA1:
+			post_switch = post_JA2;
 			goto Place_A;
-		Place_JA2:		post_switch = 0;
+		Place_JA2:
+			post_switch = 0;
 			break;
 		}
 
@@ -900,14 +944,7 @@ uint CAllophoneTTS::Word2Alaphones(char *word, bool last_word, ALAPHONE **queue,
 	return word_len;
 }
 
-void CAllophoneTTS::AddAlaphone(ALAPHONE **queue, int *queue_size, char *alp, char *ind) {
-	*queue = (ALAPHONE *)realloc(*queue, sizeof(ALAPHONE)*(*queue_size + 1));
-	strcpy((*queue)[*queue_size].alp_name, alp);
-	strcat((*queue)[*queue_size].alp_name, ind);
-	(*queue_size)++;
-}
-
-void CAllophoneTTS::GetAccent(char *word, int *preaccent_pos, int *accent_pos) {
+void CAllophoneTTS::GetAccent(char *word, int &preaccent_pos, int &accent_pos) const {
 	int word_len = 0;
 	while (GroupWordChar(word[word_len]))
 		word_len++;
@@ -916,7 +953,7 @@ void CAllophoneTTS::GetAccent(char *word, int *preaccent_pos, int *accent_pos) {
 	while (i < word_len&&word[i] != accent_text_symbol)
 		i++;
 	if (word[i] == accent_text_symbol) {
-		(*accent_pos) = i - 1;
+		accent_pos = i - 1;
 		memmove(word + i, word + i + 1, word_len - i - 1);
 		word[word_len - 1] = ' ';
 	}
@@ -926,134 +963,112 @@ void CAllophoneTTS::GetAccent(char *word, int *preaccent_pos, int *accent_pos) {
 			if (GroupVovel(word[i]))
 				vovel_cnt++;
 
-		(*accent_pos) = vovel_cnt >> 1;
+		accent_pos = vovel_cnt >> 1;
 		vovel_cnt = 0;
 		for (i = 0; i < word_len; i++)
 			if (GroupVovel(word[i])) {
 				vovel_cnt++;
-				if (vovel_cnt >= *accent_pos) {
-					*accent_pos = i;
+				if (vovel_cnt >= accent_pos) {
+					accent_pos = i;
 					break;
 				}
 			}
 	}
 
-	(*preaccent_pos) = (*accent_pos) - 1;
-	while ((*preaccent_pos > 0) && !GroupVovel(word[*preaccent_pos]))
-		(*preaccent_pos)--;
+	preaccent_pos = accent_pos - 1;
+	while ((preaccent_pos > 0) && !GroupVovel(word[preaccent_pos]))
+		preaccent_pos--;
 }
 
-bool CAllophoneTTS::GroupWordChar(char c) {
+bool CAllophoneTTS::GroupWordChar(char c) const {
 	if (((c >= 'à') && (c <= 'ÿ')) || (c == '¸') || (c == accent_text_symbol))
 		return true;
 	return false;
 }
 
-bool CAllophoneTTS::GroupVovel(char c) {
+bool CAllophoneTTS::GroupVovel(char c) const {
 	if ((c == 'à') || (c == 'å') || (c == '¸') || (c == 'è') || (c == 'î') || (c == 'ó') || (c == 'û') || (c == 'ý') || (c == 'þ') || (c == 'ÿ'))
 		return true;
 	return false;
 }
 
-bool CAllophoneTTS::GroupChar01(char c) {
+bool CAllophoneTTS::GroupChar01(char c) const {
 	if ((c == 'ò') || (c == 'ä') || (c == 'ñ') || (c == 'ç') || (c == 'ö') || (c == 'ø') || (c == 'æ') || (c == 'í') || (c == 'ð') || (c == 'à'))
 		return true;
 	return false;
 }
 
-bool CAllophoneTTS::GroupChar02(char c) {
+bool CAllophoneTTS::GroupChar02(char c) const {
 	if ((c == 'ï') || (c == 'á') || (c == 'ô') || (c == 'â') || (c == 'ë') || (c == 'ì') || (c == 'ó') || (c == 'î'))
 		return true;
 	return false;
 }
 
-bool CAllophoneTTS::GroupChar03(char c) {
+bool CAllophoneTTS::GroupChar03(char c) const {
 	if ((c == 0) || (c == 'ü') || (c == 'ú') || (c == 'à') || (c == 'î') || (c == 'ó') || (c == 'ý') || (c == 'û') || (c == 'å') || (c == '¸') || (c == 'þ') || (c == 'ÿ'))
 		return true;
 	return false;
 }
 
-bool CAllophoneTTS::GroupChar04(char c) {
+bool CAllophoneTTS::GroupChar04(char c) const {
 	if ((c == 'ü') || (c == 'å') || (c == '¸') || (c == 'þ') || (c == 'ÿ') || (c == 'è'))
 		return true;
 	return false;
 }
 
-bool CAllophoneTTS::GroupChar05(char c) {
+bool CAllophoneTTS::GroupChar05(char c) const {
 	if ((c == 0) || (c == 'ï') || (c == 'ò') || (c == 'ê') || (c == 'ô') || (c == 'ö') || (c == 'ù') || (c == '÷') || (c == 'õ') || (c == 'ù'))
 		return true;
 	return false;
 }
 
-bool CAllophoneTTS::GroupChar06(char c) {
+bool CAllophoneTTS::GroupChar06(char c) const {
 	if ((c == 'á') || (c == 'ä') || (c == 'ã') || (c == 'ç') || (c == 'æ') || (c == 'ë') || (c == 'ì') || (c == 'í') || (c == 'â') || (c == 'é') || (c == 'ð'))
 		return true;
 	return false;
 }
 
-bool CAllophoneTTS::GroupChar07(char c) {
+bool CAllophoneTTS::GroupChar07(char c) const {
 	if ((c == 'à') || (c == 'å') || (c == 'î') || (c == 'ó') || (c == 'û') || (c == 'è'))
 		return true;
 	return false;
 }
 
-bool CAllophoneTTS::GroupChar08(char c) {
+bool CAllophoneTTS::GroupChar08(char c) const {
 	if ((c == 'á') || (c == 'ä') || (c == 'ã') || (c == 'ç') || (c == 'æ'))
 		return true;
 	return false;
 }
 
-uint CAllophoneTTS::Speak(const char *text) {
-	/*	char *phrase=_strlwr(_strdup(text));
+std::deque<size_t> CAllophoneTTS::Text2Allophones(const char *text) const {
+	std::vector<char> phrase(text, text + strlen(text)+1);
+	boost::algorithm::to_lower(phrase);
 
-		ALAPHONE *	queue=NULL;
-		int			queue_size=0;
+	std::deque<size_t> queue;
 
-		dev_out.notify.event_overall=CreateEvent(0,0,0,0);
-		dev_out.Open();
-
-		int phrase_pos=0;
-		while(phrase[phrase_pos]){
-			while(!GroupWordChar(phrase[phrase_pos])){
-				switch(phrase[phrase_pos]){
-				case 0:
-					goto phrase_finish;
-				case '.':
-				case '!':
-				case '?':
-					break;
-				case ',':
-				case ':':
-				case '-':
-					break;
-				default:
-					break;
-				}
-				phrase_pos++;
+	int phrase_pos = 0;
+	while (phrase[phrase_pos]) {
+		while (!GroupWordChar(phrase[phrase_pos])) {
+			switch (phrase[phrase_pos]) {
+			case 0:
+				goto phrase_finish;
+			case '.':
+			case '!':
+			case '?':
+				break;
+			case ',':
+			case ':':
+			case '-':
+				break;
+			default:
+				break;
 			}
-
-			phrase_pos+=Word2Alaphones(phrase+phrase_pos,false,&queue,&queue_size);
-			for(int q=0;q<queue_size;q++){
-				for(int ind=0;ind<lTTS_ALP_COUNT;ind++)
-					if((queue[q].alp_code==alp_base[ind].user_def)&&(!strcmp(queue[q].alp_name,alp_base[ind].file_name))){
-						dev_out.Play(alp_base[ind].signal.fx16,alp_base[ind].length,1);
-						break;
-					}
-			}
-			if(queue_size){
-				free(queue);
-				queue=0;
-				queue_size=0;
-			}
+			phrase_pos++;
 		}
-	phrase_finish:
 
-		WaitForSingleObject(dev_out.notify.event_overall,INFINITE);
-		dev_out.Close();
+		phrase_pos += Word2Alaphones(&phrase[phrase_pos], false, queue);
+	}
+phrase_finish:
 
-		free(phrase);
-		return success;
-		*/
-
-	return 0;
+	return queue;
 }
