@@ -10,7 +10,12 @@ int main(int argc, const char *argv[])
 		CAllophoneTTS tts("db_bor1");
 
 		for (int i = 0; i < 10; ++i)
-			std::cout << text_gen.Generate() << std::endl;
+		{
+			std::string text = text_gen.Generate();
+			std::cout << text << std::endl;
+
+			std::deque<size_t> queue = tts.Text2Allophones(text.c_str());
+		}
 
 		return 0;
 	}

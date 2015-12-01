@@ -107,9 +107,9 @@ void CAllophoneTTS::LoadBase(const char *path) {
 			auto current_cpath = current_path.c_str();
 
 			SndfileHandle file(current_cpath);
-			if (!file.frames() || !base.samplerate || !base.channels)
+			if (!file.frames() || !file.samplerate() || !file.channels())
 				throw std::runtime_error("Empty file.");
-			if (base.channels != 1)
+			if (file.channels() != 1)
 				throw std::runtime_error("Can't process multichannel data.");
 
 			if (!base.samplerate)
@@ -168,9 +168,8 @@ void CAllophoneTTS::PushBackAlaphone(const char *alp, const char *ind, std::dequ
 	strcpy(alp_name, alp);
 	strcat(alp_name, ind);
 
-	auto pos = std::lower_bound(base.names.cbegin(), base.names.cend(), alp_name);
-	auto pos_ind = pos - base.names.cbegin();
-	queue.push_back(pos_ind);
+	auto pos = std::lower_bound(base.names.cbegin(), base.names.cend(), alp_name, [](auto a, auto b) { return strcmp(a, b) < 0; });
+	queue.push_back(pos - base.names.cbegin());
 }
 
 int CAllophoneTTS::Word2Alaphones(char *word, bool last_word, std::deque<size_t> &queue) const {
@@ -1041,7 +1040,7 @@ bool CAllophoneTTS::GroupChar08(char c) const {
 }
 
 std::deque<size_t> CAllophoneTTS::Text2Allophones(const char *text) const {
-	std::vector<char> phrase(text, text + strlen(text)+1);
+	std::vector<char> phrase(text, text + strlen(text) + 1);
 	boost::algorithm::to_lower(phrase);
 
 	std::deque<size_t> queue;
