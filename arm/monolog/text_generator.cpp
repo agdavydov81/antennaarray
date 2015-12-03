@@ -5,7 +5,6 @@
 #include <sstream>
 #include <numeric>
 #include <algorithm>
-#include "random.h"
 
 //Распределение числа фраз в фоноабзаце
 const uint		CTextGenerator::phrase_cdf[] = { 0, 5, 15, 30, 60, 85, 95, 100 };
@@ -46,9 +45,8 @@ const size_t	CTextGenerator::syll_accent[] = {
 	0,	1,	2,	3,	4,	5,	6,	7,
 	0,	1,	2,	3,	4,	5,	6,	7,	8 };
 
-CTextGenerator::CTextGenerator(ulong seed)
+CTextGenerator::CTextGenerator(ulong seed) : rnd(seed == 0 ? static_cast<ulong>(time(nullptr)) : seed)
 {
-	randomizeMT(seed==0 ? static_cast<ulong>(time(nullptr)) : seed);
 }
 
 CTextGenerator::CTextGenerator(const char *filename, ulong seed) : CTextGenerator(seed)
@@ -88,7 +86,7 @@ void CTextGenerator::LoadProbabilities(const char* filename)
 			throw std::runtime_error("Incorrect probability values number.");
 
 		cdfs.resize(txt_num);
-		for (size_t ci = 0; ci<txt_num; ++ci) {
+		for (size_t ci = 0; ci < txt_num; ++ci) {
 			cdfs[ci].resize(txt_num);
 
 			std::partial_sum(data.begin() + ci*txt_num + 1, data.begin() + (ci + 1)*txt_num, cdfs[ci].begin() + 1);
@@ -102,21 +100,17 @@ void CTextGenerator::LoadProbabilities(const char* filename)
 	}
 }
 
-#define rand_gen(cdf__) ((std::upper_bound(cdf__, cdf__+sizeof(cdf__)/sizeof(cdf__[0]), randomMT() % cdf__[sizeof(cdf__)/sizeof(cdf__[0])-1]) - cdf__) - 1)
-
-size_t rand_gen_vec(const std::vector<uint> &cdf) {
-	return (std::upper_bound(cdf.begin(), cdf.end(), randomMT() % cdf.back()) - cdf.begin()) - 1;
-}
+#define rand_gen(cdf__) rand_gen_arr(cdf__, sizeof(cdf__)/sizeof(cdf__[0]))
 
 std::string CTextGenerator::Generate()
 {
 	std::stringstream sstr;
 
 	size_t last_txt_ind = 0;
-	for (size_t phrase_i = 0, phrase_num = rand_gen(phrase_cdf) + 1; phrase_i<phrase_num; ++phrase_i) {
-		for (size_t syntagma_i = 0, syntagma_num = rand_gen(syntagma_cdf) + 1; syntagma_i<syntagma_num; ++syntagma_i) {
-			for (size_t word_i = 0, word_num = rand_gen(word_cdf) + 1; word_i<word_num; ++word_i) {
-				for (size_t syll_i = 0, syll_ind = rand_gen(syll_cdf), syll_num_val = syll_num[syll_ind], syll_accent_val = syll_accent[syll_ind]; syll_i<syll_num_val; ++syll_i) {
+	for (size_t phrase_i = 0, phrase_num = rand_gen(phrase_cdf) + 1; phrase_i < phrase_num; ++phrase_i) {
+		for (size_t syntagma_i = 0, syntagma_num = rand_gen(syntagma_cdf) + 1; syntagma_i < syntagma_num; ++syntagma_i) {
+			for (size_t word_i = 0, word_num = rand_gen(word_cdf) + 1; word_i < word_num; ++word_i) {
+				for (size_t syll_i = 0, syll_ind = rand_gen(syll_cdf), syll_num_val = syll_num[syll_ind], syll_accent_val = syll_accent[syll_ind]; syll_i < syll_num_val; ++syll_i) {
 					last_txt_ind = rand_gen_vec(cdfs[last_txt_ind]);
 					sstr << txt[last_txt_ind].c_str();
 					last_txt_ind++;
