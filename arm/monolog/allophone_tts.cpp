@@ -168,8 +168,9 @@ void CAllophoneTTS::PushBackAlaphone(const char *alp, const char *ind, std::dequ
 	strcpy(alp_name, alp);
 	strcat(alp_name, ind);
 
-	auto pos = std::lower_bound(base.names.cbegin(), base.names.cend(), alp_name, [](auto a, auto b) { return strcmp(a, b) < 0; });
-	queue.push_back(pos - base.names.cbegin());
+	size_t pos = (size_t)(std::lower_bound(base.names.cbegin(), base.names.cend(), alp_name, [](auto a, auto b) { return strcmp(a, b) < 0; }) - base.names.cbegin());
+	assert(pos >= 0 && pos < base.datas.size());
+	queue.push_back(pos);
 }
 
 int CAllophoneTTS::Word2Alaphones(char *word, bool last_word, std::deque<size_t> &queue) const {
@@ -292,9 +293,9 @@ int CAllophoneTTS::Word2Alaphones(char *word, bool last_word, std::deque<size_t>
 				ind[0] = '1';
 				ind[1] = '0';
 				if ((word[i + 1] == 'î') || (word[i + 1] == 'ó'))
-					ind[2] = 2;
+					ind[2] = '2';
 				else
-					ind[2] = 3;
+					ind[2] = '3';
 			}
 			PushBackAlaphone(alp, ind, queue);
 			break;
@@ -612,14 +613,15 @@ int CAllophoneTTS::Word2Alaphones(char *word, bool last_word, std::deque<size_t>
 			break;
 		case 'ñ':	//////////////////////////////////////////////////////////////////////////
 			if (word[i + 1] == '÷') {
-				alp[0] = 'ø';
-				alp[1] = 0;
+				alp[0] = 's';
+				alp[1] = 'h';
+				alp[2] = 0;
 				ind[0] = '0';
 				ind[1] = '0';
 				if (last_word && (i == word_len - 1))
-					ind[2] = 0;
+					ind[2] = '0';
 				else
-					ind[2] = 1;
+					ind[2] = '1';
 				PushBackAlaphone(alp, ind, queue);
 				break;
 			}

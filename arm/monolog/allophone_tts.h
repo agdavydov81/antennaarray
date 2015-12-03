@@ -39,6 +39,7 @@ protected:
 
 	char accent_text_symbol;
 
+public:
 	struct ALLOPHONE_BASE {
 		ALLOPHONE_BASE();
 
@@ -56,7 +57,6 @@ protected:
 		std::deque<ALLOPHONE_DATA>	datas;
 	} base;
 
-public:
 	CAllophoneTTS(char accent_text_symbol_ = '\'');
 	CAllophoneTTS(const char *path, char accent_text_symbol_ = '\'');
 
