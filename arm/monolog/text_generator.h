@@ -4,6 +4,7 @@
 #include <array>
 #include <string>
 #include <boost/random.hpp>
+#include <boost/filesystem.hpp>
 
 #ifndef uint
 typedef unsigned int uint;
@@ -17,6 +18,7 @@ class CTextGenerator
 public:
 	CTextGenerator(ulong seed = 0);
 	CTextGenerator(const char *filename, ulong seed = 0);
+	CTextGenerator(const boost::filesystem::path &filename, ulong seed = 0);
 	virtual ~CTextGenerator();
 
 	/// Generate next SLS text paragraph.
@@ -37,7 +39,9 @@ private:
 	std::vector<std::string> txt;
 	std::vector<std::vector<size_t>> cdfs;
 
-	void LoadProbabilities(const char *file_name);
+	void LoadProbabilities(const char *filename);
+	void LoadProbabilities(const boost::filesystem::path &filename);
+	
 
 	static const uint phrase_cdf[];
 	static const uint syntagma_cdf[];

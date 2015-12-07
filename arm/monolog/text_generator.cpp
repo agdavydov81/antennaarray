@@ -54,12 +54,23 @@ CTextGenerator::CTextGenerator(const char *filename, ulong seed) : CTextGenerato
 	LoadProbabilities(filename);
 }
 
+CTextGenerator::CTextGenerator(const boost::filesystem::path &filename, ulong seed) : CTextGenerator(seed)
+{
+	LoadProbabilities(filename);
+}
+
 CTextGenerator::~CTextGenerator()
 {
 }
 
 void CTextGenerator::LoadProbabilities(const char* filename)
 {
+	LoadProbabilities(boost::filesystem::path(filename));
+}
+
+void CTextGenerator::LoadProbabilities(const boost::filesystem::path &bfilename)
+{
+	std::string filename(bfilename.generic_string());
 	try {
 		std::ifstream fh(filename);
 		if (!fh)

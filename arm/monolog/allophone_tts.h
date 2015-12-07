@@ -3,6 +3,7 @@
 
 #include <deque>
 #include <vector>
+#include <boost/filesystem.hpp>
 
 #ifndef uint
 typedef unsigned int uint;
@@ -59,8 +60,10 @@ public:
 
 	CAllophoneTTS(char accent_text_symbol_ = '\'');
 	CAllophoneTTS(const char *path, char accent_text_symbol_ = '\'');
+	CAllophoneTTS(const boost::filesystem::path &path, char accent_text_symbol_ = '\'');
 
 	void LoadBase(const char *path);
+	void LoadBase(const boost::filesystem::path &path);
 
 	std::deque<size_t> Text2Allophones(const char *text) const;
 };

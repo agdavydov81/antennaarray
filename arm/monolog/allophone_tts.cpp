@@ -4,7 +4,6 @@
 
 #include "allophone_tts.h"
 #include <sstream>
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <wav_markers_regions.h>
 
@@ -29,7 +28,15 @@ CAllophoneTTS::CAllophoneTTS(const char *path_, char accent_text_symbol_) : CAll
 	LoadBase(path_);
 }
 
+CAllophoneTTS::CAllophoneTTS(const boost::filesystem::path &path_, char accent_text_symbol_) : CAllophoneTTS(accent_text_symbol_) {
+	LoadBase(path_);
+}
+
 void CAllophoneTTS::LoadBase(const char *path) {
+	LoadBase(boost::filesystem::path(path));
+}
+
+void CAllophoneTTS::LoadBase(const boost::filesystem::path &bpath) {
 	static const char *alp_name_init[] = {
 		"a000",		"a001",		"a002",		"a003",		"a010",		"a011",
 		"a012",		"a013",		"a020",		"a021",		"a022",		"a023",
@@ -99,9 +106,8 @@ void CAllophoneTTS::LoadBase(const char *path) {
 	try
 	{
 		base.names.assign(alp_name_init, alp_name_init + sizeof(alp_name_init) / sizeof(alp_name_init[0]));
-		std::sort(base.names.begin(), base.names.end());
+		std::sort(base.names.begin(), base.names.end(), [](const char *a_, const char *b_) { return strcmp(a_, b_) < 0; });
 
-		bfs::path bpath(path);
 		for (const auto &current_name : base.names) {
 			current_path = bpath / bfs::path(std::string(current_name) + ".wav");
 			auto current_cpath = current_path.c_str();
