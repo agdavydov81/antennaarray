@@ -11,7 +11,9 @@ set(${NAME}_SRCS
 	)
 
 add_definitions(-DUNICODE -D_UNICODE)
-add_definitions(-DENABLE_SNDFILE_WINDOWS_PROTOTYPES=1)
+if (WIN32)
+	add_definitions(-DENABLE_SNDFILE_WINDOWS_PROTOTYPES=1)
+endif()
 
 add_executable(${NAME} ${${NAME}_SRCS})
 target_link_libraries(${NAME} ${PORTAUDIO_LIBRARIES} ${SNDFILE_LIBRARIES} ${Boost_LIBRARIES})

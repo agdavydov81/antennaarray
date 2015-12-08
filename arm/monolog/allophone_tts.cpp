@@ -143,7 +143,7 @@ void CAllophoneTTS::LoadBase(const boost::filesystem::path &bpath) {
 			wav_markers_regions_read(current_cpath, markers, regions);
 
 			data.pitches.resize(markers.size());
-			std::transform(markers.cbegin(), markers.cend(), data.pitches.begin(), [](auto m) { return m.pos; });
+			std::transform(markers.cbegin(), markers.cend(), data.pitches.begin(), [](const WAV_MARKER &m) { return m.pos; });
 			for (const auto &r : regions)
 				if (!r.length)
 					data.pitches.push_back(r.pos);
@@ -174,7 +174,7 @@ void CAllophoneTTS::PushBackAlaphone(const char *alp, const char *ind, std::dequ
 	strcpy(alp_name, alp);
 	strcat(alp_name, ind);
 
-	size_t pos = (size_t)(std::lower_bound(base.names.cbegin(), base.names.cend(), alp_name, [](auto a, auto b) { return strcmp(a, b) < 0; }) - base.names.cbegin());
+	size_t pos = (size_t)(std::lower_bound(base.names.cbegin(), base.names.cend(), alp_name, [](const char *a, const char *b) { return strcmp(a, b) < 0; }) - base.names.cbegin());
 	assert(pos >= 0 && pos < base.datas.size());
 	queue.push_back(pos);
 }

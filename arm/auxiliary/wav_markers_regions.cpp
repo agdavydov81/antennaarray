@@ -269,12 +269,16 @@ void wav_markers_regions_read_(std::ifstream &fh, std::vector<WAV_MARKER> &marke
 }
 
 void wav_markers_regions_read(const char *file_name, std::vector<WAV_MARKER> &markers, std::vector<WAV_REGION> &regions) {
-	wav_markers_regions_read_(std::ifstream(file_name, std::ios_base::in | std::ios_base::binary), markers, regions);
+    std::ifstream file_stream(file_name, std::ios_base::in | std::ios_base::binary);
+	wav_markers_regions_read_(file_stream, markers, regions);
 }
 
+#ifdef MSCVER
 void wav_markers_regions_read(const wchar_t *file_name, std::vector<WAV_MARKER> &markers, std::vector<WAV_REGION> &regions) {
-	wav_markers_regions_read_(std::ifstream(file_name, std::ios_base::in | std::ios_base::binary), markers, regions);
+    std::ifstream file_stream(file_name, std::ios_base::in | std::ios_base::binary);
+	wav_markers_regions_read_(file_stream, markers, regions);
 }
+#endif
 
 std::streampos delete_markers_regions_from_file(std::fstream &fh, std::streampos file_size) {
 	std::streampos put_pos=(sizeof(RIFF_CHUNK)+1)&-2;
@@ -475,7 +479,8 @@ std::streampos wav_markers_regions_write_(std::fstream &fh, const std::vector<WA
 }
 
 void wav_markers_regions_write(const char *file_name, const std::vector<WAV_MARKER> &markers, const std::vector<WAV_REGION> &regions) {
-	std::streampos new_sz = wav_markers_regions_write_(std::fstream(file_name, std::ios_base::in | std::ios_base::out | std::ios_base::binary), markers, regions);
+    std::fstream file_stream(file_name, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+	std::streampos new_sz = wav_markers_regions_write_(file_stream, markers, regions);
 
 	if(new_sz != std::streampos(-1))
 	{
@@ -494,8 +499,10 @@ void wav_markers_regions_write(const char *file_name, const std::vector<WAV_MARK
 	}
 }
 
+#ifdef MSCVER
 void wav_markers_regions_write(const wchar_t *file_name, const std::vector<WAV_MARKER> &markers, const std::vector<WAV_REGION> &regions) {
-	std::streampos new_sz = wav_markers_regions_write_(std::fstream(file_name, std::ios_base::in | std::ios_base::out | std::ios_base::binary), markers, regions);
+    std::fstream file_stream(file_name, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+	std::streampos new_sz = wav_markers_regions_write_(file_name, markers, regions);
 
 	if (new_sz != std::streampos(-1))
 	{
@@ -513,3 +520,4 @@ void wav_markers_regions_write(const wchar_t *file_name, const std::vector<WAV_M
 #endif
 	}
 }
+#endif

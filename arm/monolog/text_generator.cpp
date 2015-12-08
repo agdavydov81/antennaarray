@@ -87,7 +87,8 @@ void CTextGenerator::LoadProbabilities(const boost::filesystem::path &bfilename)
 			throw std::runtime_error("Error getting text line.");
 		if (line.length() != txt_sum_length)
 			throw std::runtime_error("Incorrect text length.");
-		txt.assign((std::istream_iterator<std::string>(std::istringstream(line))), std::istream_iterator<std::string>());
+        std::istringstream line_stream(line);
+		txt.assign((std::istream_iterator<std::string>(line_stream)), std::istream_iterator<std::string>());
 		if (txt.size() != txt_num)
 			throw std::runtime_error("Incorrect text elements number.");
 
