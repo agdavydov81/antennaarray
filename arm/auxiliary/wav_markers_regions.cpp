@@ -273,7 +273,7 @@ void wav_markers_regions_read(const char *file_name, std::vector<WAV_MARKER> &ma
 	wav_markers_regions_read_(file_stream, markers, regions);
 }
 
-#ifdef MSCVER
+#ifdef _MSC_VER
 void wav_markers_regions_read(const wchar_t *file_name, std::vector<WAV_MARKER> &markers, std::vector<WAV_REGION> &regions) {
     std::ifstream file_stream(file_name, std::ios_base::in | std::ios_base::binary);
 	wav_markers_regions_read_(file_stream, markers, regions);
@@ -499,10 +499,10 @@ void wav_markers_regions_write(const char *file_name, const std::vector<WAV_MARK
 	}
 }
 
-#ifdef MSCVER
+#ifdef _MSC_VER
 void wav_markers_regions_write(const wchar_t *file_name, const std::vector<WAV_MARKER> &markers, const std::vector<WAV_REGION> &regions) {
     std::fstream file_stream(file_name, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-	std::streampos new_sz = wav_markers_regions_write_(file_name, markers, regions);
+	std::streampos new_sz = wav_markers_regions_write_(file_stream, markers, regions);
 
 	if (new_sz != std::streampos(-1))
 	{
