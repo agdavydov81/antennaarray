@@ -11,6 +11,7 @@
 #include <fcntl.h>
 
 #ifdef _WIN32
+#include <io.h>
 #include <windows.h>
 #else // linux
 #include <sys/ioctl.h>
@@ -155,7 +156,7 @@ void portaudio_list_sound_devices() {
 	int def_in = Pa_GetDefaultInputDevice();
 	int def_out = Pa_GetDefaultOutputDevice();
 
-	for (int i = 0; i<numDevices; ++i) {
+	for (int i = 0; i < numDevices; ++i) {
 		auto deviceInfo = Pa_GetDeviceInfo(i);
 		std::cout << &separator_line[0] << std::endl;
 		std::cout << "Device #" << i;
@@ -247,17 +248,17 @@ void portaudio_list_sound_devices() {
 	}
 }
 
-void portaudio_print_supported_standard_sample_rates(const PaStreamParameters *inputParameters,	const PaStreamParameters *outputParameters) {
+void portaudio_print_supported_standard_sample_rates(const PaStreamParameters *inputParameters, const PaStreamParameters *outputParameters) {
 	static double standardSampleRates[] = {
 		8000.0, 9600.0, 11025.0, 12000.0, 16000.0, 22050.0, 24000.0, 32000.0,
-		44100.0, 48000.0, 88200.0, 96000.0, 192000.0};
+		44100.0, 48000.0, 88200.0, 96000.0, 192000.0 };
 
 	std::cout << "\t";
 
 	PaError err;
-	for (int i = 0, ie = sizeof(standardSampleRates)/sizeof(standardSampleRates[0]); i<ie; ++i)
-		if((err = Pa_IsFormatSupported(inputParameters, outputParameters, standardSampleRates[i])) == paFormatIsSupported)
+	for (int i = 0, ie = sizeof(standardSampleRates) / sizeof(standardSampleRates[0]); i < ie; ++i)
+		if ((err = Pa_IsFormatSupported(inputParameters, outputParameters, standardSampleRates[i])) == paFormatIsSupported)
 			std::cout << standardSampleRates[i] << " ";
-	
+
 	std::cout << std::endl;
 }
