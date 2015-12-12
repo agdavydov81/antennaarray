@@ -6,7 +6,8 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <portaudio.h>
-#include <io.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 
 #ifdef _WIN32
