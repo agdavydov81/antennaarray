@@ -8,6 +8,8 @@ set(${NAME}_SRCS
 	allophone_tts.cpp
 	../auxiliary/wav_markers_regions.h
 	../auxiliary/wav_markers_regions.cpp
+	audio.h
+	audio.cpp
 	)
 
 add_definitions(-DUNICODE -D_UNICODE)

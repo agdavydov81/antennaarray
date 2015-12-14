@@ -93,7 +93,8 @@ void CAllophoneTTS::LoadBase(const boost::filesystem::path &bpath) {
 		"y020",		"y021",		"y022",		"y023",		"y111",		"y112",
 		"y113",		"y121",		"y122",		"y123",		"y210",		"y211",
 		"y212",		"y213",		"y220",		"y221",		"y222",		"y223",
-		"z'204",	"z'205",	"z204",		"z205",		"zh204",	"zh205"
+		"z'204",	"z'205",	"z204",		"z205",		"zh204",	"zh205",
+		"#pause1",	"#pause2",	"#pause3"
 	};
 
 	base.samplerate = 0;
@@ -174,7 +175,7 @@ void CAllophoneTTS::PushBackAlaphone(const char *alp, const char *ind, std::dequ
 	strcpy(alp_name, alp);
 	strcat(alp_name, ind);
 
-	size_t pos = (size_t)(std::lower_bound(base.names.cbegin(), base.names.cend(), alp_name, [](const char *a, const char *b) { return strcmp(a, b) < 0; }) - base.names.cbegin());
+	size_t pos = static_cast<size_t>(std::lower_bound(base.names.cbegin(), base.names.cend(), alp_name, [](const char *a, const char *b) { return strcmp(a, b) < 0; }) - base.names.cbegin());
 	assert(pos >= 0 && pos < base.datas.size());
 	queue.push_back(pos);
 }
@@ -183,12 +184,8 @@ int CAllophoneTTS::Word2Alaphones(char *word, bool last_word, std::deque<size_t>
 	char alp[8], ind[8] = "xxx";
 	char prev_symb = 0;
 
-	int preaccent_pos, accent_pos;
-	GetAccent(word, preaccent_pos, accent_pos);
-
-	int word_len = 0;
-	while (GroupWordChar(word[word_len]))
-		word_len++;
+	int preaccent_pos, accent_pos, word_len;
+	GetAccent(word, preaccent_pos, accent_pos, word_len);
 
 	int post_switch = post_pass;
 
@@ -951,28 +948,39 @@ int CAllophoneTTS::Word2Alaphones(char *word, bool last_word, std::deque<size_t>
 	return word_len;
 }
 
-void CAllophoneTTS::GetAccent(char *word, int &preaccent_pos, int &accent_pos) const {
-	int word_len = 0;
-	while (GroupWordChar(word[word_len]))
-		word_len++;
+void CAllophoneTTS::GetAccent(char *word, int &preaccent_pos, int &accent_pos, int &word_len) const {
+	word_len = 0;
+	accent_pos = 0;
+	while (true)
+	{
+		const auto &c = word[word_len];
+		if (c == accent_text_symbol) {
+			accent_pos = word_len;
+			word_len++;
+			continue;
+		}
+		if (((c >= 'à') && (c <= 'ÿ')) || (c == '¸')) {
+			word_len++;
+			continue;
+		}
+		break;
+	}
 
-	int i = 0;
-	while (i < word_len&&word[i] != accent_text_symbol)
-		i++;
-	if (word[i] == accent_text_symbol) {
-		accent_pos = i - 1;
-		memmove(word + i, word + i + 1, word_len - i - 1);
-		word[word_len - 1] = ' ';
+	if (word[accent_pos] == accent_text_symbol) {
+		accent_pos--;
+		word_len--;
+		memmove(word + accent_pos, word + accent_pos + 1, word_len - accent_pos);
+		word[word_len] = ' ';
 	}
 	else {
 		int vovel_cnt = 0;
-		for (i = 0; i < word_len; i++)
+		for (int i = 0; i < word_len; i++)
 			if (GroupVovel(word[i]))
 				vovel_cnt++;
 
 		accent_pos = vovel_cnt >> 1;
 		vovel_cnt = 0;
-		for (i = 0; i < word_len; i++)
+		for (int i = 0; i < word_len; i++)
 			if (GroupVovel(word[i])) {
 				vovel_cnt++;
 				if (vovel_cnt >= accent_pos) {
@@ -987,64 +995,40 @@ void CAllophoneTTS::GetAccent(char *word, int &preaccent_pos, int &accent_pos) c
 		preaccent_pos--;
 }
 
-bool CAllophoneTTS::GroupWordChar(char c) const {
-	if (((c >= 'à') && (c <= 'ÿ')) || (c == '¸') || (c == accent_text_symbol))
-		return true;
-	return false;
-}
-
 bool CAllophoneTTS::GroupVovel(char c) const {
-	if ((c == 'à') || (c == 'å') || (c == '¸') || (c == 'è') || (c == 'î') || (c == 'ó') || (c == 'û') || (c == 'ý') || (c == 'þ') || (c == 'ÿ'))
-		return true;
-	return false;
+	return strchr("àå¸èîóûýþÿ", c) != nullptr;
 }
 
 bool CAllophoneTTS::GroupChar01(char c) const {
-	if ((c == 'ò') || (c == 'ä') || (c == 'ñ') || (c == 'ç') || (c == 'ö') || (c == 'ø') || (c == 'æ') || (c == 'í') || (c == 'ð') || (c == 'à'))
-		return true;
-	return false;
+	return strchr("òäñçöøæíðà", c) != nullptr;
 }
 
 bool CAllophoneTTS::GroupChar02(char c) const {
-	if ((c == 'ï') || (c == 'á') || (c == 'ô') || (c == 'â') || (c == 'ë') || (c == 'ì') || (c == 'ó') || (c == 'î'))
-		return true;
-	return false;
+	return strchr("ïáôâëìóî", c) != nullptr;
 }
 
 bool CAllophoneTTS::GroupChar03(char c) const {
-	if ((c == 0) || (c == 'ü') || (c == 'ú') || (c == 'à') || (c == 'î') || (c == 'ó') || (c == 'ý') || (c == 'û') || (c == 'å') || (c == '¸') || (c == 'þ') || (c == 'ÿ'))
-		return true;
-	return false;
+	return c == '\0' || strchr("üúàîóýûå¸þÿ", c) != nullptr;
 }
 
 bool CAllophoneTTS::GroupChar04(char c) const {
-	if ((c == 'ü') || (c == 'å') || (c == '¸') || (c == 'þ') || (c == 'ÿ') || (c == 'è'))
-		return true;
-	return false;
+	return strchr("üå¸þÿè", c) != nullptr;
 }
 
 bool CAllophoneTTS::GroupChar05(char c) const {
-	if ((c == 0) || (c == 'ï') || (c == 'ò') || (c == 'ê') || (c == 'ô') || (c == 'ö') || (c == 'ù') || (c == '÷') || (c == 'õ') || (c == 'ù'))
-		return true;
-	return false;
+	return c == '\0' || strchr("ïòêôöù÷õù", c) != nullptr;
 }
 
 bool CAllophoneTTS::GroupChar06(char c) const {
-	if ((c == 'á') || (c == 'ä') || (c == 'ã') || (c == 'ç') || (c == 'æ') || (c == 'ë') || (c == 'ì') || (c == 'í') || (c == 'â') || (c == 'é') || (c == 'ð'))
-		return true;
-	return false;
+	return strchr("áäãçæëìíâéð", c) != nullptr;
 }
 
 bool CAllophoneTTS::GroupChar07(char c) const {
-	if ((c == 'à') || (c == 'å') || (c == 'î') || (c == 'ó') || (c == 'û') || (c == 'è'))
-		return true;
-	return false;
+	return strchr("àåîóûè", c) != nullptr;
 }
 
 bool CAllophoneTTS::GroupChar08(char c) const {
-	if ((c == 'á') || (c == 'ä') || (c == 'ã') || (c == 'ç') || (c == 'æ'))
-		return true;
-	return false;
+	return strchr("áäãçæ", c) != nullptr;
 }
 
 std::deque<size_t> CAllophoneTTS::Text2Allophones(const char *text) const {
@@ -1053,10 +1037,13 @@ std::deque<size_t> CAllophoneTTS::Text2Allophones(const char *text) const {
 
 	std::deque<size_t> queue;
 
-	int phrase_pos = 0;
-	while (phrase[phrase_pos]) {
-		while (!GroupWordChar(phrase[phrase_pos])) {
-			switch (phrase[phrase_pos]) {
+	const char tag_pause[] = "#pause";
+
+	char *phrase_pos = &phrase[0];
+	while (*phrase_pos) {
+		while (!(*phrase_pos >= 'à' && *phrase_pos <= 'ÿ' || *phrase_pos == '¸' || *phrase_pos == accent_text_symbol) ||
+				*phrase_pos == '#') {
+			switch (*phrase_pos) {
 			case 0:
 				goto phrase_finish;
 			case '.':
@@ -1067,15 +1054,28 @@ std::deque<size_t> CAllophoneTTS::Text2Allophones(const char *text) const {
 			case ':':
 			case '-':
 				break;
+			case '#':
+				if (!strncmp(phrase_pos, tag_pause, sizeof(tag_pause)-1)) {
+					phrase_pos[sizeof(tag_pause)] = '\0';
+					size_t pos = static_cast<size_t>(std::lower_bound(base.names.cbegin(), base.names.cend(), phrase_pos, [](const char *a, const char *b) { return strcmp(a, b) < 0; }) - base.names.cbegin());
+					assert(pos >= 0 && pos < base.datas.size());
+					queue.push_back(pos);
+					phrase_pos += sizeof(tag_pause);
+				}
+				break;
 			default:
 				break;
 			}
 			phrase_pos++;
 		}
 
-		phrase_pos += Word2Alaphones(&phrase[phrase_pos], false, queue);
+		phrase_pos += Word2Alaphones(phrase_pos, false, queue);
 	}
 phrase_finish:
 
 	return queue;
+}
+
+std::deque<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allophones) const {
+	throw std::runtime_error("Not implemented");
 }

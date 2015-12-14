@@ -133,10 +133,12 @@ std::string CTextGenerator::Generate()
 					sstr << " ";
 			}
 			if (syntagma_i + 1 != syntagma_num)
-				sstr << ", ";
+				sstr << ", #pause1 ";
 		}
-		sstr << ". ";
+		if (phrase_i + 1 != phrase_num)
+			sstr << ". #pause2 ";
 	}
+	sstr << " #pause3 ";
 
 	return sstr.str();
 }

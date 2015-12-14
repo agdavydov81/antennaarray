@@ -4,6 +4,7 @@
 #include <deque>
 #include <vector>
 #include <boost/filesystem.hpp>
+#include <cstdint>
 
 #ifndef uint
 typedef unsigned int uint;
@@ -14,8 +15,7 @@ class CAllophoneTTS
 protected:
 	void PushBackAlaphone(const char *alp, const char *ind, std::deque<size_t> &queue) const;
 	int Word2Alaphones(char *word,bool last_word, std::deque<size_t> &queue) const;
-	void GetAccent(char *word,int &preaccent_pos,int &accent_pos) const;
-	bool GroupWordChar(char c) const;
+	void GetAccent(char *word,int &preaccent_pos,int &accent_pos, int &word_len) const;
 	bool GroupVovel(char c) const;
 	bool GroupChar01(char c) const;
 	bool GroupChar02(char c) const;
@@ -66,6 +66,8 @@ public:
 	void LoadBase(const boost::filesystem::path &path);
 
 	std::deque<size_t> Text2Allophones(const char *text) const;
+
+	std::deque<int16_t> Allophones2Sound(std::deque<size_t> &allophones) const;
 };
 
 #endif
