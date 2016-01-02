@@ -3,6 +3,7 @@
 #include <portaudio.h>
 #include <pugixml/pugixml.hpp>
 #include <boost/thread.hpp>
+#include <cstdio>
 
 struct PA_OBJECT {
 	PA_OBJECT() {
