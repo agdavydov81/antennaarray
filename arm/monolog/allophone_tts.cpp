@@ -4,8 +4,11 @@
 
 #include "allophone_tts.h"
 #include <sstream>
+#include <stdexcept>
 #include <boost/algorithm/string.hpp>
 #include <wav_markers_regions.h>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 #if defined(_WIN32) && (defined(UNICODE) || defined(_UNICODE))
 typedef wchar_t		_tchar;
@@ -17,6 +20,7 @@ typedef std::basic_string<_tchar>	_tstring;
 #include <sndfile.hh>
 
 namespace bfs = boost::filesystem;
+namespace bpt = boost::property_tree;
 
 CAllophoneTTS::ALLOPHONE_BASE::ALLOPHONE_BASE() : samplerate(0), channels(0) {
 }
@@ -24,19 +28,25 @@ CAllophoneTTS::ALLOPHONE_BASE::ALLOPHONE_BASE() : samplerate(0), channels(0) {
 CAllophoneTTS::CAllophoneTTS(char accent_text_symbol_) : accent_text_symbol(accent_text_symbol_) {
 }
 
-CAllophoneTTS::CAllophoneTTS(const char *path_, char accent_text_symbol_) : CAllophoneTTS(accent_text_symbol_) {
-	LoadBase(path_);
+CAllophoneTTS::CAllophoneTTS(const char *base_path_, const char *xml_path_, char accent_text_symbol_) : CAllophoneTTS(accent_text_symbol_) {
+	LoadBase(base_path_);
+	LoadConfig(xml_path_);
 }
 
-CAllophoneTTS::CAllophoneTTS(const boost::filesystem::path &path_, char accent_text_symbol_) : CAllophoneTTS(accent_text_symbol_) {
-	LoadBase(path_);
+CAllophoneTTS::CAllophoneTTS(const bfs::path &base_path_, const bfs::path &xml_path_, char accent_text_symbol_) : CAllophoneTTS(accent_text_symbol_) {
+	LoadBase(base_path_);
+	LoadConfig(xml_path_);
 }
 
-void CAllophoneTTS::LoadBase(const char *path) {
-	LoadBase(boost::filesystem::path(path));
+void CAllophoneTTS::LoadBase(const char *base_path) {
+	if (base_path)
+		LoadBase(bfs::path(base_path));
 }
 
-void CAllophoneTTS::LoadBase(const boost::filesystem::path &bpath) {
+void CAllophoneTTS::LoadBase(const bfs::path &bpath) {
+	if (bpath.empty())
+		return;
+
 	static const char *alp_name_init[] = {
 		"a000",		"a001",		"a002",		"a003",		"a010",		"a011",
 		"a012",		"a013",		"a020",		"a021",		"a022",		"a023",
@@ -168,6 +178,57 @@ void CAllophoneTTS::LoadBase(const boost::filesystem::path &bpath) {
 		sstr << __FUNCTION__ << ": Error in file " << current_path << ": " << error.what();
 		throw std::runtime_error(sstr.str());
 	}
+}
+
+void CAllophoneTTS::LoadConfig(const char *xml_path_) {
+	if (xml_path_)
+		LoadConfig(bfs::path(xml_path_));
+}
+
+CAllophoneTTS::PROSODY_CONTOUR LoadContour(const char *root_, const bpt::ptree &pt_) {
+	CAllophoneTTS::PROSODY_CONTOUR ret;
+
+	{
+		std::istringstream isstr(pt_.get(std::string(root_) + ".position", ""));
+		ret.position.assign((std::istream_iterator<double>(isstr)), std::istream_iterator<double>());
+	}
+
+	{
+		std::istringstream isstr(pt_.get(std::string(root_) + ".factor", ""));
+		ret.factor.assign((std::istream_iterator<double>(isstr)), std::istream_iterator<double>());
+	}
+
+	if (ret.position.size() != ret.factor.size()) {
+		std::stringstream sstr;
+		sstr << __FUNCTION__ << ": In \"" << root_ << "\" element the number of position points ("
+			<< ret.position.size() << ") not equal to the number of factor points (" << ret.factor.size() << ").";
+		throw std::runtime_error(sstr.str());
+	}
+
+	for (size_t i = 1; i < ret.position.size(); ++i)
+		if (ret.position[i - 1]>ret.position[i])
+			throw std::runtime_error(std::string(__FUNCTION__) + ": The points in \"" + root_ + ".position\" element are unordered.");
+
+	if (!ret.position.empty()) {
+		if (ret.position.front() != 0)
+			throw std::runtime_error(std::string(__FUNCTION__) + ": The first point position in \"" + root_ + ".position\" must equals to zero.");
+		if (ret.position.back() != 1)
+			throw std::runtime_error(std::string(__FUNCTION__) + ": The last point position in \"" + root_ + ".position\" must equals to one.");
+	}
+
+	return ret;
+}
+
+void CAllophoneTTS::LoadConfig(const bfs::path &xml_path_) {
+	bpt::ptree pt;
+	{
+		std::ifstream xml_stream(xml_path_.c_str());
+		read_xml(xml_stream, pt);
+	}
+
+	syntagm_contour = LoadContour("tts.prosody.syntagm.frequency", pt);
+	phrase_contour = LoadContour("tts.prosody.phrase.frequency", pt);
+	paragraph_contour = LoadContour("tts.prosody.paragraph.frequency", pt);
 }
 
 void CAllophoneTTS::PushBackAlaphone(const char *alp, const char *ind, std::deque<size_t> &queue) const {
@@ -1078,4 +1139,18 @@ phrase_finish:
 
 std::deque<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allophones) const {
 	throw std::runtime_error("Not implemented");
+
+	/*
+	for (const auto &ind : allophones) {
+		const auto &signal = base.datas[ind].signal;
+
+		if (sound_stream_lab.is_open()) {
+			auto signal_frames = signal.size() / tts.base.channels;
+			sound_stream.write(&signal[0], signal_frames);
+			auto lab_begin = frames_counter * 10000000 / tts.base.samplerate;
+			frames_counter += signal_frames;
+			auto lab_end = frames_counter * 10000000 / tts.base.samplerate;
+			sound_stream_lab << lab_begin << " " << lab_end << " " << tts.base.names[ind] << std::endl;
+		}
+	}*/
 }

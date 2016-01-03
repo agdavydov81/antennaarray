@@ -59,12 +59,19 @@ public:
 	} base;
 
 	CAllophoneTTS(char accent_text_symbol_ = '\'');
-	CAllophoneTTS(const char *path, char accent_text_symbol_ = '\'');
-	CAllophoneTTS(const boost::filesystem::path &path, char accent_text_symbol_ = '\'');
+	CAllophoneTTS(const char *base_path, const char *xml_path, char accent_text_symbol_ = '\'');
+	CAllophoneTTS(const boost::filesystem::path &base_path, const boost::filesystem::path &xml_path, char accent_text_symbol_ = '\'');
 
-	void LoadBase(const char *path);
-	void LoadBase(const boost::filesystem::path &path);
+	void LoadBase(const char *base_path);
+	void LoadBase(const boost::filesystem::path &base_path);
 
+	void LoadConfig(const char *xml_path);
+	void LoadConfig(const boost::filesystem::path &xml_path);
+
+	struct PROSODY_CONTOUR {
+		std::vector<double> position, factor;
+	} syntagm_contour, phrase_contour, paragraph_contour;
+public:
 	std::deque<size_t> Text2Allophones(const char *text) const;
 
 	std::deque<int16_t> Allophones2Sound(std::deque<size_t> &allophones) const;
