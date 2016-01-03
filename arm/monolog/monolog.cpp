@@ -68,7 +68,8 @@ int main(int argc, const char *argv[]) {
 		std::ofstream out_sound_lab;
 		if (arg_vm.count("outsound")) {
 			auto snd_path = arg_vm["outsound"].as<bfs::path>();
-			out_sound = SndfileHandle(snd_path.c_str(), SFM_WRITE, SF_FORMAT_OGG | SF_FORMAT_VORBIS, tts.base.channels, tts.base.samplerate);
+			out_sound = SndfileHandle(snd_path.c_str(), SFM_WRITE, SF_FORMAT_OGG | SF_FORMAT_VORBIS
+					/*SF_FORMAT_PCM_16 | SF_FORMAT_WAV*/ , tts.base.channels, tts.base.samplerate);
 			snd_path.replace_extension(".lab");
 			out_sound_lab.open(snd_path.c_str());
 		}
@@ -93,23 +94,20 @@ int main(int argc, const char *argv[]) {
 				out_allophone << std::endl;
 			}
 
-			auto sound = tts.Allophones2Sound(queue);
 
-			/*
-			for (const auto &ind : queue) {
-				const auto &signal = tts.base.datas[ind].signal;
+			while (!queue.empty()) {
+				auto sound = tts.Allophones2Sound(queue);
 
-				if (sound_stream_lab.is_open()) {
-					auto signal_frames = signal.size() / tts.base.channels;
-					sound_stream.write(&signal[0], signal_frames);
+				if (out_sound_lab.is_open()) {
+					auto signal_frames = sound.size() / tts.base.channels;
+					out_sound.write(&sound[0], signal_frames);
 					auto lab_begin = frames_counter * 10000000 / tts.base.samplerate;
 					frames_counter += signal_frames;
 					auto lab_end = frames_counter * 10000000 / tts.base.samplerate;
-					sound_stream_lab << lab_begin << " " << lab_end << " " << tts.base.names[ind] << std::endl;
+					out_sound_lab << lab_begin << " " << lab_end << " syntagm" << std::endl;
 				}
-			}*/
+			}
 		}
-
 
 		return 0;
 	}

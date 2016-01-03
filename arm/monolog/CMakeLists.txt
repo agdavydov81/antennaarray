@@ -6,10 +6,12 @@ set(${NAME}_SRCS
 	text_generator.cpp
 	allophone_tts.h
 	allophone_tts.cpp
-	../auxiliary/wav_markers_regions.h
-	../auxiliary/wav_markers_regions.cpp
 	audio.h
 	audio.cpp
+	../auxiliary/wav_markers_regions.cpp
+	../auxiliary/libresample/src/filterkit.c
+	../auxiliary/libresample/src/resample.c
+	../auxiliary/libresample/src/resamplesubs.c
 	)
 
 add_definitions(-DUNICODE -D_UNICODE)

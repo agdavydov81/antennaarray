@@ -39,6 +39,12 @@ protected:
 	};
 
 	char accent_text_symbol;
+	size_t syntagm_index, phrase_index, paragraph_index;
+
+	void *prosody_handle;
+	double prosody_ratio;
+public:
+	static const double prosody_max_factor;
 
 public:
 	struct ALLOPHONE_BASE {
@@ -61,6 +67,7 @@ public:
 	CAllophoneTTS(char accent_text_symbol_ = '\'');
 	CAllophoneTTS(const char *base_path, const char *xml_path, char accent_text_symbol_ = '\'');
 	CAllophoneTTS(const boost::filesystem::path &base_path, const boost::filesystem::path &xml_path, char accent_text_symbol_ = '\'');
+	virtual ~CAllophoneTTS();
 
 	void LoadBase(const char *base_path);
 	void LoadBase(const boost::filesystem::path &base_path);
@@ -71,10 +78,10 @@ public:
 	struct PROSODY_CONTOUR {
 		std::vector<double> position, factor;
 	} syntagm_contour, phrase_contour, paragraph_contour;
-public:
+
 	std::deque<size_t> Text2Allophones(const char *text) const;
 
-	std::deque<int16_t> Allophones2Sound(std::deque<size_t> &allophones) const;
+	std::vector<int16_t> Allophones2Sound(std::deque<size_t> &allophones);
 };
 
 #endif

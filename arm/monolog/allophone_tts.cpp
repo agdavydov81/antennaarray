@@ -4,11 +4,13 @@
 
 #include "allophone_tts.h"
 #include <sstream>
+#include <array>
 #include <stdexcept>
 #include <boost/algorithm/string.hpp>
 #include <wav_markers_regions.h>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include "../auxiliary/libresample/include/libresample.h"
 
 #if defined(_WIN32) && (defined(UNICODE) || defined(_UNICODE))
 typedef wchar_t		_tchar;
@@ -22,10 +24,27 @@ typedef std::basic_string<_tchar>	_tstring;
 namespace bfs = boost::filesystem;
 namespace bpt = boost::property_tree;
 
+const double CAllophoneTTS::prosody_max_factor = 10.0;
+
 CAllophoneTTS::ALLOPHONE_BASE::ALLOPHONE_BASE() : samplerate(0), channels(0) {
 }
 
 CAllophoneTTS::CAllophoneTTS(char accent_text_symbol_) : accent_text_symbol(accent_text_symbol_) {
+	prosody_handle = resample_open(1, 1 / prosody_max_factor, prosody_max_factor);
+	if (!prosody_handle)
+		throw std::runtime_error(std::string(__FUNCTION__) + ": Can't create prosody resample object.");
+
+	float input_data = 0;
+	std::array<float, 16> prosody_buffer;
+	int inUsed = 1;
+	prosody_ratio = 1;
+	while (!resample_process(prosody_handle, 1, &input_data, 1, 0, &inUsed, &prosody_buffer[0], static_cast<int>(prosody_buffer.size())))
+		;
+}
+
+CAllophoneTTS::~CAllophoneTTS() {
+	if (prosody_handle)
+		resample_close(prosody_handle);
 }
 
 CAllophoneTTS::CAllophoneTTS(const char *base_path_, const char *xml_path_, char accent_text_symbol_) : CAllophoneTTS(accent_text_symbol_) {
@@ -41,6 +60,13 @@ CAllophoneTTS::CAllophoneTTS(const bfs::path &base_path_, const bfs::path &xml_p
 void CAllophoneTTS::LoadBase(const char *base_path) {
 	if (base_path)
 		LoadBase(bfs::path(base_path));
+}
+
+size_t FindString(const std::deque<const char *> names, const char *name) {
+	size_t ret = std::lower_bound(names.begin(), names.end(), name, [](const char *str1, const char *str2) { return strcmp(str1, str2) < 0; }) - names.begin();
+	if (strcmp(names[ret], name))
+		throw std::runtime_error(std::string(__FUNCTION__) + ": Can't find name \"" + name + "\" in base.");
+	return ret;
 }
 
 void CAllophoneTTS::LoadBase(const bfs::path &bpath) {
@@ -118,6 +144,10 @@ void CAllophoneTTS::LoadBase(const bfs::path &bpath) {
 	{
 		base.names.assign(alp_name_init, alp_name_init + sizeof(alp_name_init) / sizeof(alp_name_init[0]));
 		std::sort(base.names.begin(), base.names.end(), [](const char *a_, const char *b_) { return strcmp(a_, b_) < 0; });
+
+		syntagm_index = FindString(base.names, "#pause1");
+		phrase_index = FindString(base.names, "#pause2");
+		paragraph_index = FindString(base.names, "#pause3");
 
 		for (const auto &current_name : base.names) {
 			current_path = bpath / bfs::path(std::string(current_name) + ".wav");
@@ -215,6 +245,10 @@ CAllophoneTTS::PROSODY_CONTOUR LoadContour(const char *root_, const bpt::ptree &
 		if (ret.position.back() != 1)
 			throw std::runtime_error(std::string(__FUNCTION__) + ": The last point position in \"" + root_ + ".position\" must equals to one.");
 	}
+
+	for (const auto &val : ret.factor)
+		if (val < 1 / CAllophoneTTS::prosody_max_factor || val > CAllophoneTTS::prosody_max_factor)
+			throw std::runtime_error(std::string(__FUNCTION__) + ": The factor value in \"" + root_ + ".factor in out of range.");
 
 	return ret;
 }
@@ -1103,7 +1137,7 @@ std::deque<size_t> CAllophoneTTS::Text2Allophones(const char *text) const {
 	char *phrase_pos = &phrase[0];
 	while (*phrase_pos) {
 		while (!(*phrase_pos >= 'à' && *phrase_pos <= 'ÿ' || *phrase_pos == '¸' || *phrase_pos == accent_text_symbol) ||
-				*phrase_pos == '#') {
+			*phrase_pos == '#') {
 			switch (*phrase_pos) {
 			case 0:
 				goto phrase_finish;
@@ -1116,7 +1150,7 @@ std::deque<size_t> CAllophoneTTS::Text2Allophones(const char *text) const {
 			case '-':
 				break;
 			case '#':
-				if (!strncmp(phrase_pos, tag_pause, sizeof(tag_pause)-1)) {
+				if (!strncmp(phrase_pos, tag_pause, sizeof(tag_pause) - 1)) {
 					phrase_pos[sizeof(tag_pause)] = '\0';
 					size_t pos = static_cast<size_t>(std::lower_bound(base.names.cbegin(), base.names.cend(), phrase_pos, [](const char *a, const char *b) { return strcmp(a, b) < 0; }) - base.names.cbegin());
 					assert(pos >= 0 && pos < base.datas.size());
@@ -1137,20 +1171,68 @@ phrase_finish:
 	return queue;
 }
 
-std::deque<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allophones) const {
-	throw std::runtime_error("Not implemented");
+std::vector<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allophones) {
+	std::vector<int16_t> ret;
 
-	/*
-	for (const auto &ind : allophones) {
-		const auto &signal = base.datas[ind].signal;
+	// Find next pause
+	size_t syntagm_size = 0;
+	auto pause_it = allophones.cbegin();
+	for (auto ie = allophones.cend(); pause_it != ie; ++pause_it) {
+		if (*pause_it == syntagm_index || *pause_it == phrase_index || *pause_it == paragraph_index)
+			break;
+		syntagm_size += base.datas[*pause_it].signal.size();
+	}
+	if (pause_it == allophones.cend())
+		throw std::runtime_error(std::string(__FUNCTION__) + ": Can't determine syntagm bounds.");
 
-		if (sound_stream_lab.is_open()) {
-			auto signal_frames = signal.size() / tts.base.channels;
-			sound_stream.write(&signal[0], signal_frames);
-			auto lab_begin = frames_counter * 10000000 / tts.base.samplerate;
-			frames_counter += signal_frames;
-			auto lab_end = frames_counter * 10000000 / tts.base.samplerate;
-			sound_stream_lab << lab_begin << " " << lab_end << " " << tts.base.names[ind] << std::endl;
+	const PROSODY_CONTOUR &prosody_contour = *pause_it == syntagm_index ? syntagm_contour :
+		(*pause_it == phrase_index ? phrase_contour : paragraph_contour);
+
+	ret.reserve(syntagm_size + base.datas[*pause_it].signal.size());
+
+	float prosody_input = 0;
+	std::array<float, 16> prosody_output;
+	int prosody_inUsed = 1;
+	size_t prosody_border = 0; // prosody coeffients recalculation position
+	size_t prosody_contour_ind = 0;
+	double prosody_a = 0, prosody_b = 0;
+	float ret_min = static_cast<float>(std::numeric_limits<int16_t>::min());
+	float ret_max = static_cast<float>(std::numeric_limits<int16_t>::max());
+
+	size_t syntagm_pos = 0;
+	for (auto alp_it = allophones.cbegin(); alp_it != pause_it; ++alp_it) {
+
+		auto sgnl_it = base.datas[*alp_it].signal.cbegin();
+		for (size_t sgnl_i = 0, sgnl_sz = base.datas[*alp_it].signal.size(); sgnl_i < sgnl_sz; ++sgnl_i, ++syntagm_pos, ++sgnl_it) {
+
+			if (syntagm_pos == prosody_border) {
+				prosody_b = ((1/prosody_contour.factor[prosody_contour_ind]) * prosody_contour.position[prosody_contour_ind] * syntagm_size -
+					(1/prosody_contour.factor[prosody_contour_ind + 1]) * prosody_contour.position[prosody_contour_ind + 1] * syntagm_size) /
+					((1/prosody_contour.factor[prosody_contour_ind + 1]) - (1/prosody_contour.factor[prosody_contour_ind]));
+				if (std::isinf(prosody_b))
+					prosody_b = (prosody_b<0 ? -1 : 1) * std::numeric_limits<double>::max() / prosody_max_factor;
+				prosody_a = (1/prosody_contour.factor[prosody_contour_ind]) * (prosody_contour.position[prosody_contour_ind] * syntagm_size + prosody_b);
+
+				prosody_contour_ind++;
+				prosody_border = static_cast<size_t>(floor(prosody_contour.position[prosody_contour_ind] * syntagm_size + 0.5)); // round
+			}
+
+			prosody_input = *sgnl_it;
+
+			prosody_ratio = prosody_a / (syntagm_pos + prosody_b);
+
+			int out = resample_process(prosody_handle, prosody_ratio, &prosody_input, 1, 0, &prosody_inUsed, &prosody_output[0], static_cast<int>(prosody_output.size()));
+			if (out < 0)
+				throw std::runtime_error(std::string(__FUNCTION__) + ": Prosody resampler return nagative value.");
+
+			for (int i = 0; i < out; ++i)
+				ret.push_back(static_cast<int16_t>(std::max(ret_min, std::min(ret_max, prosody_output[i]))));
 		}
-	}*/
+	}
+
+	ret.insert(ret.end(), base.datas[*pause_it].signal.cbegin(), base.datas[*pause_it].signal.cend());
+
+	allophones.erase(allophones.begin(), pause_it + 1);
+
+	return ret;
 }
