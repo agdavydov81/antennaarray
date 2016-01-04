@@ -28,7 +28,7 @@ CAllophoneTTS::ALLOPHONE_BASE::ALLOPHONE_BASE() : samplerate(0), channels(0) {
 }
 
 CAllophoneTTS::CAllophoneTTS(char accent_text_symbol_) : accent_text_symbol(accent_text_symbol_) {
-	prosody_handle = resample_open(1, 1 / (prosody_max_factor*1.01), prosody_max_factor*1.01);
+	prosody_handle = resample_open(0, 1 / (prosody_max_factor*1.01), prosody_max_factor*1.01);
 	if (!prosody_handle)
 		throw std::runtime_error(std::string(__FUNCTION__) + ": Can't create prosody resample object.");
 	prosody_ratio = 1;
@@ -246,14 +246,16 @@ void CAllophoneTTS::LoadConfig(const boost::property_tree::ptree &pt) {
 	phrase_contour = LoadContour("tts.prosody.phrase.frequency", pt);
 	paragraph_contour = LoadContour("tts.prosody.paragraph.frequency", pt);
 
-	float input_data = 0;
-	std::array<float, 16> prosody_buffer;
-	int inUsed = 1;
-	int out = 0;
-	prosody_delay = 0;
-	while (!out) {
-		out = resample_process(prosody_handle, prosody_ratio, &input_data, 1, 0, &inUsed, &prosody_buffer[0], static_cast<int>(prosody_buffer.size()));
-		prosody_delay++;
+	if (syntagm_contour.position.size()) {
+		float input_data = 0;
+		std::array<float, 16> prosody_buffer;
+		int inUsed = 1;
+		int out = 0;
+		prosody_delay = 0;
+		while (!out) {
+			out = resample_process(prosody_handle, prosody_ratio, &input_data, 1, 0, &inUsed, &prosody_buffer[0], static_cast<int>(prosody_buffer.size()));
+			prosody_delay++;
+		}
 	}
 }
 
