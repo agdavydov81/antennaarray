@@ -8,8 +8,6 @@
 #include <stdexcept>
 #include <boost/algorithm/string.hpp>
 #include <wav_markers_regions.h>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 #include "../auxiliary/libresample/include/libresample.h"
 
 #if defined(_WIN32) && (defined(UNICODE) || defined(_UNICODE))
@@ -23,9 +21,6 @@ typedef std::basic_string<_tchar>	_tstring;
 #include <windows.h>
 #endif
 #include <sndfile.hh>
-
-namespace bfs = boost::filesystem;
-namespace bpt = boost::property_tree;
 
 const double CAllophoneTTS::prosody_max_factor = 10.0;
 
@@ -44,19 +39,19 @@ CAllophoneTTS::~CAllophoneTTS() {
 		resample_close(prosody_handle);
 }
 
-CAllophoneTTS::CAllophoneTTS(const char *base_path_, const char *xml_path_, char accent_text_symbol_) : CAllophoneTTS(accent_text_symbol_) {
+CAllophoneTTS::CAllophoneTTS(const char *base_path_, const boost::property_tree::ptree &pt_, char accent_text_symbol_) : CAllophoneTTS(accent_text_symbol_) {
 	LoadBase(base_path_);
-	LoadConfig(xml_path_);
+	LoadConfig(pt_);
 }
 
-CAllophoneTTS::CAllophoneTTS(const bfs::path &base_path_, const bfs::path &xml_path_, char accent_text_symbol_) : CAllophoneTTS(accent_text_symbol_) {
+CAllophoneTTS::CAllophoneTTS(const boost::filesystem::path &base_path_, const boost::property_tree::ptree &pt_, char accent_text_symbol_) : CAllophoneTTS(accent_text_symbol_) {
 	LoadBase(base_path_);
-	LoadConfig(xml_path_);
+	LoadConfig(pt_);
 }
 
 void CAllophoneTTS::LoadBase(const char *base_path) {
 	if (base_path)
-		LoadBase(bfs::path(base_path));
+		LoadBase(boost::filesystem::path(base_path));
 }
 
 size_t FindString(const std::deque<const char *> names, const char *name) {
@@ -66,7 +61,7 @@ size_t FindString(const std::deque<const char *> names, const char *name) {
 	return ret;
 }
 
-void CAllophoneTTS::LoadBase(const bfs::path &bpath) {
+void CAllophoneTTS::LoadBase(const boost::filesystem::path &bpath) {
 	if (bpath.empty())
 		return;
 
@@ -135,7 +130,7 @@ void CAllophoneTTS::LoadBase(const bfs::path &bpath) {
 	base.names.clear();
 	base.datas.clear();
 
-	bfs::path current_path;
+	boost::filesystem::path current_path;
 
 	try
 	{
@@ -147,7 +142,7 @@ void CAllophoneTTS::LoadBase(const bfs::path &bpath) {
 		paragraph_index = FindString(base.names, "#pause3");
 
 		for (const auto &current_name : base.names) {
-			current_path = bpath / bfs::path(std::string(current_name) + ".wav");
+			current_path = bpath / boost::filesystem::path(std::string(current_name) + ".wav");
 			auto current_cpath = current_path.c_str();
 
 			SndfileHandle file(current_cpath);
@@ -207,12 +202,7 @@ void CAllophoneTTS::LoadBase(const bfs::path &bpath) {
 	}
 }
 
-void CAllophoneTTS::LoadConfig(const char *xml_path_) {
-	if (xml_path_)
-		LoadConfig(bfs::path(xml_path_));
-}
-
-CAllophoneTTS::PROSODY_CONTOUR LoadContour(const char *root_, const bpt::ptree &pt_) {
+CAllophoneTTS::PROSODY_CONTOUR LoadContour(const char *root_, const boost::property_tree::ptree &pt_) {
 	CAllophoneTTS::PROSODY_CONTOUR ret;
 
 	{
@@ -250,15 +240,7 @@ CAllophoneTTS::PROSODY_CONTOUR LoadContour(const char *root_, const bpt::ptree &
 	return ret;
 }
 
-void CAllophoneTTS::LoadConfig(const bfs::path &xml_path_) {
-	bpt::ptree pt;
-	{
-		std::ifstream xml_stream(xml_path_.c_str());
-		if (!xml_stream.is_open())
-			return;
-		read_xml(xml_stream, pt);
-	}
-
+void CAllophoneTTS::LoadConfig(const boost::property_tree::ptree &pt) {
 	syntagm_contour = LoadContour("tts.prosody.syntagm.frequency", pt);
 	phrase_contour = LoadContour("tts.prosody.phrase.frequency", pt);
 	paragraph_contour = LoadContour("tts.prosody.paragraph.frequency", pt);

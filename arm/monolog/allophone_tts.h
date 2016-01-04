@@ -5,6 +5,7 @@
 #include <vector>
 #include <boost/filesystem.hpp>
 #include <cstdint>
+#include <boost/property_tree/ptree.hpp>
 
 #ifndef uint
 typedef unsigned int uint;
@@ -65,15 +66,14 @@ public:
 	} base;
 
 	CAllophoneTTS(char accent_text_symbol_ = '\'');
-	CAllophoneTTS(const char *base_path, const char *xml_path, char accent_text_symbol_ = '\'');
-	CAllophoneTTS(const boost::filesystem::path &base_path, const boost::filesystem::path &xml_path, char accent_text_symbol_ = '\'');
+	CAllophoneTTS(const char *base_path, const boost::property_tree::ptree &pt, char accent_text_symbol_ = '\'');
+	CAllophoneTTS(const boost::filesystem::path &base_path, const boost::property_tree::ptree &pt, char accent_text_symbol_ = '\'');
 	virtual ~CAllophoneTTS();
 
 	void LoadBase(const char *base_path);
 	void LoadBase(const boost::filesystem::path &base_path);
 
-	void LoadConfig(const char *xml_path);
-	void LoadConfig(const boost::filesystem::path &xml_path);
+	void LoadConfig(const boost::property_tree::ptree &pt);
 
 	struct PROSODY_CONTOUR {
 		std::vector<double> position, factor;

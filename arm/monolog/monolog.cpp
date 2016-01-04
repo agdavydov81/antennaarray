@@ -5,6 +5,8 @@
 #include "allophone_tts.h"
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 #include "audio.h"
 
 #ifdef ENABLE_SNDFILE_WINDOWS_PROTOTYPES
@@ -14,6 +16,7 @@
 
 namespace bpo = boost::program_options;
 namespace bfs = boost::filesystem;
+namespace bpt = boost::property_tree;
 
 int main(int argc, const char *argv[]) {
 	try {
@@ -24,7 +27,7 @@ int main(int argc, const char *argv[]) {
 			("seed", bpo::value<ulong>(), "set random generator seed")
 			("statpath", bpo::value<bfs::path>(), "set statistics file filename")
 			("ttsbase", bpo::value<bfs::path>(), "set TTS base pathname")
-			("ttsxml", bpo::value<bfs::path>(), "set TTS configuration pathname")
+			("config", bpo::value<bfs::path>(), "set configuration pathname")
 			("outtext", bpo::value<bfs::path>(), "set text stream output file")
 			("outallophone", bpo::value<bfs::path>(), "set allophone stream output file")
 			("outsound", bpo::value<bfs::path>(), "set sound stream output file")
@@ -55,10 +58,18 @@ int main(int argc, const char *argv[]) {
 		ulong rand_seed = arg_vm.count("seed") ? arg_vm["seed"].as<ulong>() : static_cast<ulong>(time(nullptr));
 		auto stat_path = arg_vm.count("statpath") ? arg_vm["statpath"].as<bfs::path>() : bfs::path("det_res.txt");
 		auto tts_base = arg_vm.count("ttsbase") ? arg_vm["ttsbase"].as<bfs::path>() : bfs::path("db_bor1");
-		auto tts_xml = arg_vm.count("ttsxml") ? arg_vm["ttsxml"].as<bfs::path>() : bfs::path(tts_base)/".."/"tts.xml";
+		auto config_xml = arg_vm.count("config") ? arg_vm["config"].as<bfs::path>() : bfs::path("monolog.xml");
+
+		bpt::ptree pt;
+		{
+			std::ifstream xml_stream(config_xml.c_str());
+			if (!xml_stream.is_open())
+				throw std::runtime_error(std::string(__FUNCTION__) + ": Can't open configuration file.");
+			read_xml(xml_stream, pt);
+		}
 
 		CTextGenerator text_gen(stat_path, rand_seed);
-		CAllophoneTTS tts(tts_base, tts_xml);
+		CAllophoneTTS tts(tts_base, pt);
 
 		// Prepare log files
 		std::ofstream out_text;
