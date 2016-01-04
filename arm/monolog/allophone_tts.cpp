@@ -36,13 +36,7 @@ CAllophoneTTS::CAllophoneTTS(char accent_text_symbol_) : accent_text_symbol(acce
 	prosody_handle = resample_open(1, 1 / (prosody_max_factor*1.01), prosody_max_factor*1.01);
 	if (!prosody_handle)
 		throw std::runtime_error(std::string(__FUNCTION__) + ": Can't create prosody resample object.");
-
-	float input_data = 0;
-	std::array<float, 16> prosody_buffer;
-	int inUsed = 1;
 	prosody_ratio = 1;
-	while (!resample_process(prosody_handle, 1, &input_data, 1, 0, &inUsed, &prosody_buffer[0], static_cast<int>(prosody_buffer.size())))
-		;
 }
 
 CAllophoneTTS::~CAllophoneTTS() {
