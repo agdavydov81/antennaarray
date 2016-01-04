@@ -1218,9 +1218,9 @@ std::vector<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allopho
 			for (size_t sgnl_i = 0, sgnl_sz = sgnl.size(); sgnl_i < sgnl_sz; ++sgnl_i, ++syntagm_pos, ++sgnl_it) {
 
 				if (syntagm_pos == prosody_border) {
-					prosody_b = ((1 / prosody_contour.factor[prosody_contour_ind]) * prosody_contour.position[prosody_contour_ind] * syntagm_size -
-						(1 / prosody_contour.factor[prosody_contour_ind + 1]) * prosody_contour.position[prosody_contour_ind + 1] * syntagm_size) /
-						((1 / prosody_contour.factor[prosody_contour_ind + 1]) - (1 / prosody_contour.factor[prosody_contour_ind]));
+					prosody_b = (prosody_contour.factor[prosody_contour_ind + 1] * prosody_contour.position[prosody_contour_ind] * syntagm_size -
+						prosody_contour.factor[prosody_contour_ind] * prosody_contour.position[prosody_contour_ind + 1] * syntagm_size) /
+						(prosody_contour.factor[prosody_contour_ind] - prosody_contour.factor[prosody_contour_ind + 1]);
 					if (std::isinf(prosody_b))
 						prosody_b = (prosody_b < 0 ? -1 : 1) * std::numeric_limits<double>::max() / prosody_max_factor;
 					prosody_a = (1 / prosody_contour.factor[prosody_contour_ind]) * (prosody_contour.position[prosody_contour_ind] * syntagm_size + prosody_b);
