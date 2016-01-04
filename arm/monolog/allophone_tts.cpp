@@ -32,6 +32,7 @@ CAllophoneTTS::CAllophoneTTS(char accent_text_symbol_) : accent_text_symbol(acce
 	if (!prosody_handle)
 		throw std::runtime_error(std::string(__FUNCTION__) + ": Can't create prosody resample object.");
 	prosody_ratio = 1;
+	prosody_delay = 0;
 }
 
 CAllophoneTTS::~CAllophoneTTS() {
@@ -244,6 +245,16 @@ void CAllophoneTTS::LoadConfig(const boost::property_tree::ptree &pt) {
 	syntagm_contour = LoadContour("tts.prosody.syntagm.frequency", pt);
 	phrase_contour = LoadContour("tts.prosody.phrase.frequency", pt);
 	paragraph_contour = LoadContour("tts.prosody.paragraph.frequency", pt);
+
+	float input_data = 0;
+	std::array<float, 16> prosody_buffer;
+	int inUsed = 1;
+	int out = 0;
+	prosody_delay = 0;
+	while (!out) {
+		out = resample_process(prosody_handle, prosody_ratio, &input_data, 1, 0, &inUsed, &prosody_buffer[0], static_cast<int>(prosody_buffer.size()));
+		prosody_delay++;
+	}
 }
 
 void CAllophoneTTS::PushBackAlaphone(const char *alp, const char *ind, std::deque<size_t> &queue) const {
@@ -1152,8 +1163,10 @@ phrase_finish:
 	return queue;
 }
 
-std::vector<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allophones) {
+std::vector<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allophones, std::deque<MARK_DATA> *marks) {
 	std::vector<int16_t> ret;
+	if (marks)
+		marks->clear();
 
 	// Find next pause
 	size_t syntagm_size = 0;
@@ -1184,6 +1197,9 @@ std::vector<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allopho
 		size_t syntagm_pos = 0;
 		for (auto alp_it = allophones.cbegin(); alp_it != pause_it; ++alp_it) {
 			const auto &sgnl = base.datas[*alp_it].signal;
+
+			if (marks)
+				marks->push_back(MARK_DATA(ret.size() + prosody_delay, base.names[*alp_it]));
 
 			if (prosody_contour.position.empty()) {
 				ret.insert(ret.end(), sgnl.cbegin(), sgnl.cend());
@@ -1218,6 +1234,9 @@ std::vector<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allopho
 			}
 		}
 	}
+
+	if (marks)
+		marks->push_back(MARK_DATA(ret.size() + prosody_delay, base.names[*pause_it]));
 
 	const auto &sgnl = base.datas[*pause_it].signal;
 	if (prosody_contour.position.empty())

@@ -83,7 +83,7 @@ int main(int argc, const char *argv[]) {
 		std::ofstream out_sound_lab;
 		if (arg_vm.count("outsound")) {
 			auto snd_path = arg_vm["outsound"].as<bfs::path>();
-			
+
 			auto ext = snd_path.extension().generic_wstring();
 			std::transform(ext.begin(), ext.end(), ext.begin(), towlower);
 
@@ -107,6 +107,7 @@ int main(int argc, const char *argv[]) {
 		}
 
 		uint64_t frames_counter = 0;
+		std::deque<CAllophoneTTS::MARK_DATA> marks;
 		for (int i = 0; i < 3; ++i) {
 			std::string text = text_gen.Generate();
 			if (out_text.is_open())
@@ -121,15 +122,23 @@ int main(int argc, const char *argv[]) {
 
 
 			while (!queue.empty()) {
-				auto sound = tts.Allophones2Sound(queue);
+				auto sound = tts.Allophones2Sound(queue, out_sound_lab.is_open() ? &marks : nullptr);
 
 				if (out_sound_lab.is_open()) {
 					auto signal_frames = sound.size() / tts.base.channels;
 					out_sound.write(&sound[0], signal_frames);
-					auto lab_begin = frames_counter * 10000000 / tts.base.samplerate;
+
+					for (size_t i = 1; i < marks.size(); ++i)
+						out_sound_lab << (frames_counter + marks[i - 1].position) * 10000000 / tts.base.samplerate << " " <<
+										(frames_counter + marks[i].position) * 10000000 / tts.base.samplerate << " " <<
+										marks[i - 1].name << std::endl;
+
+					if(!marks.empty())
+						out_sound_lab << (frames_counter + marks.back().position) * 10000000 / tts.base.samplerate << " " <<
+										(frames_counter + signal_frames + tts.prosody_delay) * 10000000 / tts.base.samplerate << " " <<
+										marks.back().name << std::endl;
+
 					frames_counter += signal_frames;
-					auto lab_end = frames_counter * 10000000 / tts.base.samplerate;
-					out_sound_lab << lab_begin << " " << lab_end << " syntagm" << std::endl;
 				}
 			}
 		}

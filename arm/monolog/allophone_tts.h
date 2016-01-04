@@ -45,6 +45,7 @@ protected:
 	void *prosody_handle;
 	double prosody_ratio;
 public:
+	size_t prosody_delay;
 	static const double prosody_max_factor;
 
 public:
@@ -81,7 +82,12 @@ public:
 
 	std::deque<size_t> Text2Allophones(const char *text) const;
 
-	std::vector<int16_t> Allophones2Sound(std::deque<size_t> &allophones);
+	struct MARK_DATA {
+		size_t	position;
+		const char *name;
+		MARK_DATA(size_t position_ = 0, const char *name_ = nullptr) : position(position_), name(name_) {}
+	};
+	std::vector<int16_t> Allophones2Sound(std::deque<size_t> &allophones, std::deque<MARK_DATA> *marks = nullptr);
 };
 
 #endif
