@@ -19,6 +19,9 @@ typedef char		_tchar;
 #endif
 typedef std::basic_string<_tchar>	_tstring;
 
+#ifdef ENABLE_SNDFILE_WINDOWS_PROTOTYPES
+#include <windows.h>
+#endif
 #include <sndfile.hh>
 
 namespace bfs = boost::filesystem;
@@ -30,7 +33,7 @@ CAllophoneTTS::ALLOPHONE_BASE::ALLOPHONE_BASE() : samplerate(0), channels(0) {
 }
 
 CAllophoneTTS::CAllophoneTTS(char accent_text_symbol_) : accent_text_symbol(accent_text_symbol_) {
-	prosody_handle = resample_open(1, 1 / prosody_max_factor, prosody_max_factor);
+	prosody_handle = resample_open(1, 1 / (prosody_max_factor*1.01), prosody_max_factor*1.01);
 	if (!prosody_handle)
 		throw std::runtime_error(std::string(__FUNCTION__) + ": Can't create prosody resample object.");
 
@@ -257,6 +260,8 @@ void CAllophoneTTS::LoadConfig(const bfs::path &xml_path_) {
 	bpt::ptree pt;
 	{
 		std::ifstream xml_stream(xml_path_.c_str());
+		if (!xml_stream.is_open())
+			return;
 		read_xml(xml_stream, pt);
 	}
 
@@ -1190,47 +1195,85 @@ std::vector<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allopho
 
 	ret.reserve(syntagm_size + base.datas[*pause_it].signal.size());
 
-	float prosody_input = 0;
-	std::array<float, 16> prosody_output;
-	int prosody_inUsed = 1;
-	size_t prosody_border = 0; // prosody coeffients recalculation position
-	size_t prosody_contour_ind = 0;
-	double prosody_a = 0, prosody_b = 0;
 	float ret_min = static_cast<float>(std::numeric_limits<int16_t>::min());
 	float ret_max = static_cast<float>(std::numeric_limits<int16_t>::max());
+	{
+		float prosody_input = 0;
+		std::array<float, 16> prosody_output;
+		int prosody_inUsed = 1;
+		size_t prosody_border = 0; // prosody coefficients recalculation position
+		size_t prosody_contour_ind = 0;
+		double prosody_a = 0, prosody_b = 0;
 
-	size_t syntagm_pos = 0;
-	for (auto alp_it = allophones.cbegin(); alp_it != pause_it; ++alp_it) {
+		size_t syntagm_pos = 0;
+		for (auto alp_it = allophones.cbegin(); alp_it != pause_it; ++alp_it) {
+			const auto &sgnl = base.datas[*alp_it].signal;
 
-		auto sgnl_it = base.datas[*alp_it].signal.cbegin();
-		for (size_t sgnl_i = 0, sgnl_sz = base.datas[*alp_it].signal.size(); sgnl_i < sgnl_sz; ++sgnl_i, ++syntagm_pos, ++sgnl_it) {
-
-			if (syntagm_pos == prosody_border) {
-				prosody_b = ((1/prosody_contour.factor[prosody_contour_ind]) * prosody_contour.position[prosody_contour_ind] * syntagm_size -
-					(1/prosody_contour.factor[prosody_contour_ind + 1]) * prosody_contour.position[prosody_contour_ind + 1] * syntagm_size) /
-					((1/prosody_contour.factor[prosody_contour_ind + 1]) - (1/prosody_contour.factor[prosody_contour_ind]));
-				if (std::isinf(prosody_b))
-					prosody_b = (prosody_b<0 ? -1 : 1) * std::numeric_limits<double>::max() / prosody_max_factor;
-				prosody_a = (1/prosody_contour.factor[prosody_contour_ind]) * (prosody_contour.position[prosody_contour_ind] * syntagm_size + prosody_b);
-
-				prosody_contour_ind++;
-				prosody_border = static_cast<size_t>(floor(prosody_contour.position[prosody_contour_ind] * syntagm_size + 0.5)); // round
+			if (prosody_contour.position.empty()) {
+				ret.insert(ret.end(), sgnl.cbegin(), sgnl.cend());
+				continue;
 			}
 
-			prosody_input = *sgnl_it;
+			auto sgnl_it = sgnl.cbegin();
+			for (size_t sgnl_i = 0, sgnl_sz = sgnl.size(); sgnl_i < sgnl_sz; ++sgnl_i, ++syntagm_pos, ++sgnl_it) {
 
-			prosody_ratio = prosody_a / (syntagm_pos + prosody_b);
+				if (syntagm_pos == prosody_border) {
+					prosody_b = ((1 / prosody_contour.factor[prosody_contour_ind]) * prosody_contour.position[prosody_contour_ind] * syntagm_size -
+						(1 / prosody_contour.factor[prosody_contour_ind + 1]) * prosody_contour.position[prosody_contour_ind + 1] * syntagm_size) /
+						((1 / prosody_contour.factor[prosody_contour_ind + 1]) - (1 / prosody_contour.factor[prosody_contour_ind]));
+					if (std::isinf(prosody_b))
+						prosody_b = (prosody_b < 0 ? -1 : 1) * std::numeric_limits<double>::max() / prosody_max_factor;
+					prosody_a = (1 / prosody_contour.factor[prosody_contour_ind]) * (prosody_contour.position[prosody_contour_ind] * syntagm_size + prosody_b);
 
-			int out = resample_process(prosody_handle, prosody_ratio, &prosody_input, 1, 0, &prosody_inUsed, &prosody_output[0], static_cast<int>(prosody_output.size()));
-			if (out < 0)
-				throw std::runtime_error(std::string(__FUNCTION__) + ": Prosody resampler return nagative value.");
+					prosody_contour_ind++;
+					prosody_border = static_cast<size_t>(floor(prosody_contour.position[prosody_contour_ind] * syntagm_size + 0.5)); // round
+				}
 
-			for (int i = 0; i < out; ++i)
-				ret.push_back(static_cast<int16_t>(std::max(ret_min, std::min(ret_max, prosody_output[i]))));
+				prosody_input = *sgnl_it;
+
+				prosody_ratio = prosody_a / (syntagm_pos + prosody_b);
+
+				int out = resample_process(prosody_handle, prosody_ratio, &prosody_input, 1, 0, &prosody_inUsed, &prosody_output[0], static_cast<int>(prosody_output.size()));
+				if (out < 0)
+					throw std::runtime_error(std::string(__FUNCTION__) + ": Prosody resampler return negative value.");
+
+				for (int i = 0; i < out; ++i)
+					ret.push_back(static_cast<int16_t>(std::max(ret_min, std::min(ret_max, prosody_output[i]))));
+			}
 		}
 	}
 
-	ret.insert(ret.end(), base.datas[*pause_it].signal.cbegin(), base.datas[*pause_it].signal.cend());
+	const auto &sgnl = base.datas[*pause_it].signal;
+	if (prosody_contour.position.empty())
+		ret.insert(ret.end(), sgnl.cbegin(), sgnl.cend());
+	else {
+		prosody_ratio = 1;
+
+		auto sgnl_it = sgnl.cbegin();
+		size_t sgnl_sz = sgnl.size();
+		std::array<float, 256> sgnl_input;
+		std::array<float, 512> sgnl_output;
+		size_t sgnl_input_pos = 0;
+		int prosody_inUsed = 0;
+
+		while (sgnl_sz) {
+			size_t copy_sz = std::min(sgnl_input.size() - sgnl_input_pos, sgnl_sz);
+			std::copy(sgnl_it, sgnl_it + copy_sz, sgnl_input.begin() + sgnl_input_pos);
+			sgnl_it += copy_sz;
+			sgnl_sz -= copy_sz;
+			sgnl_input_pos += copy_sz;
+
+			int out = resample_process(prosody_handle, prosody_ratio, &sgnl_input[0], sgnl_input_pos, 0, &prosody_inUsed, &sgnl_output[0], static_cast<int>(sgnl_output.size()));
+			if (out < 0)
+				throw std::runtime_error(std::string(__FUNCTION__) + ": Prosody resampler return negative value.");
+
+			std::copy(sgnl_input.cbegin() + prosody_inUsed, sgnl_input.cbegin() + sgnl_input_pos, sgnl_input.begin());
+			sgnl_input_pos -= prosody_inUsed;
+
+			for (int i = 0; i < out; ++i)
+				ret.push_back(static_cast<int16_t>(std::max(ret_min, std::min(ret_max, sgnl_output[i]))));
+		}
+	}
 
 	allophones.erase(allophones.begin(), pause_it + 1);
 

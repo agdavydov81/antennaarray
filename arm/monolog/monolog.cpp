@@ -3,10 +3,14 @@
 #include <fstream>
 #include "text_generator.h"
 #include "allophone_tts.h"
-#include <sndfile.hh>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include "audio.h"
+
+#ifdef ENABLE_SNDFILE_WINDOWS_PROTOTYPES
+#include <windows.h>
+#endif
+#include <sndfile.hh>
 
 namespace bpo = boost::program_options;
 namespace bfs = boost::filesystem;
@@ -20,10 +24,10 @@ int main(int argc, const char *argv[]) {
 			("seed", bpo::value<ulong>(), "set random generator seed")
 			("statpath", bpo::value<bfs::path>(), "set statistics file filename")
 			("ttsbase", bpo::value<bfs::path>(), "set TTS base pathname")
-			("ttsxml", bpo::value<bfs::path>(), "set TTS configration pathname")
+			("ttsxml", bpo::value<bfs::path>(), "set TTS configuration pathname")
 			("outtext", bpo::value<bfs::path>(), "set text stream output file")
 			("outallophone", bpo::value<bfs::path>(), "set allophone stream output file")
-			("outsound", bpo::value<bfs::path>(), "set OGG/Vorbis sound stream output file")
+			("outsound", bpo::value<bfs::path>(), "set sound stream output file")
 			("outdevice", bpo::value<int>(), "set sound output device ID (-1 to disable)")
 			("listdevices", "output list of available sound devices")
 			;
@@ -68,8 +72,18 @@ int main(int argc, const char *argv[]) {
 		std::ofstream out_sound_lab;
 		if (arg_vm.count("outsound")) {
 			auto snd_path = arg_vm["outsound"].as<bfs::path>();
-			out_sound = SndfileHandle(snd_path.c_str(), SFM_WRITE, SF_FORMAT_OGG | SF_FORMAT_VORBIS
-					/*SF_FORMAT_PCM_16 | SF_FORMAT_WAV*/ , tts.base.channels, tts.base.samplerate);
+			
+			auto ext = snd_path.extension().generic_wstring();
+			std::transform(ext.begin(), ext.end(), ext.begin(), towlower);
+
+			int format = SF_FORMAT_PCM_16 | SF_FORMAT_WAV;
+			if (!ext.compare(L".ogg"))
+				format = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
+			else if (!ext.compare(L".fla") || !ext.compare(L".flac"))
+				format = SF_FORMAT_FLAC | SF_FORMAT_PCM_16;
+
+			out_sound = SndfileHandle(snd_path.c_str(), SFM_WRITE, format, tts.base.channels, tts.base.samplerate);
+
 			snd_path.replace_extension(".lab");
 			out_sound_lab.open(snd_path.c_str());
 		}

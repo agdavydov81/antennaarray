@@ -15,6 +15,7 @@
 
 // Initialize PortAudio library
 void portaudio_init() {
+	/*
 	int fd;
 	// Suppress error messages output directly from library
 #ifdef WIN32
@@ -24,6 +25,7 @@ void portaudio_init() {
 #endif
 	dup2(fd, 2);
 	close(fd);
+	*/
 	PaError portaudio_error;
 	if ((portaudio_error = Pa_Initialize()) != paNoError)
 		throw std::runtime_error(std::string("Pa_Initialize error: ") + Pa_GetErrorText(portaudio_error));
