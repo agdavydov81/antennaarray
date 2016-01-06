@@ -2,20 +2,24 @@
 #define AUDIO_H
 
 #include <iostream>
-#include <deque>
 #include <portaudio.h>
-#include <cstdint>
-#include <boost/thread.hpp>
 
-void portaudio_init();
+class PortAudio
+{
+public:
+	PortAudio();
+	virtual ~PortAudio();
 
-void portaudio_list_devices();
+	void ListDevices(std::ostream &out = std::cout) const;
+private:
+	void ListSupportedStandardSampleRates(std::ostream &out, const PaStreamParameters *inputParameters, const PaStreamParameters *outputParameters) const;
 
-struct PORTAUDIO_USERDATA {
-	std::deque<int16_t> data;
-	boost::mutex mut;
+	PaStream *audio_stream;
+public:
+	void Open(int out_device_, int channels_, double samplerate_, PaStreamCallback *user_callback_, void *user_data_);
+	void Close();
+
+	operator bool() const;
 };
-void portaudio_stream_callback(const int16_t *input, int16_t *output, unsigned long frameCount,
-	const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, PORTAUDIO_USERDATA *userData);
 
 #endif // AUDIO_H

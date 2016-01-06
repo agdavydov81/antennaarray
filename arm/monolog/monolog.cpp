@@ -8,6 +8,11 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include "audio.h"
+#include <deque>
+#include <cstdint>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread.hpp>
+#include <boost/date_time.hpp>
 
 #ifdef ENABLE_SNDFILE_WINDOWS_PROTOTYPES
 #include <windows.h>
@@ -18,73 +23,120 @@ namespace bpo = boost::program_options;
 namespace bfs = boost::filesystem;
 namespace bpt = boost::property_tree;
 
+class PortAudioData {
+public:
+	PortAudioData(size_t channels_, long data_buffer_) : channels(channels_), data_buffer(data_buffer_){}
+
+	boost::mutex mut;
+	size_t channels;
+	long data_buffer;
+	std::deque<int16_t> data;
+
+	bool Insert(const std::vector<int16_t> &sound_) {
+		boost::mutex::scoped_lock lock(mut);
+
+		data.insert(data.end(), sound_.begin(), sound_.end());
+
+		return (long)data.size() >= data_buffer;
+	}
+
+	operator bool() const {
+		return (long)data.size() >= data_buffer;
+	}
+
+	static int Callback(const int16_t *input, int16_t *output, unsigned long frameCount,
+		const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, PortAudioData *userData) {
+		boost::mutex::scoped_lock lock(userData->mut);
+
+		size_t data_sz = std::min((size_t)frameCount*userData->channels, userData->data.size());
+		std::copy(userData->data.begin(), userData->data.begin() + data_sz, output);
+		userData->data.erase(userData->data.begin(), userData->data.begin() + data_sz);
+
+		std::fill(output + data_sz, output + frameCount*userData->channels, 0);
+
+		return paContinue;
+	}
+};
+
 int main(int argc, const char *argv[]) {
+	const char *str_help		= "help";
+	const char *str_seed		= "seed";
+	const char *str_statpath	= "statpath";
+	const char *str_ttsbase		= "ttsbase";
+	const char *str_config		= "config";
+	const char *str_outtext		= "outtext";
+	const char *str_outallophone= "outallophone";
+	const char *str_outsound	= "outsound";
+	const char *str_outdevice	= "outdevice";
+	const char *str_listdevices	= "listdevices";
+	const char *str_outbuffer	= "outbuffer";
+	const char *str_length		= "length";
+
 	try {
 		// Declare the supported options.
 		bpo::options_description arg_desc("Allowed options");
 		arg_desc.add_options()
-			("help", "produce help message")
-			("seed", bpo::value<ulong>(), "set random generator seed")
-			("statpath", bpo::value<bfs::path>(), "set statistics file filename")
-			("ttsbase", bpo::value<bfs::path>(), "set TTS base pathname")
-			("config", bpo::value<bfs::path>(), "set configuration pathname")
-			("outtext", bpo::value<bfs::path>(), "set text stream output file")
-			("outallophone", bpo::value<bfs::path>(), "set allophone stream output file")
-			("outsound", bpo::value<bfs::path>(), "set sound stream output file")
-			("outdevice", bpo::value<int>(), "set sound output device ID (-1 to disable)")
-			("listdevices", "output list of available sound devices")
-			("length", bpo::value<double>(), "minimum sound length in seconds (-1 to infinite)")
+			(str_help, "produce help message")
+			(str_seed, bpo::value<ulong>(), "set random generator seed")
+			(str_statpath, bpo::value<bfs::path>(), "set statistics file filename")
+			(str_ttsbase, bpo::value<bfs::path>(), "set TTS base pathname")
+			(str_config, bpo::value<bfs::path>(), "set configuration pathname")
+			(str_outtext, bpo::value<bfs::path>(), "set text stream output file")
+			(str_outallophone, bpo::value<bfs::path>(), "set allophone stream output file")
+			(str_outsound, bpo::value<bfs::path>(), "set sound stream output file")
+			(str_outdevice, bpo::value<int>(), "set sound output device ID (-1 to disable)")
+			(str_listdevices, "list of available sound devices")
+			(str_outbuffer, bpo::value<double>(), "output device buffer size in seconds (10 by default)")
+			(str_length, bpo::value<double>(), "minimum sound length in seconds (-1 to infinite - default)")
 			;
 
 		bpo::variables_map arg_vm;
 		bpo::store(bpo::parse_command_line(argc, argv, arg_desc), arg_vm);
 		bpo::notify(arg_vm);
 
-		if (arg_vm.count("help")) {
+		if (arg_vm.count(str_help)) {
 			std::cout << arg_desc << std::endl;
 			return 0;
 		}
 
-		PaError portaudio_error;
-		PaStream *portaudio_stream;
-		PORTAUDIO_USERDATA portaudio_userdata;
-		portaudio_init();
-		if (arg_vm.count("listdevices")) {
-			portaudio_list_devices();
+		PortAudio audio;
+		if (arg_vm.count(str_listdevices)) {
+			audio.ListDevices();
 			return 0;
 		}
-		int out_device = arg_vm.count("outdevice") ? arg_vm["outdevice"].as<int>() : Pa_GetDefaultOutputDevice();
+		int arg_outdevice = arg_vm.count(str_outdevice) ? arg_vm[str_outdevice].as<int>() : Pa_GetDefaultOutputDevice();
 
 		// Prepare base and text generator
-		ulong rand_seed = arg_vm.count("seed") ? arg_vm["seed"].as<ulong>() : static_cast<ulong>(time(nullptr));
-		auto stat_path = arg_vm.count("statpath") ? arg_vm["statpath"].as<bfs::path>() : bfs::path("det_res.txt");
-		auto tts_base = arg_vm.count("ttsbase") ? arg_vm["ttsbase"].as<bfs::path>() : bfs::path("db_bor1");
-		auto config_xml = arg_vm.count("config") ? arg_vm["config"].as<bfs::path>() : bfs::path("monolog.xml");
-		auto length_limit = arg_vm.count("length") ? arg_vm["length"].as<double>() : -1.0;
+		ulong arg_seed = arg_vm.count(str_seed) ? arg_vm[str_seed].as<ulong>() : static_cast<ulong>(time(nullptr));
+		auto arg_statpath = arg_vm.count(str_statpath) ? arg_vm[str_statpath].as<bfs::path>() : bfs::path("det_res.txt");
+		auto arg_ttsbase = arg_vm.count(str_ttsbase) ? arg_vm[str_ttsbase].as<bfs::path>() : bfs::path("db_bor1");
+		auto arg_config = arg_vm.count(str_config) ? arg_vm[str_config].as<bfs::path>() : bfs::path("monolog.xml");
+		auto arg_outbuffer = arg_vm.count(str_outbuffer) ? arg_vm[str_outbuffer].as<double>() : 10;
+		auto arg_length = arg_vm.count(str_length) ? arg_vm[str_length].as<double>() : -1.0;
 
 		bpt::ptree pt;
 		{
-			std::ifstream xml_stream(config_xml.c_str());
+			std::ifstream xml_stream(arg_config.c_str());
 			if (!xml_stream.is_open())
 				throw std::runtime_error(std::string(__FUNCTION__) + ": Can't open configuration file.");
 			read_xml(xml_stream, pt);
 		}
 
-		CTextGenerator text_gen(stat_path, rand_seed);
-		CAllophoneTTS tts(tts_base, pt);
+		CTextGenerator text_gen(arg_statpath, arg_seed);
+		CAllophoneTTS tts(arg_ttsbase, pt);
 
 		// Prepare log files
 		std::ofstream out_text;
-		if (arg_vm.count("outtext"))
-			out_text.open(arg_vm["outtext"].as<bfs::path>().c_str());
+		if (arg_vm.count(str_outtext))
+			out_text.open(arg_vm[str_outtext].as<bfs::path>().c_str());
 		std::ofstream out_allophone;
-		if (arg_vm.count("outallophone"))
-			out_allophone.open(arg_vm["outallophone"].as<bfs::path>().c_str());
+		if (arg_vm.count(str_outallophone))
+			out_allophone.open(arg_vm[str_outallophone].as<bfs::path>().c_str());
 
 		SndfileHandle out_sound;
 		std::ofstream out_sound_lab;
-		if (arg_vm.count("outsound")) {
-			auto snd_path = arg_vm["outsound"].as<bfs::path>();
+		if (arg_vm.count(str_outsound)) {
+			auto snd_path = arg_vm[str_outsound].as<bfs::path>();
 
 			auto ext = snd_path.extension().generic_wstring();
 			std::transform(ext.begin(), ext.end(), ext.begin(), towlower);
@@ -103,22 +155,19 @@ int main(int argc, const char *argv[]) {
 			out_sound_lab.open(snd_path.c_str());
 		}
 
-		if (out_device >= 0) {
-			PaStreamParameters out_stream_info = { out_device, static_cast<int>(tts.base.channels), paInt16, Pa_GetDeviceInfo(out_device)->defaultHighOutputLatency, NULL };
-
-			if ((portaudio_error = Pa_OpenStream(&portaudio_stream, nullptr, &out_stream_info, tts.base.samplerate, paFramesPerBufferUnspecified, paNoFlag, (PaStreamCallback *)portaudio_stream_callback, &portaudio_userdata)) != paNoError)
-				throw std::runtime_error(std::string("Pa_OpenStream error: ") + Pa_GetErrorText(portaudio_error));
-		}
+		PortAudioData audio_data(tts.base.channels, (long)std::floor(arg_outbuffer*tts.base.samplerate+0.5));
+		if (arg_outdevice >= 0)
+			audio.Open(arg_outdevice, tts.base.channels, tts.base.samplerate, (PaStreamCallback *)PortAudioData::Callback, &audio_data);
 		else
-			if (!arg_vm.count("length"))
-				length_limit = 100;
+			if (!arg_vm.count(str_length))
+				arg_length = 100;
 
-		if (!out_text.is_open() && !out_allophone.is_open() && !out_sound_lab.is_open() && out_device < 0)
+		if (!out_text.is_open() && !out_allophone.is_open() && !out_sound_lab.is_open() && arg_outdevice < 0)
 			throw std::runtime_error("No output specified.");
 
 		int64_t frames_counter = 0;
 		std::deque<CAllophoneTTS::MARK_DATA> marks;
-		while (static_cast<double>(frames_counter)/tts.base.samplerate<length_limit || length_limit<0) {
+		while (static_cast<double>(frames_counter)/tts.base.samplerate<arg_length || arg_length<0) {
 			std::string text = text_gen.Generate();
 			if (out_text.is_open())
 				out_text << text << std::endl;
@@ -149,6 +198,12 @@ int main(int argc, const char *argv[]) {
 				}
 
 				frames_counter += signal_frames;
+
+				if (audio) {
+					audio_data.Insert(sound);
+					while (audio_data)
+						boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+				}
 			}
 		}
 
@@ -158,6 +213,4 @@ int main(int argc, const char *argv[]) {
 		std::cerr << "Exception: " << err.what() << std::endl;
 		return -1;
 	}
-
-	Pa_Terminate();
 }
