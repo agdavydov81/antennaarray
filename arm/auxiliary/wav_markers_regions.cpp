@@ -494,7 +494,8 @@ void wav_markers_regions_write(const char *file_name, const std::vector<WAV_MARK
 		SetEndOfFile(win_fh);
 		CloseHandle(win_fh);
 #elif defined(__linux__)
-		truncate(file_name, new_sz);
+		if (truncate(file_name, new_sz) != 0)
+			throw std::runtime_error(std::string(__FUNCTION__) + ": Can't truncate file.");
 #endif
 	}
 }

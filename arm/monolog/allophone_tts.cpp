@@ -1176,7 +1176,7 @@ std::vector<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allopho
 
 	// Find next pause
 	size_t syntagm_size = 0;
-	auto pause_it = allophones.cbegin();
+	auto pause_it = allophones.begin();
 	for (auto ie = allophones.cend(); pause_it != ie; ++pause_it) {
 		if (*pause_it == syntagm_index || *pause_it == phrase_index || *pause_it == paragraph_index)
 			break;
