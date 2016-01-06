@@ -116,7 +116,11 @@ int main(int argc, const char *argv[]) {
 
 		bpt::ptree pt;
 		{
-			std::ifstream xml_stream(arg_config.c_str());
+			std::ifstream xml_stream(arg_config.
+#ifdef __GNUC__
+						generic_string().
+#endif
+						c_str());
 			if (!xml_stream.is_open())
 				throw std::runtime_error(std::string(__FUNCTION__) + ": Can't open configuration file.");
 			read_xml(xml_stream, pt);
@@ -128,10 +132,18 @@ int main(int argc, const char *argv[]) {
 		// Prepare log files
 		std::ofstream out_text;
 		if (arg_vm.count(str_outtext))
-			out_text.open(arg_vm[str_outtext].as<bfs::path>().c_str());
+			out_text.open(arg_vm[str_outtext].as<bfs::path>().
+#ifdef __GNUC__
+						generic_string().
+#endif
+						c_str());
 		std::ofstream out_allophone;
 		if (arg_vm.count(str_outallophone))
-			out_allophone.open(arg_vm[str_outallophone].as<bfs::path>().c_str());
+			out_allophone.open(arg_vm[str_outallophone].as<bfs::path>().
+#ifdef __GNUC__
+						generic_string().
+#endif
+						c_str());
 
 		SndfileHandle out_sound;
 		std::ofstream out_sound_lab;
@@ -152,7 +164,11 @@ int main(int argc, const char *argv[]) {
 			out_sound = SndfileHandle(snd_path.c_str(), SFM_WRITE, format, tts.base.channels, tts.base.samplerate);
 
 			snd_path.replace_extension(".lab");
-			out_sound_lab.open(snd_path.c_str());
+			out_sound_lab.open(snd_path.
+#ifdef __GNUC__
+						generic_string().
+#endif
+						c_str());
 		}
 
 		PortAudioData audio_data(tts.base.channels, (long)std::floor(arg_outbuffer*tts.base.samplerate+0.5));

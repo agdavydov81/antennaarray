@@ -144,7 +144,11 @@ void CAllophoneTTS::LoadBase(const boost::filesystem::path &bpath) {
 
 		for (const auto &current_name : base.names) {
 			current_path = bpath / boost::filesystem::path(std::string(current_name) + ".wav");
-			auto current_cpath = current_path.c_str();
+			auto current_cpath = current_path.
+#ifdef __GNUC__
+								generic_string().
+#endif
+								c_str();
 
 			SndfileHandle file(current_cpath);
 			if (!file.frames() || !file.samplerate() || !file.channels())

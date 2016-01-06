@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdexcept>
 
 #ifdef _WIN32
 #include <io.h>
