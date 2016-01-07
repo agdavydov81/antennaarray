@@ -1,9 +1,9 @@
 # Global settings
 cmake_minimum_required(VERSION 2.6)
-project(ARMProj)
-set(${PROJECT_NAME}_VERSION_MAJOR 0)
+project(SLSpp)
+set(${PROJECT_NAME}_VERSION_MAJOR 1)
 set(${PROJECT_NAME}_VERSION_MINOR 0)
-set(${PROJECT_NAME}_VERSION_PATCH 1)
+set(${PROJECT_NAME}_VERSION_PATCH 0)
 
 # In order to be able to use the newly written FindXXX package, the
 # location of the FindXXX.cmake file must be added to the cmake modules
@@ -139,23 +139,22 @@ endif()
 
 # submodules
 add_subdirectory(auxiliary)
-# add_subdirectory(vmorph)
-add_subdirectory(audiofront)
+# add_subdirectory(audiofront)
 add_subdirectory(monolog)
 
 
 ## build a CPack driven installer package
-#include(InstallRequiredSystemLibraries)
-#set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_NAME} - Crossplatform speech tools")
-#set(CPACK_PACKAGE_VENDOR "DevTeam")
-#set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/License.txt")
-#set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/License.txt")
-#set(CPACK_PACKAGE_VERSION_MAJOR "${${PROJECT_NAME}_VERSION_MAJOR}")
-#set(CPACK_PACKAGE_VERSION_MINOR "${${PROJECT_NAME}_VERSION_MINOR}")
-#set(CPACK_PACKAGE_VERSION_PATCH "${${PROJECT_NAME}_VERSION_PATCH}")
-#set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
-#set(CPACK_PACKAGE_CONTACT "none@google.com")
-#set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+include(InstallRequiredSystemLibraries)
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_NAME} - Speech-Like Signals in C++")
+set(CPACK_PACKAGE_VENDOR "Andrei Davydov")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/ReadMe.txt")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/License.txt")
+set(CPACK_PACKAGE_VERSION_MAJOR "${${PROJECT_NAME}_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${${PROJECT_NAME}_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${${PROJECT_NAME}_VERSION_PATCH}")
+set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+set(CPACK_PACKAGE_CONTACT "agdavydov81@gmail.com")
+set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
 #if(WIN32)
 ##	set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}\\\\logo.ico")
 #	set(CPACK_NSIS_DISPLAY_NAME "DevTeam ${PROJECT_NAME} ${CPACK_PACKAGE_VERSION}")
@@ -173,7 +172,7 @@ add_subdirectory(monolog)
 #	set(CPACK_RPM_PACKAGE_GROUP "devel")
 #	set(CPACK_RPM_PACKAGE_REQUIRES "libc6>=2.3.1, libgcc1>=4.4.1 libintl>=1.18, libsndfile1>=1.20")
 #endif()
-#include(CPack)
+include(CPack)
 
 # enable dashboard scripting
 include(CTest)
