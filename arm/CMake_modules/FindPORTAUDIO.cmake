@@ -19,7 +19,13 @@ endif()
 
 find_path(PORTAUDIO_INCLUDE_DIRS portaudio.h  /usr/include )
 
-find_library(PORTAUDIO_LIBRARIES  NAMES "portaudio${PA_STATIC}${PA_PLATFORM}"  /usr/lib )
+find_library(PORTAUDIO_LIBRARIES  NAMES "portaudio${PA_STATIC}${PA_PLATFORM}"  /usr/lib)
+if (WIN32 AND NOT PORTAUDIO_USE_STATIC_LIBS)
+	find_file(PORTAUDIO_LIBRARIES_DLL "portaudio${PA_PLATFORM}.dll" /usr/lib)
+	if(NOT PORTAUDIO_LIBRARIES_DLL)
+		message(FATAL_ERROR "Could not find PORTAUDIO DLL (portaudio${PA_PLATFORM}.dll)")
+	endif()
+endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(PORTAUDIO  DEFAULT_MSG  PORTAUDIO_LIBRARIES PORTAUDIO_INCLUDE_DIRS)
