@@ -26,3 +26,8 @@ if (NOT WIN32)
 endif()
 
 install(TARGETS ${NAME}   DESTINATION bin)
+install(FILES monolog.xml det_res.txt DESTINATION bin)
+install(DIRECTORY db_bor1 DESTINATION bin)
+if (WIN32)
+	install(FILES ${PORTAUDIO_LIBRARIES} ${SNDFILE_LIBRARIES} DESTINATION bin)
+endif()
