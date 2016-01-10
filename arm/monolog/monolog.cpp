@@ -19,6 +19,14 @@
 #endif
 #include <sndfile.hh>
 
+#ifdef _WIN32
+#include <windows.h>
+#else  /* _WIN32 */
+#include <unistd.h>
+#include <limits.h>
+#endif  /* _WIN32 */
+
+
 namespace bpo = boost::program_options;
 namespace bfs = boost::filesystem;
 namespace bpt = boost::property_tree;
@@ -106,8 +114,34 @@ int main(int argc, const char *argv[]) {
 		}
 		int arg_outdevice = arg_vm.count(str_outdevice) ? arg_vm[str_outdevice].as<int>() : Pa_GetDefaultOutputDevice();
 
-		bfs::path share_root(bfs::initial_path<bfs::path>());
-		share_root = bfs::system_complete(bfs::path(argv[0])).parent_path().parent_path() / "share";
+		/// Get shared resources base path //////////////////////////
+		bfs::path share_root;
+
+#ifdef _WIN32
+		{
+			std::vector<TCHAR> buff(MAX_PATH+8);
+
+			while (true) {
+				auto ret = GetModuleFileName(NULL, &buff[0], buff.size());
+				if (!ret)
+					throw std::runtime_error("Can't get executable path.");
+				if (ret + 4 < buff.size())
+					break;
+				buff.resize(buff.size() + 256);
+			}
+			share_root = buff;
+		}
+#else  /* _WIN32 */
+		{
+			char buff[PATH_MAX];
+			auto len = ::readlink("/proc/self/exe", buff, sizeof(buff) - 1);
+			if (len == -1)
+				throw std::runtime_error("Can't get executable path.");
+			buff[len] = '\0';
+			share_root = buff;
+		}
+#endif  /* _WIN32 */
+		share_root = share_root.parent_path().parent_path() / "share" / "slspp" / "monolog";
 
 		// Prepare base and text generator
 		ulong arg_seed = arg_vm.count(str_seed) ? arg_vm[str_seed].as<ulong>() : static_cast<ulong>(time(nullptr));
