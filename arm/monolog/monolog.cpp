@@ -106,11 +106,14 @@ int main(int argc, const char *argv[]) {
 		}
 		int arg_outdevice = arg_vm.count(str_outdevice) ? arg_vm[str_outdevice].as<int>() : Pa_GetDefaultOutputDevice();
 
+		bfs::path share_root(bfs::initial_path<bfs::path>());
+		share_root = bfs::system_complete(bfs::path(argv[0])).parent_path().parent_path() / "share";
+
 		// Prepare base and text generator
 		ulong arg_seed = arg_vm.count(str_seed) ? arg_vm[str_seed].as<ulong>() : static_cast<ulong>(time(nullptr));
-		auto arg_statpath = arg_vm.count(str_statpath) ? arg_vm[str_statpath].as<bfs::path>() : bfs::path("det_res.txt");
-		auto arg_ttsbase = arg_vm.count(str_ttsbase) ? arg_vm[str_ttsbase].as<bfs::path>() : bfs::path("db_bor1");
-		auto arg_config = arg_vm.count(str_config) ? arg_vm[str_config].as<bfs::path>() : bfs::path("monolog.xml");
+		auto arg_statpath = arg_vm.count(str_statpath) ? arg_vm[str_statpath].as<bfs::path>() : (share_root / "det_res.txt");
+		auto arg_ttsbase = arg_vm.count(str_ttsbase) ? arg_vm[str_ttsbase].as<bfs::path>() : (share_root / "db_bor1");
+		auto arg_config = arg_vm.count(str_config) ? arg_vm[str_config].as<bfs::path>() : (share_root / "monolog.xml");
 		auto arg_outbuffer = arg_vm.count(str_outbuffer) ? arg_vm[str_outbuffer].as<double>() : 10;
 		auto arg_length = arg_vm.count(str_length) ? arg_vm[str_length].as<double>() : -1.0;
 
