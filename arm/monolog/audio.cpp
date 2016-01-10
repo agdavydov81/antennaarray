@@ -172,7 +172,7 @@ void PortAudio::ListDevices(std::ostream &out) const {
 void PortAudio::Open(int out_device_, int channels_, double samplerate_, PaStreamCallback *user_callback_, void *user_data_) {
 	Close();
 
-	PaStreamParameters out_stream_info = { out_device_, channels_, paInt16, Pa_GetDeviceInfo(out_device_)->defaultHighOutputLatency, nullptr };
+	PaStreamParameters out_stream_info = { out_device_, channels_, paInt16, Pa_GetDeviceInfo(out_device_)->defaultHighOutputLatency*10, nullptr };
 
 	PaError portaudio_error;
 	if ((portaudio_error = Pa_OpenStream(&audio_stream, nullptr, &out_stream_info, samplerate_, paFramesPerBufferUnspecified,
