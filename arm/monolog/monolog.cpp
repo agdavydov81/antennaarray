@@ -255,7 +255,11 @@ int main(int argc, const char *argv[]) {
 				if (audio) {
 					audio_data.Insert(sound);
 					while (audio_data)
+#if BOOST_VERSION > 104900
 						boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+#else
+						boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+#endif
 				}
 			}
 		}
