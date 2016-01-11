@@ -94,7 +94,7 @@ int main(int argc, const char *argv[]) {
 			(str_outsound, bpo::value<bfs::path>(), "set sound stream output file")
 			(str_outdevice, bpo::value<int>(), "set sound output device ID (-1 to disable)")
 			(str_listdevices, "list of available sound devices")
-			(str_outbuffer, bpo::value<double>(), "output device buffer size in seconds (10 by default)")
+			(str_outbuffer, bpo::value<double>(), "output device buffer size in seconds (2 by default)")
 			(str_length, bpo::value<double>(), "minimum sound length in seconds (-1 to infinite - default)")
 			;
 
@@ -148,7 +148,7 @@ int main(int argc, const char *argv[]) {
 		auto arg_statpath = arg_vm.count(str_statpath) ? arg_vm[str_statpath].as<bfs::path>() : (share_root / "det_res.txt");
 		auto arg_ttsbase = arg_vm.count(str_ttsbase) ? arg_vm[str_ttsbase].as<bfs::path>() : (share_root / "db_bor1");
 		auto arg_config = arg_vm.count(str_config) ? arg_vm[str_config].as<bfs::path>() : (share_root / "monolog.xml");
-		auto arg_outbuffer = arg_vm.count(str_outbuffer) ? arg_vm[str_outbuffer].as<double>() : 10;
+		auto arg_outbuffer = arg_vm.count(str_outbuffer) ? arg_vm[str_outbuffer].as<double>() : 2;
 		auto arg_length = arg_vm.count(str_length) ? arg_vm[str_length].as<double>() : -1.0;
 
 		bpt::ptree pt;
@@ -209,8 +209,9 @@ int main(int argc, const char *argv[]) {
 		}
 
 		PortAudioData audio_data(tts.base.channels, (long)std::floor(arg_outbuffer*tts.base.samplerate+0.5));
+		double outdevice2base_ratio = 1;
 		if (arg_outdevice >= 0)
-			audio.Open(arg_outdevice, tts.base.channels, tts.base.samplerate, (PaStreamCallback *)PortAudioData::Callback, &audio_data);
+			outdevice2base_ratio = audio.Open(arg_outdevice, tts.base.channels, tts.base.samplerate, arg_outbuffer, (PaStreamCallback *)PortAudioData::Callback, &audio_data);
 		else
 			if (!arg_vm.count(str_length))
 				arg_length = 100;
@@ -233,7 +234,7 @@ int main(int argc, const char *argv[]) {
 			}
 
 			while (!queue.empty()) {
-				auto sound = tts.Allophones2Sound(queue, out_sound_lab.is_open() ? &marks : nullptr);
+				auto sound = tts.Allophones2Sound(outdevice2base_ratio, queue, out_sound_lab.is_open() ? &marks : nullptr);
 				auto signal_frames = sound.size() / tts.base.channels;
 
 				if (out_sound_lab.is_open()) {

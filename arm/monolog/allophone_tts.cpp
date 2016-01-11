@@ -22,7 +22,7 @@ typedef std::basic_string<_tchar>	_tstring;
 #endif
 #include <sndfile.hh>
 
-const double CAllophoneTTS::prosody_max_factor = 10.0;
+const double CAllophoneTTS::prosody_max_factor = 16.0;
 
 CAllophoneTTS::ALLOPHONE_BASE::ALLOPHONE_BASE() : samplerate(0), channels(0) {
 }
@@ -1169,7 +1169,7 @@ phrase_finish:
 	return queue;
 }
 
-std::vector<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allophones, std::deque<MARK_DATA> *marks) {
+std::vector<int16_t> CAllophoneTTS::Allophones2Sound(double outdevice2base_ratio, std::deque<size_t> &allophones, std::deque<MARK_DATA> *marks) {
 	std::vector<int16_t> ret;
 	if (marks)
 		marks->clear();
@@ -1231,7 +1231,7 @@ std::vector<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allopho
 
 				prosody_ratio = prosody_a / (syntagm_pos + prosody_b);
 
-				int out = resample_process(prosody_handle, prosody_ratio, &prosody_input, 1, 0, &prosody_inUsed, &prosody_output[0], static_cast<int>(prosody_output.size()));
+				int out = resample_process(prosody_handle, outdevice2base_ratio*prosody_ratio, &prosody_input, 1, 0, &prosody_inUsed, &prosody_output[0], static_cast<int>(prosody_output.size()));
 				if (out < 0)
 					throw std::runtime_error(std::string(__FUNCTION__) + ": Prosody resampler return negative value.");
 
@@ -1264,7 +1264,7 @@ std::vector<int16_t> CAllophoneTTS::Allophones2Sound(std::deque<size_t> &allopho
 			sgnl_sz -= copy_sz;
 			sgnl_input_pos += copy_sz;
 
-			int out = resample_process(prosody_handle, prosody_ratio, &sgnl_input[0], sgnl_input_pos, 0, &prosody_inUsed, &sgnl_output[0], static_cast<int>(sgnl_output.size()));
+			int out = resample_process(prosody_handle, outdevice2base_ratio*prosody_ratio, &sgnl_input[0], sgnl_input_pos, 0, &prosody_inUsed, &sgnl_output[0], static_cast<int>(sgnl_output.size()));
 			if (out < 0)
 				throw std::runtime_error(std::string(__FUNCTION__) + ": Prosody resampler return negative value.");
 

@@ -87,7 +87,7 @@ public:
 		const char *name;
 		MARK_DATA(size_t position_ = 0, const char *name_ = nullptr) : position(position_), name(name_) {}
 	};
-	std::vector<int16_t> Allophones2Sound(std::deque<size_t> &allophones, std::deque<MARK_DATA> *marks = nullptr);
+	std::vector<int16_t> Allophones2Sound(double outdevice2base_ratio, std::deque<size_t> &allophones, std::deque<MARK_DATA> *marks = nullptr);
 };
 
 #endif

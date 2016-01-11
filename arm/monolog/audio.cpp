@@ -12,6 +12,8 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #endif
+#include <iterator>
+#include <algorithm>
 
 PortAudio::PortAudio() : audio_stream(nullptr){
 	/*
@@ -38,18 +40,25 @@ PortAudio::~PortAudio() {
 
 // Replica from pa_devs.c from portaudio library example
 void PortAudio::ListSupportedStandardSampleRates(std::ostream &out, const PaStreamParameters *inputParameters, const PaStreamParameters *outputParameters) const {
+	std::vector<double> sr = GetSupportedStandardSampleRates(inputParameters, outputParameters);
+
+	out << "\t";
+	std::copy(sr.begin(), sr.end(), std::ostream_iterator<double>(out, " "));
+	out << std::endl;
+}
+
+std::vector<double> PortAudio::GetSupportedStandardSampleRates(const PaStreamParameters *inputParameters, const PaStreamParameters *outputParameters) const {
 	static double standardSampleRates[] = {
 		8000.0, 9600.0, 11025.0, 12000.0, 16000.0, 22050.0, 24000.0, 32000.0,
 		44100.0, 48000.0, 88200.0, 96000.0, 192000.0 };
 
-	out << "\t";
-
 	PaError err;
+	std::vector<double> ret;
 	for (int i = 0, ie = sizeof(standardSampleRates) / sizeof(standardSampleRates[0]); i < ie; ++i)
 		if ((err = Pa_IsFormatSupported(inputParameters, outputParameters, standardSampleRates[i])) == paFormatIsSupported)
-			out << standardSampleRates[i] << " ";
+			ret.push_back(standardSampleRates[i]);
 
-	out << std::endl;
+	return ret;
 }
 
 void PortAudio::ListDevices(std::ostream &out) const {
@@ -169,18 +178,33 @@ void PortAudio::ListDevices(std::ostream &out) const {
 	}
 }
 
-void PortAudio::Open(int out_device_, int channels_, double samplerate_, PaStreamCallback *user_callback_, void *user_data_) {
+double PortAudio::Open(int out_device_, int channels_, double samplerate_, double buffer, PaStreamCallback *user_callback_, void *user_data_) {
 	Close();
 
-	PaStreamParameters out_stream_info = { out_device_, channels_, paInt16, Pa_GetDeviceInfo(out_device_)->defaultHighOutputLatency*10, nullptr };
+	PaStreamParameters out_stream_info = { out_device_, channels_, paInt16, buffer, nullptr };
+
+	double device_samplerate = samplerate_;
+
+	// Find closest supported frequency
+	std::vector<double> sr = GetSupportedStandardSampleRates(nullptr, &out_stream_info);
+	if (!sr.empty()) {
+		auto sr_it = std::upper_bound(sr.begin(), sr.end(), samplerate_);
+		if (sr_it == sr.end())
+			sr_it--;
+		if (sr_it != sr.begin() && *(sr_it - 1) == samplerate_)
+			sr_it--;
+		device_samplerate = *sr_it;
+	}
 
 	PaError portaudio_error;
-	if ((portaudio_error = Pa_OpenStream(&audio_stream, nullptr, &out_stream_info, samplerate_, paFramesPerBufferUnspecified,
+	if ((portaudio_error = Pa_OpenStream(&audio_stream, nullptr, &out_stream_info, device_samplerate, paFramesPerBufferUnspecified,
 		paNoFlag, user_callback_, user_data_)) != paNoError)
 			throw std::runtime_error(std::string("Pa_OpenStream error: ") + Pa_GetErrorText(portaudio_error));
 
 	if ((portaudio_error = Pa_StartStream(audio_stream)) != paNoError)
 		throw std::runtime_error(std::string("Pa_StartStream error: ") + Pa_GetErrorText(portaudio_error));
+
+	return device_samplerate / samplerate_;
 }
 
 void PortAudio::Close() {
