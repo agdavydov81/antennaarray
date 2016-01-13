@@ -19,7 +19,7 @@ PortAudio::PortAudio() : audio_stream(nullptr){
 	/*
 	int fd;
 	// Suppress error messages output directly from library
-	#ifdef WIN32
+	#ifdef _WIN32
 	fd = open("nul", O_WRONLY);
 	#else
 	fd = open("/dev/null", O_WRONLY);
@@ -125,7 +125,7 @@ void PortAudio::ListDevices(std::ostream &out) const {
 		out << "Default high input latency  = " << deviceInfo->defaultHighInputLatency << std::endl;
 		out << "Default high output latency = " << deviceInfo->defaultHighOutputLatency << std::endl;
 
-#ifdef WIN32
+#ifdef _WIN32
 #if PA_USE_ASIO
 		/* ASIO specific latency information */
 		if (Pa_GetHostApiInfo(deviceInfo->hostApi)->type == paASIO) {

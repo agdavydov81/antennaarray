@@ -8,16 +8,11 @@ set(${NAME}_SRCS
 	allophone_tts.cpp
 	audio.h
 	audio.cpp
-	../auxiliary/wav_markers_regions.cpp
 	../auxiliary/libresample/src/filterkit.c
 	../auxiliary/libresample/src/resample.c
 	../auxiliary/libresample/src/resamplesubs.c
+	../auxiliary/wav_markers_regions.cpp
 	)
-
-add_definitions(-DUNICODE -D_UNICODE)
-if (WIN32)
-	add_definitions(-DENABLE_SNDFILE_WINDOWS_PROTOTYPES=1)
-endif()
 
 add_executable(${NAME} ${${NAME}_SRCS})
 target_link_libraries(${NAME} ${PORTAUDIO_LIBRARIES} ${SNDFILE_LIBRARIES} ${Boost_LIBRARIES})

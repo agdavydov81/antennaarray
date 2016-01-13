@@ -131,7 +131,7 @@ void CAllophoneTTS::LoadBase(const boost::filesystem::path &bpath) {
 	base.names.clear();
 	base.datas.clear();
 
-	boost::filesystem::path current_path;
+	std::string current_path;
 
 	try
 	{
@@ -143,14 +143,9 @@ void CAllophoneTTS::LoadBase(const boost::filesystem::path &bpath) {
 		paragraph_index = FindString(base.names, "#pause3");
 
 		for (const auto &current_name : base.names) {
-			current_path = bpath / boost::filesystem::path(std::string(current_name) + ".wav");
-			auto current_cpath = current_path.
-#ifdef __GNUC__
-								generic_string().
-#endif
-								c_str();
+			current_path = (bpath / boost::filesystem::path(current_name).append(".wav")).string();
 
-			SndfileHandle file(current_cpath);
+			SndfileHandle file(current_path.c_str());
 			if (!file.frames() || !file.samplerate() || !file.channels())
 				throw std::runtime_error("Empty file.");
 			if (file.channels() != 1)
@@ -178,7 +173,7 @@ void CAllophoneTTS::LoadBase(const boost::filesystem::path &bpath) {
 
 			std::vector<WAV_MARKER> markers;
 			std::vector<WAV_REGION> regions;
-			wav_markers_regions_read(current_cpath, markers, regions);
+			wav_markers_regions_read(current_path.c_str(), markers, regions);
 
 			data.pitches.resize(markers.size());
 			std::transform(markers.cbegin(), markers.cend(), data.pitches.begin(), [](const WAV_MARKER &m) { return m.pos; });
