@@ -143,7 +143,7 @@ void CAllophoneTTS::LoadBase(const boost::filesystem::path &bpath) {
 		paragraph_index = FindString(base.names, "#pause3");
 
 		for (const auto &current_name : base.names) {
-			current_path = (bpath / boost::filesystem::path(current_name).append(".wav")).string();
+			current_path = (bpath / (std::string(current_name)+".wav")).string();
 
 			SndfileHandle file(current_path.c_str());
 			if (!file.frames() || !file.samplerate() || !file.channels())
