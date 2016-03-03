@@ -33,10 +33,9 @@ namespace bpt = boost::property_tree;
 
 class PortAudioData {
 public:
-	PortAudioData(size_t channels_, long data_buffer_) : channels(channels_), data_buffer(data_buffer_){}
+	PortAudioData(long data_buffer_) : data_buffer(data_buffer_){}
 
 	boost::mutex mut;
-	size_t channels;
 	long data_buffer;
 	std::deque<int16_t> data;
 
@@ -56,11 +55,16 @@ public:
 		const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, PortAudioData *userData) {
 		boost::mutex::scoped_lock lock(userData->mut);
 
-		size_t data_sz = std::min((size_t)frameCount*userData->channels, userData->data.size());
-		std::copy(userData->data.begin(), userData->data.begin() + data_sz, output);
+		size_t data_sz = std::min((size_t)frameCount, userData->data.size());
+		for (auto it = userData->data.cbegin(), ie = it + data_sz; it != ie; ++it) {
+			*output++ = *it;
+			*output++ = *it;
+		}
 		userData->data.erase(userData->data.begin(), userData->data.begin() + data_sz);
 
-		std::fill(output + data_sz, output + frameCount*userData->channels, 0);
+		auto fill_sz = (size_t)frameCount - data_sz;
+		if (fill_sz)
+			std::fill(output, output + fill_sz * 2, 0);
 
 		return paContinue;
 	}
@@ -203,10 +207,10 @@ int main(int argc, const char *argv[]) {
 			}
 		}
 
-		PortAudioData audio_data(tts.base.channels, (long)std::floor(arg_outbuffer*tts.base.samplerate+0.5));
+		PortAudioData audio_data((long)std::floor(arg_outbuffer*tts.base.samplerate+0.5));
 		double outdevice2base_ratio = 1;
 		if (arg_outdevice >= 0)
-			outdevice2base_ratio = audio.Open(arg_outdevice, tts.base.channels, tts.base.samplerate, arg_outbuffer, (PaStreamCallback *)PortAudioData::Callback, &audio_data);
+			outdevice2base_ratio = audio.Open(arg_outdevice, 2, tts.base.samplerate, arg_outbuffer, (PaStreamCallback *)PortAudioData::Callback, &audio_data);
 		else
 			if (!arg_vm.count(str_length))
 				arg_length = 100;
