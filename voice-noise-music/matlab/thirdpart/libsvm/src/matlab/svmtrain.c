@@ -2,8 +2,28 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <time.h>
+#include <assert.h>
 #include "../svm.h"
+
+#ifdef _MSC_VER
+	#include <intrin.h>
+	#pragma intrinsic(__rdtsc)
+	typedef unsigned __int64 uint64_t;
+#else
+	#include <stdint.h>
+	// http://en.wikipedia.org/wiki/Time_Stamp_Counter
+	__inline__ uint64_t __rdtsc(void) {
+		uint32_t lo, hi;
+		__asm__ __volatile__ (
+		"        xorl %%eax,%%eax \n"
+		"        cpuid"      // serialize
+		::: "%rax", "%rbx", "%rcx", "%rdx");
+		/* We cannot use "=A", since this would use %rax on x86_64 and return only the lower 32bits of the TSC */
+		__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+		return (uint64_t)hi << 32 | lo;
+	}
+#endif
+
 
 #include "mex.h"
 #include "svm_model_matlab.h"
@@ -61,7 +81,11 @@ void exit_with_help()
 struct svm_parameter param;		// set by parse_command_line
 struct svm_problem prob;		// set by read_problem
 struct svm_model *model;
+#ifdef _DENSE_REP
+double *x_space;
+#else
 struct svm_node *x_space;
+#endif
 int cross_validation;
 int nr_fold;
 
@@ -151,7 +175,7 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 				;
 	}
 
-	rnd_seed=time(0);
+	rnd_seed=(unsigned int)__rdtsc();
 
 	// parse options
 	for(i=1;i<argc;i++)
@@ -263,6 +287,9 @@ int read_problem_dense(const mxArray *label_vec, const mxArray *instance_mat)
 		return -1;
 	}
 
+#ifdef _DENSE_REP
+		elements = prob.l * (sc + 1);
+#else
 	if(param.kernel_type == PRECOMPUTED)
 		elements = prob.l * (sc + 1);
 	else
@@ -276,29 +303,53 @@ int read_problem_dense(const mxArray *label_vec, const mxArray *instance_mat)
 			elements++;
 		}
 	}
+#endif
 
 	prob.y = Malloc(double,prob.l);
+#ifdef _DENSE_REP
+	prob.x = Malloc(struct svm_node, prob.l);
+	x_space = Malloc(double, elements);
+	memset(x_space, 0, elements*sizeof(*x_space));
+#else
 	prob.x = Malloc(struct svm_node *,prob.l);
 	x_space = Malloc(struct svm_node, elements);
+#endif
 
 	max_index = sc;
 	j = 0;
 	for(i = 0; i < prob.l; i++)
 	{
+#ifdef _DENSE_REP
+		prob.x[i].dim = sc;
+		prob.x[i].values = &x_space[j];
+#else
 		prob.x[i] = &x_space[j];
+#endif
 		prob.y[i] = labels[i];
 
 		for(k = 0; k < sc; k++)
 		{
 			if(param.kernel_type == PRECOMPUTED || samples[k * prob.l + i] != 0)
 			{
+#ifdef _DENSE_REP
+				x_space[j] = samples[k * prob.l + i];
+#else
 				x_space[j].index = k + 1;
 				x_space[j].value = samples[k * prob.l + i];
 				j++;
+#endif
 			}
+#ifdef _DENSE_REP
+				j++;
+#endif
 		}
+#ifdef _DENSE_REP
+		j++;
+#else
 		x_space[j++].index = -1;
+#endif
 	}
+	assert(j==elements);
 
 	if(param.gamma == 0 && max_index > 0)
 		param.gamma = 1.0/max_index;
@@ -306,7 +357,11 @@ int read_problem_dense(const mxArray *label_vec, const mxArray *instance_mat)
 	if(param.kernel_type == PRECOMPUTED)
 		for(i=0;i<prob.l;i++)
 		{
+#ifdef _DENSE_REP
+			if((int)prob.x[i].values[0] <= 0 || (int)prob.x[i].values[0] > max_index)
+#else
 			if((int)prob.x[i][0].value <= 0 || (int)prob.x[i][0].value > max_index)
+#endif
 			{
 				mexPrintf("Wrong input format: sample_serial_number out of range\n");
 				return -1;
@@ -318,6 +373,10 @@ int read_problem_dense(const mxArray *label_vec, const mxArray *instance_mat)
 
 int read_problem_sparse(const mxArray *label_vec, const mxArray *instance_mat)
 {
+#ifdef _DENSE_REP
+	mexPrintf("libSVM with _DENSE_REP define unsupports this sparse matrices.\n");
+	return -1;
+#else
 	int i, j, k, low, high;
 	mwIndex *ir, *jc;
 	int elements, max_index, num_samples, label_vector_row_num;
@@ -385,6 +444,7 @@ int read_problem_sparse(const mxArray *label_vec, const mxArray *instance_mat)
 		param.gamma = 1.0/max_index;
 
 	return 0;
+#endif
 }
 
 static void fake_answer(mxArray *plhs[])
