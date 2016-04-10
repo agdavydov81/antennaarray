@@ -13,7 +13,7 @@ try
 	else
 		mex CFLAGS="\$CFLAGS -std=c99" -largeArrayDims libsvmread.c
 		mex CFLAGS="\$CFLAGS -std=c99" -largeArrayDims libsvmwrite.c
-		mex CFLAGS="\$CFLAGS -std=c99" -largeArrayDims svmtrain.c   ../svm.cpp svm_model_matlab.c
+		mex CFLAGS="\$CFLAGS -std=c99" -D_DENSE_REP -largeArrayDims svmtrain.c   ../svm.cpp svm_model_matlab.c
 		mex CFLAGS="\$CFLAGS -std=c99" -largeArrayDims svmpredict.c ../svm.cpp svm_model_matlab.c
 		mex CFLAGS="\$CFLAGS -std=c99" -largeArrayDims libsvmmodelread.c  ../svm.cpp svm_model_matlab.c
 		mex CFLAGS="\$CFLAGS -std=c99" -largeArrayDims libsvmmodelwrite.c ../svm.cpp svm_model_matlab.c

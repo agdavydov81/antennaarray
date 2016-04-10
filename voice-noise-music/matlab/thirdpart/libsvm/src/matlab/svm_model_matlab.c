@@ -138,11 +138,16 @@ const char *model_to_matlab_structure(mxArray *plhs[], int num_of_feature, struc
 			nonzero_element = 0;
 			for(i = 0; i < model->l; i++) {
 				j = 0;
+#ifdef _DENSE_REP
+					nonzero_element+=model->SV[i].dim;
+					j+=model->SV[i].dim;
+#else
 				while(model->SV[i][j].index != -1) 
 				{
 					nonzero_element++;
 					j++;
 				}
+#endif
 			}
 		}
 
@@ -158,19 +163,32 @@ const char *model_to_matlab_structure(mxArray *plhs[], int num_of_feature, struc
 			{
 				// make a (1 x model->l) matrix
 				ir[ir_index] = 0; 
+#ifdef _DENSE_REP
+				ptr[ir_index] = model->SV[i].values[0];
+#else
 				ptr[ir_index] = model->SV[i][0].value;
+#endif
 				ir_index++;
 				jc[i+1] = jc[i] + 1;
 			}
 			else
 			{
 				int x_index = 0;
+#ifdef _DENSE_REP
+				while (x_index < model->SV[i].dim)
+				{
+					ir[ir_index] = x_index; 
+					ptr[ir_index] = model->SV[i].values[x_index];
+					ir_index++, x_index++;
+				}
+#else
 				while (model->SV[i][x_index].index != -1)
 				{
 					ir[ir_index] = model->SV[i][x_index].index - 1; 
 					ptr[ir_index] = model->SV[i][x_index].value;
 					ir_index++, x_index++;
 				}
+#endif
 				jc[i+1] = jc[i] + x_index;
 			}
 		}
@@ -200,7 +218,11 @@ struct svm_model *matlab_matrix_to_model(const mxArray *matlab_struct, const cha
 	int i, j, n, num_of_fields;
 	double *ptr;
 	int id = 0;
+#ifdef _DENSE_REP
+	double *x_space;
+#else
 	struct svm_node *x_space;
+#endif
 	struct svm_model *model;
 	mxArray **rhs;
 
@@ -325,22 +347,40 @@ struct svm_model *matlab_matrix_to_model(const mxArray *matlab_struct, const cha
 
 		elements = num_samples + sr;
 
+#ifdef _DENSE_REP
+		model->SV = (struct svm_node *) malloc(sr * sizeof(struct svm_node));
+		x_space = (double *)malloc(elements * sizeof(*x_space));
+		memset(x_space, 0, elements * sizeof(*x_space));
+#else
 		model->SV = (struct svm_node **) malloc(sr * sizeof(struct svm_node *));
 		x_space = (struct svm_node *)malloc(elements * sizeof(struct svm_node));
+#endif
 
 		// SV is in column
 		for(i=0;i<sr;i++)
 		{
 			int low = (int)jc[i], high = (int)jc[i+1];
 			int x_index = 0;
+#ifdef _DENSE_REP
+			model->SV[i].dim = sr;
+			model->SV[i].values = &x_space[low+i];
+#else
 			model->SV[i] = &x_space[low+i];
+#endif
 			for(j=low;j<high;j++)
 			{
+#ifdef _DENSE_REP
+				model->SV[i].values[(int)ir[j] + 1] = ptr[j];
+#else
 				model->SV[i][x_index].index = (int)ir[j] + 1; 
 				model->SV[i][x_index].value = ptr[j];
+#endif
 				x_index++;
 			}
+#ifdef _DENSE_REP
+#else
 			model->SV[i][x_index].index = -1;
+#endif
 		}
 
 		id++;

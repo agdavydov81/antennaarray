@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 project(SLSpp)
 set(${PROJECT_NAME}_VERSION_MAJOR 1)
 set(${PROJECT_NAME}_VERSION_MINOR 0)
-set(${PROJECT_NAME}_VERSION_PATCH 3)
+set(${PROJECT_NAME}_VERSION_PATCH 4)
 
 # In order to be able to use the newly written FindXXX package, the
 # location of the FindXXX.cmake file must be added to the cmake modules
