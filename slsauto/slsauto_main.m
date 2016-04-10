@@ -60,7 +60,7 @@ addpath_recursive(fileparts(mfilename('fullpath')), 'ignore_dirs',{'@.*' '\.svn'
 
 % Load translation module
 handles.gtxt = simplegettext();
-handles.gtxt.traslate_ui(hObject);
+handles.gtxt.translate_ui(hObject);
 
 % Load dialog values
 handles.cache_filename = [mfilename '_cache.mat'];

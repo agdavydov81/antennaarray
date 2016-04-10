@@ -71,14 +71,14 @@ classdef simplegettext < handle
 			is_translation_found = true;
 		end
 		
-		function traslate_ui(obj,hObject,is_report_unfound)
+		function translate_ui(obj,hObject,is_report_unfound)
 			if nargin<3
 				is_report_unfound = false;
 			end
 
 			ch_list = get(hObject,'Children');
 			for ci = 1:numel(ch_list)
-				traslate_ui(obj,ch_list(ci),is_report_unfound);
+				translate_ui(obj,ch_list(ci),is_report_unfound);
 			end
 
 			fl_name = '';
