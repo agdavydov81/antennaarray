@@ -51,8 +51,15 @@ function process_files(root, ext_list)
 
 	parfor li = 1:numel(list)
 		cfg = struct('snd_filename', fullfile(root, list(li).name));
-		slsauto_pitch_raw(cfg);
 
-		% slsauto_lpc_analyse(cfg);
+		slsauto_pitch_raw(cfg, {'pitchrapt'});
+
+		slsauto_lpc_analyse(cfg);
+		
+		fclose(fopen(slsauto_getpath(cfg,'lab'), 'w'));
+
+		slsauto_vu2lab(cfg, [], [], [], false);
+
+		delete(slsauto_getpath(cfg,'lpc'));
 	end
 end

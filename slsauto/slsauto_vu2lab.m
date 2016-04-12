@@ -1,12 +1,15 @@
-function slsauto_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
-	if nargin<2
+function slsauto_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t, plot_result)
+	if nargin<2 || isempty(peak_neigh_t)
 		peak_neigh_t = 0.029;
 	end
-	if nargin<3
+	if nargin<3 || isempty(peak_neigh_val)
 		peak_neigh_val = 1.5;
 	end
-	if nargin<4
+	if nargin<4 || isempty(reg_size_t)
 		reg_size_t = 0.080;
+	end
+	if nargin<5 || isempty(plot_result)
+		plot_result = true;
 	end
 	alg.peak_neigh_t = peak_neigh_t;
 	alg.peak_neigh_val = peak_neigh_val;
@@ -23,7 +26,9 @@ function slsauto_vu2lab(cfg, peak_neigh_t, peak_neigh_val, reg_size_t)
 
 	save_lab(cfg, [lab_data.lab_vu; lab_data.lab_lpc]); % Сохранение результатов
 
-	plot_data(cfg, alg, x,fs, power, pitch_vu, lpc, lab_data);
+	if plot_result
+		plot_data(cfg, alg, x,fs, power, pitch_vu, lpc, lab_data);
+	end
 end
 
 function [lab_syntagm lab_lpc lpc] = split_lpc_b(cfg, alg, power, pitch_vu, lab_vu)

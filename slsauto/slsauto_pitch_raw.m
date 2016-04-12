@@ -3,8 +3,8 @@ function slsauto_pitch_raw(cfg, methods)
 		methods = {'pitchrapt' 'irapt'}; % 'sfs_rapt'
 	end
 	
-	for m = methods
-		switch(m{1})
+	for mi = 1:numel(methods)
+		switch methods{mi}
 			case 'sfs_rapt'
 				[f0_sfs.freq, f0_sfs.time] = sfs_rapt(slsauto_getpath(cfg,'snd'));
 				f0_sfs = remove_zeros(f0_sfs);
