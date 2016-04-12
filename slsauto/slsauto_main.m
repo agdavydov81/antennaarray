@@ -129,7 +129,9 @@ function pitchraw_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to pitchraw_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-slsauto_pitch_raw(struct('snd_filename',get(handles.snd_filename_edit,'String')));
+cfg = struct('snd_filename',get(handles.snd_filename_edit,'String'));
+slsauto_pitch_raw(cfg);
+slsauto_pitch_editor(cfg);
 
 
 % --- Executes on button press in pitcheditor_btn.

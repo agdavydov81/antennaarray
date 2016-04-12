@@ -12,7 +12,11 @@ function [f0_freq, f0_time, f0_tone] = pitchrapt(x_or_filename, fs)
 	if fs~=8000
 		x = resample(x, 8000, fs);
 	end
-	wavwrite(x, 8000, fullfile(tmp_dir, 'signal.wav'));
+	if exist('audiowrite','file')
+		audiowrite(fullfile(tmp_dir, 'signal.wav'), x, 8000);
+	else
+		wavwrite(x, 8000, fullfile(tmp_dir, 'signal.wav'));
+	end
 
 	tmp_do = fullfile(tmp_dir, 'do.bat');
 	fh = fopen(tmp_do, 'w');

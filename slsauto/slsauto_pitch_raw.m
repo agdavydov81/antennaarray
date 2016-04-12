@@ -1,24 +1,33 @@
-function slsauto_pitch_raw(cfg)
-%	[f0_sfs.freq, f0_sfs.time] = sfs_rapt(slsauto_getpath(cfg,'snd'));
-%	f0_sfs = remove_zeros(f0_sfs);
-%	save_pitch_raw(slsauto_getpath(cfg,'snd'), f0_sfs, '010_sfs_rapt(k.-)');
+function slsauto_pitch_raw(cfg, methods)
+	if nargin < 2
+		methods = {'pitchrapt' 'irapt'}; % 'sfs_rapt'
+	end
+	
+	for m = methods
+		switch(m{1})
+			case 'sfs_rapt'
+				[f0_sfs.freq, f0_sfs.time] = sfs_rapt(slsauto_getpath(cfg,'snd'));
+				f0_sfs = remove_zeros(f0_sfs);
+				save_pitch_raw(slsauto_getpath(cfg,'snd'), f0_sfs, '010_sfs_rapt(k.-)');
 
-	[f0_pr.freq, f0_pr.time]   = pitchrapt(slsauto_getpath(cfg,'snd'));
-	f0_pr = remove_zeros(f0_pr);
-	save_pitch_raw(slsauto_getpath(cfg,'snd'), f0_pr, '020_pitchrapt(bd-)');
-	f0_pr.freq = octave_fix(f0_pr.freq, f0_pr.time, 0.5);
-	f0_pr.freq = median_fix(f0_pr.freq, f0_pr.time, 5);
-	save_pitch_raw(slsauto_getpath(cfg,'snd'), f0_pr, '021_pitchrapt(bd-)');
+			case 'pitchrapt'
+				[f0_pr.freq, f0_pr.time]   = pitchrapt(slsauto_getpath(cfg,'snd'));
+				f0_pr = remove_zeros(f0_pr);
+				save_pitch_raw(slsauto_getpath(cfg,'snd'), f0_pr, '020_pitchrapt(bd-)');
+				f0_pr.freq = octave_fix(f0_pr.freq, f0_pr.time, 0.5);
+				f0_pr.freq = median_fix(f0_pr.freq, f0_pr.time, 5);
+				save_pitch_raw(slsauto_getpath(cfg,'snd'), f0_pr, '021_pitchrapt(bd-)');
 
-	[x, x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
-	[f0_irapt.freq, f0_irapt.time, f0_irapt.isvocal] = irapt(x, x_info.SampleRate, 'irapt2');
-	f0_irapt = remove_zeros(f0_irapt);
-	save_pitch_raw(slsauto_getpath(cfg,'snd'), f0_irapt, '030_irapt(ko-)');
-	f0_irapt = irapt_voiced_fix(f0_irapt, 8, 0.041);
-	f0_irapt.freq = octave_fix(f0_irapt.freq, f0_irapt.time, 0.5);
-	save_pitch_raw(slsauto_getpath(cfg,'snd'), f0_irapt, '031_irapt(ko-)');
-
-	slsauto_pitch_editor(cfg);
+			case 'irapt'
+				[x, x_info] = libsndfile_read(slsauto_getpath(cfg,'snd'));
+				[f0_irapt.freq, f0_irapt.time, f0_irapt.isvocal] = irapt(x, x_info.SampleRate, 'irapt2');
+				f0_irapt = remove_zeros(f0_irapt);
+				save_pitch_raw(slsauto_getpath(cfg,'snd'), f0_irapt, '030_irapt(ko-)');
+				f0_irapt = irapt_voiced_fix(f0_irapt, 8, 0.041);
+				f0_irapt.freq = octave_fix(f0_irapt.freq, f0_irapt.time, 0.5);
+				save_pitch_raw(slsauto_getpath(cfg,'snd'), f0_irapt, '031_irapt(ko-)');
+		end
+	end
 end
 
 function f0_irapt = irapt_voiced_fix(f0_irapt, lodf2dt_max, voc_sz_min)
