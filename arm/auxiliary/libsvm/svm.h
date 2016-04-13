@@ -1,7 +1,9 @@
 #ifndef _LIBSVM_H
 #define _LIBSVM_H
 
-#define LIBSVM_VERSION 312
+#include <stdio.h>
+
+#define LIBSVM_VERSION 321
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +45,29 @@ enum { LINEAR, POLY, RBF, SIGMOID, PRECOMPUTED }; /* kernel_type */
 
 struct svm_parameter
 {
+#ifdef __cplusplus
+	svm_parameter()
+		: svm_type(C_SVC)
+		, kernel_type(RBF)
+		, degree(3)
+		, gamma(0)
+		, coef0(0)
+		, cache_size(100)
+		, eps(1e-3)
+		, C(1)
+		, nr_weight(0)
+		, weight_label(NULL)
+		, weight(NULL)
+		, nu(0.5)
+		, p(0.1)
+		, shrinking(1)
+		, probability(0)
+		, rnd_seed(0)
+		, max_iter(0)
+		, messages_file_descriptor(NULL)
+	{}
+#endif
+
 	int svm_type;
 	int kernel_type;
 	int degree;	/* for poly */
@@ -60,6 +85,9 @@ struct svm_parameter
 	double p;	/* for EPSILON_SVR */
 	int shrinking;	/* use the shrinking heuristics */
 	int probability; /* do probability estimates */
+	size_t rnd_seed; /* random number generator seed: 0 - rdtsc */
+	int max_iter; /* stopping train maximum iterations number */
+	FILE *messages_file_descriptor; /* show library messages and warnings (via fprintf) */
 };
 
 //
@@ -79,6 +107,7 @@ struct svm_model
 	double *rho;		/* constants in decision functions (rho[k*(k-1)/2]) */
 	double *probA;		/* pariwise probability information */
 	double *probB;
+	int *sv_indices;        /* sv_indices[0,...,nSV-1] are values in [1,...,num_traning_data] to indicate SVs in the training set */
 
 	/* for classification only */
 
@@ -99,6 +128,8 @@ struct svm_model *svm_load_model(const char *model_file_name);
 int svm_get_svm_type(const struct svm_model *model);
 int svm_get_nr_class(const struct svm_model *model);
 void svm_get_labels(const struct svm_model *model, int *label);
+void svm_get_sv_indices(const struct svm_model *model, int *sv_indices);
+int svm_get_nr_sv(const struct svm_model *model);
 double svm_get_svr_probability(const struct svm_model *model);
 
 double svm_predict_values(const struct svm_model *model, const struct svm_node *x, double* dec_values);
@@ -111,8 +142,6 @@ void svm_destroy_param(struct svm_parameter *param);
 
 const char *svm_check_parameter(const struct svm_problem *prob, const struct svm_parameter *param);
 int svm_check_probability_model(const struct svm_model *model);
-
-void svm_set_print_string_function(void (*print_func)(const char *));
 
 #ifdef __cplusplus
 }
