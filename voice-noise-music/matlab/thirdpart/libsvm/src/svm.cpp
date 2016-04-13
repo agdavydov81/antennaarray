@@ -1,4 +1,4 @@
-#include <math.h>
+#include <cmath>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -7,6 +7,22 @@
 #include <stdarg.h>
 #include <limits.h>
 #include <locale.h>
+#include <limits>
+#include <vector>
+
+#include "xorshiftrand.h"
+#if !defined(_MSC_VER) || _MSC_VER >= 1900
+thread_local
+#endif
+XorShift128Plus PRNG;
+
+#ifdef _OPENMP
+#include <omp.h>
+#pragma message ("-- OpenMP enabled ----------------------------")
+#else
+#pragma message ("-- OpenMP disabled ---------------------------")
+#endif
+
 #include "svm.h"
 int libsvm_version = LIBSVM_VERSION;
 typedef float Qfloat;
@@ -34,29 +50,9 @@ static inline double powi(double base, int times)
 	}
 	return ret;
 }
-#define INF HUGE_VAL
+#define INF (std::numeric_limits<double>::infinity())
 #define TAU 1e-12
 #define Malloc(type,n) (type *)malloc((n)*sizeof(type))
-
-static void print_string_stdout(const char *s)
-{
-	fputs(s,stdout);
-	fflush(stdout);
-}
-static void (*svm_print_string) (const char *) = &print_string_stdout;
-#if 1
-static void info(const char *fmt,...)
-{
-	char buf[BUFSIZ];
-	va_list ap;
-	va_start(ap,fmt);
-	vsprintf(buf,fmt,ap);
-	va_end(ap);
-	(*svm_print_string)(buf);
-}
-#else
-static void info(const char *fmt,...) {}
-#endif
 
 //
 // Kernel Cache
@@ -74,7 +70,7 @@ public:
 	// return some position p where [p,len) need to be filled
 	// (p >= len if nothing needs to be filled)
 	int get_data(const int index, Qfloat **data, int len);
-	void swap_index(int i, int j);	
+	void swap_index(int i, int j);
 private:
 	int l;
 	long int size;
@@ -267,7 +263,7 @@ private:
 };
 
 #ifdef _DENSE_REP
-Kernel::Kernel(int l, svm_node * x_, const svm_parameter& param)
+Kernel::Kernel(int l, svm_node * const x_, const svm_parameter& param)
 #else
 Kernel::Kernel(int l, svm_node * const * x_, const svm_parameter& param)
 #endif
@@ -391,7 +387,7 @@ double Kernel::k_function(const svm_node *x, const svm_node *y,
 				else
 				{
 					if(x->index > y->index)
-					{
+					{	
 						sum += y->value * y->value;
 						++y;
 					}
@@ -449,8 +445,12 @@ double Kernel::k_function(const svm_node *x, const svm_node *y,
 // solution will be put in \alpha, objective value will be put in obj
 //
 class Solver {
+	FILE * messages_file_descriptor;
+
 public:
-	Solver() {};
+	Solver(const svm_parameter *params) {
+		messages_file_descriptor = (FILE *)params->messages_file_descriptor;
+	};
 	virtual ~Solver() {};
 
 	struct SolutionInfo {
@@ -463,7 +463,7 @@ public:
 
 	void Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 		   double *alpha_, double Cp, double Cn, double eps,
-		   SolutionInfo* si, int shrinking);
+		   SolutionInfo* si, int shrinking, int max_iter);
 protected:
 	int active_size;
 	schar *y;
@@ -502,7 +502,7 @@ protected:
 	virtual double calculate_rho();
 	virtual void do_shrinking();
 private:
-	bool be_shrunk(int i, double Gmax1, double Gmax2);	
+	bool be_shrunk(int i, double Gmax1, double Gmax2);
 };
 
 void Solver::swap_index(int i, int j)
@@ -534,7 +534,8 @@ void Solver::reconstruct_gradient()
 			nr_free++;
 
 	if(2*nr_free < active_size)
-		info("\nWARNING: using -h 0 may be faster\n");
+		if (messages_file_descriptor)
+			fprintf((FILE *)messages_file_descriptor, "\nWARNING: using -h 0 may be faster\n");
 
 	if (nr_free*l > 2*active_size*(l-active_size))
 	{
@@ -561,7 +562,7 @@ void Solver::reconstruct_gradient()
 
 void Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 		   double *alpha_, double Cp, double Cn, double eps,
-		   SolutionInfo* si, int shrinking)
+		   SolutionInfo* si, int shrinking, int max_iter)
 {
 	this->l = l;
 	this->Q = &Q;
@@ -616,7 +617,8 @@ void Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 	// optimization step
 
 	int iter = 0;
-	int max_iter = max(10000000, l>INT_MAX/100 ? INT_MAX : 100*l);
+	if(max_iter==0)
+		max_iter = max(10000000, l>INT_MAX/100 ? INT_MAX : 100*l);
 	int counter = min(l,1000)+1;
 	
 	while(iter < max_iter)
@@ -627,7 +629,8 @@ void Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 		{
 			counter = min(l,1000);
 			if(shrinking) do_shrinking();
-			info(".");
+			if (messages_file_descriptor)
+				fprintf((FILE *)messages_file_descriptor, ".");
 		}
 
 		int i,j;
@@ -637,7 +640,8 @@ void Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 			reconstruct_gradient();
 			// reset active set size and check
 			active_size = l;
-			info("*");
+			if (messages_file_descriptor)
+				fprintf((FILE *)messages_file_descriptor, "*");
 			if(select_working_set(i,j)!=0)
 				break;
 			else
@@ -793,9 +797,11 @@ void Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 			// reconstruct the whole gradient to calculate objective value
 			reconstruct_gradient();
 			active_size = l;
-			info("*");
+			if (messages_file_descriptor)
+				fprintf((FILE *)messages_file_descriptor, "*");
 		}
-		info("\nWARNING: reaching max number of iterations");
+		if (messages_file_descriptor)
+			fprintf((FILE *)messages_file_descriptor, "\nWARNING: reaching max number of iterations\n");
 	}
 
 	// calculate rho
@@ -829,7 +835,8 @@ void Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 	si->upper_bound_p = Cp;
 	si->upper_bound_n = Cn;
 
-	info("\noptimization finished, #iter = %d\n",iter);
+	if (messages_file_descriptor)
+		fprintf((FILE *)messages_file_descriptor, "\noptimization finished, #iter = %d\n",iter);
 
 	delete[] p;
 	delete[] y;
@@ -891,7 +898,7 @@ int Solver::select_working_set(int &out_i, int &out_j)
 					Gmax2 = G[j];
 				if (grad_diff > 0)
 				{
-					double obj_diff; 
+					double obj_diff;
 					double quad_coef = QD[i]+QD[j]-2.0*y[i]*Q_i[j];
 					if (quad_coef > 0)
 						obj_diff = -(grad_diff*grad_diff)/quad_coef;
@@ -915,7 +922,7 @@ int Solver::select_working_set(int &out_i, int &out_j)
 					Gmax2 = -G[j];
 				if (grad_diff > 0)
 				{
-					double obj_diff; 
+					double obj_diff;
 					double quad_coef = QD[i]+QD[j]+2.0*y[i]*Q_i[j];
 					if (quad_coef > 0)
 						obj_diff = -(grad_diff*grad_diff)/quad_coef;
@@ -932,7 +939,7 @@ int Solver::select_working_set(int &out_i, int &out_j)
 		}
 	}
 
-	if(Gmax+Gmax2 < eps)
+	if(Gmax+Gmax2 < eps || Gmin_idx == -1)
 		return 1;
 
 	out_i = Gmax_idx;
@@ -1002,7 +1009,8 @@ void Solver::do_shrinking()
 		unshrink = true;
 		reconstruct_gradient();
 		active_size = l;
-		info("*");
+		if (messages_file_descriptor)
+			fprintf((FILE *)messages_file_descriptor, "*");
 	}
 
 	for(i=0;i<active_size;i++)
@@ -1064,16 +1072,16 @@ double Solver::calculate_rho()
 //
 // additional constraint: e^T \alpha = constant
 //
-class Solver_NU : public Solver
+class Solver_NU: public Solver
 {
 public:
-	Solver_NU() {}
+	Solver_NU(const svm_parameter *param) : Solver(param) {}
 	void Solve(int l, const QMatrix& Q, const double *p, const schar *y,
 		   double *alpha, double Cp, double Cn, double eps,
-		   SolutionInfo* si, int shrinking)
+		   SolutionInfo* si, int shrinking, int max_iter)
 	{
 		this->si = si;
-		Solver::Solve(l,Q,p,y,alpha,Cp,Cn,eps,si,shrinking);
+		Solver::Solve(l,Q,p,y,alpha,Cp,Cn,eps,si,shrinking,max_iter);
 	}
 private:
 	SolutionInfo *si;
@@ -1143,7 +1151,7 @@ int Solver_NU::select_working_set(int &out_i, int &out_j)
 					Gmaxp2 = G[j];
 				if (grad_diff > 0)
 				{
-					double obj_diff; 
+					double obj_diff;
 					double quad_coef = QD[ip]+QD[j]-2*Q_ip[j];
 					if (quad_coef > 0)
 						obj_diff = -(grad_diff*grad_diff)/quad_coef;
@@ -1167,7 +1175,7 @@ int Solver_NU::select_working_set(int &out_i, int &out_j)
 					Gmaxn2 = -G[j];
 				if (grad_diff > 0)
 				{
-					double obj_diff; 
+					double obj_diff;
 					double quad_coef = QD[in]+QD[j]-2*Q_in[j];
 					if (quad_coef > 0)
 						obj_diff = -(grad_diff*grad_diff)/quad_coef;
@@ -1184,7 +1192,7 @@ int Solver_NU::select_working_set(int &out_i, int &out_j)
 		}
 	}
 
-	if(max(Gmaxp+Gmaxp2,Gmaxn+Gmaxn2) < eps)
+	if(max(Gmaxp+Gmaxp2,Gmaxn+Gmaxn2) < eps || Gmin_idx == -1)
 		return 1;
 
 	if (y[Gmin_idx] == +1)
@@ -1340,6 +1348,7 @@ public:
 		int start, j;
 		if((start = cache->get_data(i,&data,len)) < len)
 		{
+#pragma omp parallel for private(j) schedule(guided)
 			for(j=start;j<len;j++)
 				data[j] = (Qfloat)(y[i]*y[j]*(this->*kernel_function)(i,j));
 		}
@@ -1389,6 +1398,7 @@ public:
 		int start, j;
 		if((start = cache->get_data(i,&data,len)) < len)
 		{
+#pragma omp parallel for private(j) schedule(guided)
 			for(j=start;j<len;j++)
 				data[j] = (Qfloat)(this->*kernel_function)(i,j);
 		}
@@ -1455,6 +1465,7 @@ public:
 		int j, real_i = index[i];
 		if(cache->get_data(real_i,&data,l) < l)
 		{
+#pragma omp parallel for private(j) schedule(guided)
 			for(j=0;j<l;j++)
 				data[j] = (Qfloat)(this->*kernel_function)(real_i,j);
 		}
@@ -1512,16 +1523,17 @@ static void solve_c_svc(
 		if(prob->y[i] > 0) y[i] = +1; else y[i] = -1;
 	}
 
-	Solver s;
+	Solver s(param);
 	s.Solve(l, SVC_Q(*prob,*param,y), minus_ones, y,
-		alpha, Cp, Cn, param->eps, si, param->shrinking);
+		alpha, Cp, Cn, param->eps, si, param->shrinking, param->max_iter);
 
 	double sum_alpha=0;
 	for(i=0;i<l;i++)
 		sum_alpha += alpha[i];
 
 	if (Cp==Cn)
-		info("nu = %f\n", sum_alpha/(Cp*prob->l));
+		if (param->messages_file_descriptor)
+			fprintf((FILE *)param->messages_file_descriptor, "nu = %f\n", sum_alpha/(Cp*prob->l));
 
 	for(i=0;i<l;i++)
 		alpha[i] *= y[i];
@@ -1566,12 +1578,13 @@ static void solve_nu_svc(
 	for(i=0;i<l;i++)
 		zeros[i] = 0;
 
-	Solver_NU s;
+	Solver_NU s(param);
 	s.Solve(l, SVC_Q(*prob,*param,y), zeros, y,
-		alpha, 1.0, 1.0, param->eps, si,  param->shrinking);
+		alpha, 1.0, 1.0, param->eps, si,  param->shrinking, param->max_iter);
 	double r = si->r;
 
-	info("C = %f\n",1/r);
+	if (param->messages_file_descriptor)
+		fprintf((FILE *)param->messages_file_descriptor, "C = %f\n",1/r);
 
 	for(i=0;i<l;i++)
 		alpha[i] *= y[i]/r;
@@ -1609,9 +1622,9 @@ static void solve_one_class(
 		ones[i] = 1;
 	}
 
-	Solver s;
+	Solver s(param);
 	s.Solve(l, ONE_CLASS_Q(*prob,*param), zeros, ones,
-		alpha, 1.0, 1.0, param->eps, si, param->shrinking);
+		alpha, 1.0, 1.0, param->eps, si, param->shrinking, param->max_iter);
 
 	delete[] zeros;
 	delete[] ones;
@@ -1638,9 +1651,9 @@ static void solve_epsilon_svr(
 		y[i+l] = -1;
 	}
 
-	Solver s;
+	Solver s(param);
 	s.Solve(2*l, SVR_Q(*prob,*param), linear_term, y,
-		alpha2, param->C, param->C, param->eps, si, param->shrinking);
+		alpha2, param->C, param->C, param->eps, si, param->shrinking, param->max_iter);
 
 	double sum_alpha = 0;
 	for(i=0;i<l;i++)
@@ -1648,7 +1661,8 @@ static void solve_epsilon_svr(
 		alpha[i] = alpha2[i] - alpha2[i+l];
 		sum_alpha += fabs(alpha[i]);
 	}
-	info("nu = %f\n",sum_alpha/(param->C*l));
+	if (param->messages_file_descriptor)
+		fprintf((FILE *)param->messages_file_descriptor, "nu = %f\n",sum_alpha/(param->C*l));
 
 	delete[] alpha2;
 	delete[] linear_term;
@@ -1679,11 +1693,12 @@ static void solve_nu_svr(
 		y[i+l] = -1;
 	}
 
-	Solver_NU s;
+	Solver_NU s(param);
 	s.Solve(2*l, SVR_Q(*prob,*param), linear_term, y,
-		alpha2, C, C, param->eps, si, param->shrinking);
+		alpha2, C, C, param->eps, si, param->shrinking, param->max_iter);
 
-	info("epsilon = %f\n",-si->r);
+	if (param->messages_file_descriptor)
+		fprintf((FILE *)param->messages_file_descriptor, "epsilon = %f\n",-si->r);
 
 	for(i=0;i<l;i++)
 		alpha[i] = alpha2[i] - alpha2[i+l];
@@ -1699,7 +1714,7 @@ static void solve_nu_svr(
 struct decision_function
 {
 	double *alpha;
-	double rho;	
+	double rho;
 };
 
 static decision_function svm_train_one(
@@ -1727,7 +1742,8 @@ static decision_function svm_train_one(
 			break;
 	}
 
-	info("obj = %f, rho = %f\n",si.obj,si.rho);
+	if (param->messages_file_descriptor)
+		fprintf((FILE *)param->messages_file_descriptor, "obj = %f, rho = %f\n",si.obj,si.rho);
 
 	// output SVs
 
@@ -1751,7 +1767,8 @@ static decision_function svm_train_one(
 		}
 	}
 
-	info("nSV = %d, nBSV = %d\n",nSV,nBSV);
+	if (param->messages_file_descriptor)
+		fprintf((FILE *)param->messages_file_descriptor, "nSV = %d, nBSV = %d\n",nSV,nBSV);
 
 	decision_function f;
 	f.alpha = alpha;
@@ -1762,7 +1779,7 @@ static decision_function svm_train_one(
 // Platt's binary SVM Probablistic Output: an improvement from Lin et al.
 static void sigmoid_train(
 	int l, const double *dec_values, const double *labels, 
-	double& A, double& B)
+	double& A, double& B, const svm_parameter *param)
 {
 	double prior1=0, prior0 = 0;
 	int i;
@@ -1780,7 +1797,7 @@ static void sigmoid_train(
 	double *t=Malloc(double,l);
 	double fApB,p,q,h11,h22,h21,g1,g2,det,dA,dB,gd,stepsize;
 	double newA,newB,newf,d1,d2;
-	int iter; 
+	int iter;
 	
 	// Initial Point and Initial Fun Value
 	A=0.0; B=log((prior0+1.0)/(prior1+1.0));
@@ -1863,13 +1880,15 @@ static void sigmoid_train(
 
 		if (stepsize < min_step)
 		{
-			info("Line search fails in two-class probability estimates\n");
+			if (param->messages_file_descriptor)
+				fprintf((FILE *)param->messages_file_descriptor, "Line search fails in two-class probability estimates\n");
 			break;
 		}
 	}
 
 	if (iter>=max_iter)
-		info("Reaching maximal iterations in two-class probability estimates\n");
+		if (param->messages_file_descriptor)
+			fprintf((FILE *)param->messages_file_descriptor, "Reaching maximal iterations in two-class probability estimates\n");
 	free(t);
 }
 
@@ -1884,7 +1903,7 @@ static double sigmoid_predict(double decision_value, double A, double B)
 }
 
 // Method 2 from the multiclass_prob paper by Wu, Lin, and Weng
-static void multiclass_probability(int k, double **r, double *p)
+static void multiclass_probability(int k, double **r, double *p, FILE * messages_file_descriptor)
 {
 	int t,j;
 	int iter = 0, max_iter=max(100,k);
@@ -1941,7 +1960,8 @@ static void multiclass_probability(int k, double **r, double *p)
 		}
 	}
 	if (iter>=max_iter)
-		info("Exceeds max_iter in multiclass_prob\n");
+		if (messages_file_descriptor)
+			fprintf((FILE *)messages_file_descriptor, "Exceeds max_iter in multiclass_prob\n");
 	for(t=0;t<k;t++) free(Q[t]);
 	free(Q);
 	free(Qp);
@@ -1961,7 +1981,7 @@ static void svm_binary_svc_probability(
 	for(i=0;i<prob->l;i++) perm[i]=i;
 	for(i=0;i<prob->l;i++)
 	{
-		int j = i+rand()%(prob->l-i);
+		int j = i+PRNG.rand()%(prob->l-i);
 		swap(perm[i],perm[j]);
 	}
 	for(i=0;i<nr_fold;i++)
@@ -2026,7 +2046,7 @@ static void svm_binary_svc_probability(
 #ifdef _DENSE_REP
 				svm_predict_values(submodel,(prob->x+perm[j]),&(dec_values[perm[j]])); 
 #else
-				svm_predict_values(submodel,prob->x[perm[j]],&(dec_values[perm[j]])); 
+				svm_predict_values(submodel,prob->x[perm[j]],&(dec_values[perm[j]]));
 #endif
 				// ensure +1 -1 order; reason not using CV subroutine
 				dec_values[perm[j]] *= submodel->label[0];
@@ -2037,7 +2057,7 @@ static void svm_binary_svc_probability(
 		free(subprob.x);
 		free(subprob.y);
 	}		
-	sigmoid_train(prob->l,dec_values,prob->y,probA,probB);
+	sigmoid_train(prob->l,dec_values,prob->y,probA,probB,param);
 	free(dec_values);
 	free(perm);
 }
@@ -2069,7 +2089,8 @@ static double svm_svr_probability(
 		else 
 			mae+=fabs(ymv[i]);
 	mae /= (prob->l-count);
-	info("Prob. model for test data: target value = predicted value + z,\nz: Laplace distribution e^(-|z|/sigma)/(2sigma),sigma= %g\n",mae);
+	if (param->messages_file_descriptor)
+		fprintf((FILE *)param->messages_file_descriptor, "Prob. model for test data: target value = predicted value + z,\nz: Laplace distribution e^(-|z|/sigma)/(2sigma),sigma= %g\n",mae);
 	free(ymv);
 	return mae;
 }
@@ -2084,7 +2105,7 @@ static void svm_group_classes(const svm_problem *prob, int *nr_class_ret, int **
 	int nr_class = 0;
 	int *label = Malloc(int,max_nr_class);
 	int *count = Malloc(int,max_nr_class);
-	int *data_label = Malloc(int,l);	
+	int *data_label = Malloc(int,l);
 	int i;
 
 	for(i=0;i<l;i++)
@@ -2111,6 +2132,24 @@ static void svm_group_classes(const svm_problem *prob, int *nr_class_ret, int **
 			label[nr_class] = this_label;
 			count[nr_class] = 1;
 			++nr_class;
+		}
+	}
+
+	//
+	// Labels are ordered by their first occurrence in the training set. 
+	// However, for two-class sets with -1/+1 labels and -1 appears first, 
+	// we swap labels to ensure that internally the binary SVM has positive data corresponding to the +1 instances.
+	//
+	if (nr_class == 2 && label[0] == -1 && label[1] == 1)
+	{
+		swap(label[0],label[1]);
+		swap(count[0],count[1]);
+		for(i=0;i<l;i++)
+		{
+			if(data_label[i] == 0)
+				data_label[i] = 1;
+			else
+				data_label[i] = 0;
 		}
 	}
 
@@ -2142,6 +2181,9 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 	svm_model *model = Malloc(svm_model,1);
 	model->param = *param;
 	model->free_sv = 0;	// XXX
+	
+	if (param->rnd_seed)
+		PRNG.seed(param->rnd_seed);
 
 	if(param->svm_type == ONE_CLASS ||
 	   param->svm_type == EPSILON_SVR ||
@@ -2177,12 +2219,14 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 		model->SV = Malloc(svm_node *,nSV);
 #endif
 		model->sv_coef[0] = Malloc(double,nSV);
+		model->sv_indices = Malloc(int,nSV);
 		int j = 0;
 		for(i=0;i<prob->l;i++)
 			if(fabs(f.alpha[i]) > 0)
 			{
 				model->SV[j] = prob->x[i];
 				model->sv_coef[0][j] = f.alpha[i];
+				model->sv_indices[j] = i+1;
 				++j;
 			}		
 
@@ -2200,8 +2244,9 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 
 		// group training data of the same class
 		svm_group_classes(prob,&nr_class,&label,&start,&count,perm);
-		if(nr_class == 1) 
-			info("WARNING: training data in only one class. See README for details.\n");
+		if(nr_class == 1)
+			if (param->messages_file_descriptor)
+				fprintf((FILE *)param->messages_file_descriptor, "WARNING: training data in only one class. See README for details.\n");
 		
 #ifdef _DENSE_REP
 		svm_node *x = Malloc(svm_node,l);
@@ -2224,7 +2269,8 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 				if(param->weight_label[i] == label[j])
 					break;
 			if(j == nr_class)
-				fprintf(stderr,"WARNING: class label %d specified in weight is not found\n", param->weight_label[i]);
+				if (param->messages_file_descriptor)
+					fprintf((FILE *)param->messages_file_descriptor, "WARNING: class label %d specified in weight is not found\n", param->weight_label[i]);
 			else
 				weighted_C[j] *= param->weight[i];
 		}
@@ -2328,7 +2374,8 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 			nz_count[i] = nSV;
 		}
 		
-		info("Total nSV = %d\n",total_sv);
+		if (param->messages_file_descriptor)
+			fprintf((FILE *)param->messages_file_descriptor, "Total nSV = %d\n",total_sv);
 
 		model->l = total_sv;
 #ifdef _DENSE_REP
@@ -2336,9 +2383,14 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 #else
 		model->SV = Malloc(svm_node *,total_sv);
 #endif
+		model->sv_indices = Malloc(int,total_sv);
 		p = 0;
 		for(i=0;i<l;i++)
-			if(nonzero[i]) model->SV[p++] = x[i];
+			if(nonzero[i])
+			{
+				model->SV[p] = x[i];
+				model->sv_indices[p++] = perm[i] + 1;
+			}
 
 		int *nz_start = Malloc(int,nr_class);
 		nz_start[0] = 0;
@@ -2396,11 +2448,17 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 void svm_cross_validation(const svm_problem *prob, const svm_parameter *param, int nr_fold, double *target)
 {
 	int i;
-	int *fold_start = Malloc(int,nr_fold+1);
+	int *fold_start;
 	int l = prob->l;
 	int *perm = Malloc(int,l);
 	int nr_class;
-
+	if (nr_fold > l)
+	{
+		nr_fold = l;
+		if (param->messages_file_descriptor)
+			fprintf((FILE *)param->messages_file_descriptor, "WARNING: # folds > # data. Will use # folds = # data instead (i.e., leave-one-out cross validation)\n");
+	}
+	fold_start = Malloc(int,nr_fold+1);
 	// stratified cv may not give leave-one-out rate
 	// Each class to l folds -> some folds may have zero elements
 	if((param->svm_type == C_SVC ||
@@ -2420,7 +2478,7 @@ void svm_cross_validation(const svm_problem *prob, const svm_parameter *param, i
 		for (c=0; c<nr_class; c++) 
 			for(i=0;i<count[c];i++)
 			{
-				int j = i+rand()%(count[c]-i);
+				int j = i+PRNG.rand()%(count[c]-i);
 				swap(index[start[c]+j],index[start[c]+i]);
 			}
 		for(i=0;i<nr_fold;i++)
@@ -2446,9 +2504,9 @@ void svm_cross_validation(const svm_problem *prob, const svm_parameter *param, i
 		fold_start[0]=0;
 		for (i=1;i<=nr_fold;i++)
 			fold_start[i] = fold_start[i-1]+fold_count[i-1];
-		free(start);	
+		free(start);
 		free(label);
-		free(count);	
+		free(count);
 		free(index);
 		free(fold_count);
 	}
@@ -2457,7 +2515,7 @@ void svm_cross_validation(const svm_problem *prob, const svm_parameter *param, i
 		for(i=0;i<l;i++) perm[i]=i;
 		for(i=0;i<l;i++)
 		{
-			int j = i+rand()%(l-i);
+			int j = i+PRNG.rand()%(l-i);
 			swap(perm[i],perm[j]);
 		}
 		for(i=0;i<=nr_fold;i++)
@@ -2503,7 +2561,7 @@ void svm_cross_validation(const svm_problem *prob, const svm_parameter *param, i
 #else
 				target[perm[j]] = svm_predict_probability(submodel,prob->x[perm[j]],prob_estimates);
 #endif
-			free(prob_estimates);			
+			free(prob_estimates);
 		}
 		else
 			for(j=begin;j<end;j++)
@@ -2517,7 +2575,7 @@ void svm_cross_validation(const svm_problem *prob, const svm_parameter *param, i
 		free(subprob.y);
 	}		
 	free(fold_start);
-	free(perm);	
+	free(perm);
 }
 
 
@@ -2538,6 +2596,18 @@ void svm_get_labels(const svm_model *model, int* label)
 			label[i] = model->label[i];
 }
 
+void svm_get_sv_indices(const svm_model *model, int* indices)
+{
+	if (model->sv_indices != NULL)
+		for(int i=0;i<model->l;i++)
+			indices[i] = model->sv_indices[i];
+}
+
+int svm_get_nr_sv(const svm_model *model)
+{
+	return model->l;
+}
+
 double svm_get_svr_probability(const svm_model *model)
 {
 	if ((model->param.svm_type == EPSILON_SVR || model->param.svm_type == NU_SVR) &&
@@ -2545,7 +2615,8 @@ double svm_get_svr_probability(const svm_model *model)
 		return model->probA[0];
 	else
 	{
-		fprintf(stderr,"Model doesn't contain information for SVR probability inference\n");
+		if (model->param.messages_file_descriptor)
+			fprintf((FILE *)model->param.messages_file_descriptor, "Model doesn't contain information for SVR probability inference\n");
 		return 0;
 	}
 }
@@ -2559,7 +2630,8 @@ double svm_predict_values(const svm_model *model, const svm_node *x, double* dec
 	{
 		double *sv_coef = model->sv_coef[0];
 		double sum = 0;
-		
+
+#pragma omp parallel for private(i) reduction(+:sum) schedule(guided)
 		for(i=0;i<model->l;i++)
 #ifdef _DENSE_REP
 			sum += sv_coef[i] * Kernel::k_function(x,model->SV+i,model->param);
@@ -2580,6 +2652,7 @@ double svm_predict_values(const svm_model *model, const svm_node *x, double* dec
 		int l = model->l;
 		
 		double *kvalue = Malloc(double,l);
+#pragma omp parallel for private(i) schedule(guided) 
 		for(i=0;i<l;i++)
 #ifdef _DENSE_REP
 			kvalue[i] = Kernel::k_function(x,model->SV+i,model->param);
@@ -2673,7 +2746,7 @@ double svm_predict_probability(
 				pairwise_prob[j][i]=1-pairwise_prob[i][j];
 				k++;
 			}
-		multiclass_probability(nr_class,pairwise_prob,prob_estimates);
+		multiclass_probability(nr_class,pairwise_prob,prob_estimates, (FILE *)model->param.messages_file_descriptor);
 
 		int prob_max_idx = 0;
 		for(i=1;i<nr_class;i++)
@@ -2682,7 +2755,7 @@ double svm_predict_probability(
 		for(i=0;i<nr_class;i++)
 			free(pairwise_prob[i]);
 		free(dec_values);
-		free(pairwise_prob);	     
+		free(pairwise_prob);
 		return model->label[prob_max_idx];
 	}
 	else 
@@ -2704,7 +2777,10 @@ int svm_save_model(const char *model_file_name, const svm_model *model)
 	FILE *fp = fopen(model_file_name,"w");
 	if(fp==NULL) return -1;
 
-	char *old_locale = strdup(setlocale(LC_ALL, NULL));
+	char *old_locale = setlocale(LC_ALL, NULL);
+	if (old_locale) {
+		old_locale = strdup(old_locale);
+	}
 	setlocale(LC_ALL, "C");
 
 	const svm_parameter& param = model->param;
@@ -2808,53 +2884,47 @@ int svm_save_model(const char *model_file_name, const svm_model *model)
 	else return 0;
 }
 
-static char *line = NULL;
-static int max_line_len;
+//char *line = NULL;
+//int max_line_len;
 
-static char* readline(FILE *input)
+static char* readline(FILE *input, std::vector<char> line)
 {
 	int len;
 
-	if(fgets(line,max_line_len,input) == NULL)
+	if(fgets(&line[0], (int)line.size(), input) == NULL)
 		return NULL;
 
-	while(strrchr(line,'\n') == NULL)
+	while(strrchr(&line[0],'\n') == NULL)
 	{
-		max_line_len *= 2;
-		line = (char *) realloc(line,max_line_len);
-		len = (int) strlen(line);
-		if(fgets(line+len,max_line_len-len,input) == NULL)
+		line.resize(line.size() * 2);
+		//max_line_len *= 2;
+		//line = (char *) realloc(line,max_line_len);
+		len = (int) strlen(&line[0]);
+		if(fgets(&line[len], (int)line.size()-len,input) == NULL)
 			break;
 	}
-	return line;
+	return &line[0];
 }
 
-svm_model *svm_load_model(const char *model_file_name)
+//
+// FSCANF helps to handle fscanf failures.
+// Its do-while block avoids the ambiguity when
+// if (...)
+//    FSCANF();
+// is used
+//
+#define FSCANF(_stream, _format, _var) do{ if (fscanf(_stream, _format, _var) != 1) return false; }while(0)
+bool read_model_header(FILE *fp, svm_model* model)
 {
-	FILE *fp = fopen(model_file_name,"rb");
-	if(fp==NULL) return NULL;
-
-	char *old_locale = strdup(setlocale(LC_ALL, NULL));
-	setlocale(LC_ALL, "C");
-
-	// read parameters
-
-	svm_model *model = Malloc(svm_model,1);
 	svm_parameter& param = model->param;
-	model->rho = NULL;
-	model->probA = NULL;
-	model->probB = NULL;
-	model->label = NULL;
-	model->nSV = NULL;
-
 	char cmd[81];
 	while(1)
 	{
-		fscanf(fp,"%80s",cmd);
+		FSCANF(fp,"%80s",cmd);
 
 		if(strcmp(cmd,"svm_type")==0)
 		{
-			fscanf(fp,"%80s",cmd);
+			FSCANF(fp,"%80s",cmd);
 			int i;
 			for(i=0;svm_type_table[i];i++)
 			{
@@ -2866,20 +2936,14 @@ svm_model *svm_load_model(const char *model_file_name)
 			}
 			if(svm_type_table[i] == NULL)
 			{
-				fprintf(stderr,"unknown svm type.\n");
-				
-				setlocale(LC_ALL, old_locale);
-				free(old_locale);
-				free(model->rho);
-				free(model->label);
-				free(model->nSV);
-				free(model);
-				return NULL;
+				if (param.messages_file_descriptor)
+					fprintf((FILE *)param.messages_file_descriptor, "Unknown SVM type.\n");
+				return false;
 			}
 		}
 		else if(strcmp(cmd,"kernel_type")==0)
 		{		
-			fscanf(fp,"%80s",cmd);
+			FSCANF(fp,"%80s",cmd);
 			int i;
 			for(i=0;kernel_type_table[i];i++)
 			{
@@ -2891,115 +2955,145 @@ svm_model *svm_load_model(const char *model_file_name)
 			}
 			if(kernel_type_table[i] == NULL)
 			{
-				fprintf(stderr,"unknown kernel function.\n");
-				
-				setlocale(LC_ALL, old_locale);
-				free(old_locale);
-				free(model->rho);
-				free(model->label);
-				free(model->nSV);
-				free(model);
-				return NULL;
+				if (param.messages_file_descriptor)
+					fprintf((FILE *)param.messages_file_descriptor, "Unknown kernel function.\n");
+				return false;
 			}
 		}
 		else if(strcmp(cmd,"degree")==0)
-			fscanf(fp,"%d",&param.degree);
+			FSCANF(fp,"%d",&param.degree);
 		else if(strcmp(cmd,"gamma")==0)
-			fscanf(fp,"%lf",&param.gamma);
+			FSCANF(fp,"%lf",&param.gamma);
 		else if(strcmp(cmd,"coef0")==0)
-			fscanf(fp,"%lf",&param.coef0);
+			FSCANF(fp,"%lf",&param.coef0);
 		else if(strcmp(cmd,"nr_class")==0)
-			fscanf(fp,"%d",&model->nr_class);
+			FSCANF(fp,"%d",&model->nr_class);
 		else if(strcmp(cmd,"total_sv")==0)
-			fscanf(fp,"%d",&model->l);
+			FSCANF(fp,"%d",&model->l);
 		else if(strcmp(cmd,"rho")==0)
 		{
 			int n = model->nr_class * (model->nr_class-1)/2;
 			model->rho = Malloc(double,n);
 			for(int i=0;i<n;i++)
-				fscanf(fp,"%lf",&model->rho[i]);
+				FSCANF(fp,"%lf",&model->rho[i]);
 		}
 		else if(strcmp(cmd,"label")==0)
 		{
 			int n = model->nr_class;
 			model->label = Malloc(int,n);
 			for(int i=0;i<n;i++)
-				fscanf(fp,"%d",&model->label[i]);
+				FSCANF(fp,"%d",&model->label[i]);
 		}
 		else if(strcmp(cmd,"probA")==0)
 		{
 			int n = model->nr_class * (model->nr_class-1)/2;
 			model->probA = Malloc(double,n);
 			for(int i=0;i<n;i++)
-				fscanf(fp,"%lf",&model->probA[i]);
+				FSCANF(fp,"%lf",&model->probA[i]);
 		}
 		else if(strcmp(cmd,"probB")==0)
 		{
 			int n = model->nr_class * (model->nr_class-1)/2;
 			model->probB = Malloc(double,n);
 			for(int i=0;i<n;i++)
-				fscanf(fp,"%lf",&model->probB[i]);
+				FSCANF(fp,"%lf",&model->probB[i]);
 		}
 		else if(strcmp(cmd,"nr_sv")==0)
 		{
 			int n = model->nr_class;
 			model->nSV = Malloc(int,n);
 			for(int i=0;i<n;i++)
-				fscanf(fp,"%d",&model->nSV[i]);
+				FSCANF(fp,"%d",&model->nSV[i]);
 		}
 		else if(strcmp(cmd,"SV")==0)
 		{
 			while(1)
 			{
 				int c = getc(fp);
-				if(c==EOF || c=='\n') break;	
+				if(c==EOF || c=='\n') break;
 			}
 			break;
 		}
 		else
 		{
+#ifdef SVM_WARNINGS
 			fprintf(stderr,"unknown text in model file: [%s]\n",cmd);
-			
-			setlocale(LC_ALL, old_locale);
-			free(old_locale);
-			free(model->rho);
-			free(model->label);
-			free(model->nSV);
-			free(model);
-			return NULL;
+#endif
+			return false;
 		}
 	}
 
+	return true;
+
+}
+
+svm_model *svm_load_model(const char *model_file_name)
+{
+	FILE *fp = fopen(model_file_name,"rb");
+	if(fp==NULL) return NULL;
+
+	char *old_locale = setlocale(LC_ALL, NULL);
+	if (old_locale) {
+		old_locale = strdup(old_locale);
+	}
+	setlocale(LC_ALL, "C");
+
+	// read parameters
+
+	svm_model *model = Malloc(svm_model,1);
+	model->rho = NULL;
+	model->probA = NULL;
+	model->probB = NULL;
+	model->sv_indices = NULL;
+	model->label = NULL;
+	model->nSV = NULL;
+	
+	// read header
+	if (!read_model_header(fp, model))
+	{
+		if (model->param.messages_file_descriptor)
+			fprintf((FILE *)model->param.messages_file_descriptor, "ERROR: fscanf failed to read model.\n");
+
+		setlocale(LC_ALL, old_locale);
+		free(old_locale);
+		free(model->rho);
+		free(model->label);
+		free(model->nSV);
+		free(model);
+		return NULL;
+	}
+	
 	// read sv_coef and SV
 
 	int elements = 0;
 	long pos = ftell(fp);
 
-	max_line_len = 1024;
-	line = Malloc(char,max_line_len);
+	std::vector<char> line(1024);
+	//max_line_len = 1024;
+	//line = Malloc(char,max_line_len);
 	char *p,*endptr,*idx,*val;
 
 #ifdef _DENSE_REP
 	int max_index = 1;
 	// read the max dimension of all vectors
-	while(readline(fp) != NULL)
+	while(readline(fp,line) != NULL)
 	{
 		char *p;
-		p = strrchr(line, ':');
+		p = strrchr(&line[0], ':');
 		if(p != NULL)
 		{			
-			while(*p != ' ' && *p != '\t' && p > line)
+			while(*p != ' ' && *p != '\t' && p > &line[0])
 				p--;
-			if(p > line)
+			if(p > &line[0])
 				max_index = (int) strtol(p,&endptr,10) + 1;
 		}		
 		if(max_index > elements)
 			elements = max_index;
 	}
 #else
-	while(readline(fp)!=NULL)
+	while(readline(fp,line)!=NULL)
 	{
-		p = strtok(line,":");
+		p = strtok(&line[0],":");
 		while(1)
 		{
 			p = strtok(NULL,":");
@@ -3026,12 +3120,12 @@ svm_model *svm_load_model(const char *model_file_name)
 
 	for(i=0;i<l;i++)
 	{
-		readline(fp);
+		readline(fp,line);
 
 		model->SV[i].values = Malloc(double, elements);
 		model->SV[i].dim = 0;
 
-		p = strtok(line, " \t");
+		p = strtok(&line[0], " \t");
 		model->sv_coef[0][i] = strtod(p,&endptr);
 		for(int k=1;k<m;k++)
 		{
@@ -3057,13 +3151,14 @@ svm_model *svm_load_model(const char *model_file_name)
 	model->SV = Malloc(svm_node*,l);
 	svm_node *x_space = NULL;
 	if(l>0) x_space = Malloc(svm_node,elements);
+
 	int j=0;
 	for(i=0;i<l;i++)
 	{
-		readline(fp);
+		readline(fp,line);
 		model->SV[i] = &x_space[j];
 
-		p = strtok(line, " \t");
+		p = strtok(&line[0], " \t");
 		model->sv_coef[0][i] = strtod(p,&endptr);
 		for(int k=1;k<m;k++)
 		{
@@ -3086,7 +3181,7 @@ svm_model *svm_load_model(const char *model_file_name)
 		x_space[j++].index = -1;
 	}
 #endif
-	free(line);
+	//free(line);
 
 	setlocale(LC_ALL, old_locale);
 	free(old_locale);
@@ -3130,6 +3225,9 @@ void svm_free_model_content(svm_model* model_ptr)
 
 	free(model_ptr->probB);
 	model_ptr->probB= NULL;
+
+	free(model_ptr->sv_indices);
+	model_ptr->sv_indices = NULL;
 
 	free(model_ptr->nSV);
 	model_ptr->nSV = NULL;
@@ -3278,12 +3376,4 @@ int svm_check_probability_model(const svm_model *model)
 		model->probA!=NULL && model->probB!=NULL) ||
 		((model->param.svm_type == EPSILON_SVR || model->param.svm_type == NU_SVR) &&
 		 model->probA!=NULL);
-}
-
-void svm_set_print_string_function(void (*print_func)(const char *))
-{
-	if(print_func == NULL)
-		svm_print_string = &print_string_stdout;
-	else
-		svm_print_string = print_func;
 }

@@ -6,7 +6,7 @@
 #include "svm.h"
 #define Malloc(type,n) (type *)malloc((n)*sizeof(type))
 
-void print_null(const char *s) {}
+// void print_null(const char *s) {}
 
 void exit_with_help()
 {
@@ -14,11 +14,11 @@ void exit_with_help()
 	"Usage: svm-train [options] training_set_file [model_file]\n"
 	"options:\n"
 	"-s svm_type : set type of SVM (default 0)\n"
-	"	0 -- C-SVC\n"
-	"	1 -- nu-SVC\n"
+	"	0 -- C-SVC		(multi-class classification)\n"
+	"	1 -- nu-SVC		(multi-class classification)\n"
 	"	2 -- one-class SVM\n"
-	"	3 -- epsilon-SVR\n"
-	"	4 -- nu-SVR\n"
+	"	3 -- epsilon-SVR	(regression)\n"
+	"	4 -- nu-SVR		(regression)\n"
 	"-t kernel_type : set type of kernel function (default 2)\n"
 	"	0 -- linear: u'*v\n"
 	"	1 -- polynomial: (gamma*u'*v + coef0)^degree\n"
@@ -161,7 +161,8 @@ void do_cross_validation()
 void parse_command_line(int argc, char **argv, char *input_file_name, char *model_file_name)
 {
 	int i;
-	void (*print_func)(const char*) = NULL;	// default printing to stdout
+	// void (*print_func)(const char*) = NULL;	// default printing to stdout
+	param.warnings_file_descriptor = 1;
 
 	// default values
 	param.svm_type = C_SVC;
@@ -226,7 +227,8 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 				param.probability = atoi(argv[i]);
 				break;
 			case 'q':
-				print_func = &print_null;
+				//print_func = &print_null;
+				param.warnings_file_descriptor = 0;
 				i--;
 				break;
 			case 'v':
@@ -251,7 +253,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 		}
 	}
 
-	svm_set_print_string_function(print_func);
+	// svm_set_print_string_function(print_func);
 
 	// determine filenames
 
@@ -277,7 +279,8 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 
 void read_problem(const char *filename)
 {
-	int elements, max_index, inst_max_index, i, j;
+	int max_index, inst_max_index, i;
+	size_t elements, j;
 	FILE *fp = fopen(filename,"r");
 	char *endptr;
 	char *idx, *val, *label;

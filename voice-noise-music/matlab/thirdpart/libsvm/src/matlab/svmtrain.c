@@ -3,27 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include "../svm.h"
-
-#ifdef _MSC_VER
-	#include <intrin.h>
-	#pragma intrinsic(__rdtsc)
-	typedef unsigned __int64 uint64_t;
-#else
-	#include <stdint.h>
-	// http://en.wikipedia.org/wiki/Time_Stamp_Counter
-	__inline__ uint64_t __rdtsc(void) {
-		uint32_t lo, hi;
-		__asm__ __volatile__ (
-		"        xorl %%eax,%%eax \n"
-		"        cpuid"      // serialize
-		::: "%rax", "%rbx", "%rcx", "%rdx");
-		/* We cannot use "=A", since this would use %rax on x86_64 and return only the lower 32bits of the TSC */
-		__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-		return (uint64_t)hi << 32 | lo;
-	}
-#endif
-
+#include "svm.h"
 
 #include "mex.h"
 #include "svm_model_matlab.h"
@@ -37,23 +17,31 @@ typedef int mwIndex;
 #define CMD_LEN 2048
 #define Malloc(type,n) (type *)malloc((n)*sizeof(type))
 
-void print_null(const char *s) {}
-void print_string_matlab(const char *s) {mexPrintf(s);}
 
-static bool quiet_mode=false;
+// svm arguments
+struct svm_parameter param;		// set by parse_command_line
+struct svm_problem prob;		// set by read_problem
+struct svm_model *model;
+#ifdef _DENSE_REP
+double *x_space;
+#else
+struct svm_node *x_space;
+#endif
+int cross_validation;
+int nr_fold;
 
 void exit_with_help()
 {
-	if(!quiet_mode)
-	mexPrintf(
+	if (param.messages_file_descriptor)
+	fprintf((FILE *)param.messages_file_descriptor,
 	"Usage: model or cross-validation_prediction_matrix = svmtrain(training_label_vector, training_instance_matrix, 'libsvm_options');\n"
 	"libsvm_options:\n"
 	"-s svm_type : set type of SVM (default 0)\n"
-	"	0 -- C-SVC\n"
-	"	1 -- nu-SVC\n"
+	"	0 -- C-SVC		(multi-class classification)\n"
+	"	1 -- nu-SVC		(multi-class classification)\n"
 	"	2 -- one-class SVM\n"
-	"	3 -- epsilon-SVR\n"
-	"	4 -- nu-SVR\n"
+	"	3 -- epsilon-SVR	(regression)\n"
+	"	4 -- nu-SVR		(regression)\n"
 	"-t kernel_type : set type of kernel function (default 2)\n"
 	"	0 -- linear: u'*v\n"
 	"	1 -- polynomial: (gamma*u'*v + coef0)^degree\n"
@@ -74,21 +62,10 @@ void exit_with_help()
 	"-v n : n-fold cross validation mode\n"
 	"-q : quiet mode (no outputs)\n"
 	"-rnd n : random generator seed (time by default)\n"
+	"-max_iter n : stopping train maximum iterations number\n"
+	"-messages_file_descriptor id : show library messages and warnings (via fprintf): 0 - disable; 1 - stdout; 2 - stderr; ... \n"
 	);
 }
-
-// svm arguments
-struct svm_parameter param;		// set by parse_command_line
-struct svm_problem prob;		// set by read_problem
-struct svm_model *model;
-#ifdef _DENSE_REP
-double *x_space;
-#else
-struct svm_node *x_space;
-#endif
-int cross_validation;
-int nr_fold;
-
 
 double do_cross_validation(double *target)
 {
@@ -114,10 +91,10 @@ double do_cross_validation(double *target)
 			sumyy += y*y;
 			sumvy += v*y;
 		}
-		if(!quiet_mode)
+		if(param.messages_file_descriptor)
 		{
-			mexPrintf("Cross Validation Mean squared error = %g\n",total_error/prob.l);
-			mexPrintf("Cross Validation Squared correlation coefficient = %g\n",
+			fprintf((FILE *)param.messages_file_descriptor,"Cross Validation Mean squared error = %g\n",total_error/prob.l);
+			fprintf((FILE *)param.messages_file_descriptor,"Cross Validation Squared correlation coefficient = %g\n",
 			((prob.l*sumvy-sumv*sumy)*(prob.l*sumvy-sumv*sumy))/
 			((prob.l*sumvv-sumv*sumv)*(prob.l*sumyy-sumy*sumy))
 			);
@@ -129,8 +106,8 @@ double do_cross_validation(double *target)
 		for(i=0;i<prob.l;i++)
 			if(target[i] == prob.y[i])
 				++total_correct;
-		if(!quiet_mode)
-			mexPrintf("Cross Validation Accuracy = %g%%\n",100.0*total_correct/prob.l);
+		if(param.messages_file_descriptor)
+			fprintf((FILE *)param.messages_file_descriptor,"Cross Validation Accuracy = %g%%\n",100.0*total_correct/prob.l);
 		retval = 100.0*total_correct/prob.l;
 	}
 //	free(target);
@@ -143,7 +120,6 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 	int i, argc = 1;
 	char cmd[CMD_LEN];
 	char *argv[CMD_LEN/2];
-	unsigned int rnd_seed;
 
 	// default values
 	param.svm_type = C_SVC;
@@ -162,9 +138,11 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 	param.weight_label = NULL;
 	param.weight = NULL;
 	cross_validation = 0;
-
+	
 	if(nrhs <= 1)
 		return 1;
+		
+	param.messages_file_descriptor = stdout;
 
 	if(nrhs > 2)
 	{
@@ -175,97 +153,121 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 				;
 	}
 
-	rnd_seed=(unsigned int)__rdtsc();
-
 	// parse options
 	for(i=1;i<argc;i++)
 	{
 		if(argv[i][0] != '-') break;
 		++i;
 		if(i>=argc && argv[i-1][1] != 'q')	// since option -q has no parameter
+		{
+			if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
+				fclose(param.messages_file_descriptor);
 			return 1;
+		}
 		if(!strcmp(&argv[i-1][1],"rnd"))
 		{
-			rnd_seed=atoi(argv[i]);
+			param.rnd_seed=atol(argv[i]);
+		}
+		else if(!strcmp(&argv[i-1][1],"max_iter"))
+		{
+			param.max_iter=atol(argv[i]);
+		}
+		else if(!strcmp(&argv[i-1][1],"messages_file_descriptor"))
+		{
+			if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
+				fclose(param.messages_file_descriptor);
+			int id = atol(argv[i]);
+			if (id)
+				param.messages_file_descriptor = fdopen(id, "at");
+			else
+				param.messages_file_descriptor = NULL;
 		}
 		else
 		{
-		switch(argv[i-1][1])
-		{
-			case 's':
-				param.svm_type = atoi(argv[i]);
-				break;
-			case 't':
-				param.kernel_type = atoi(argv[i]);
-				break;
-			case 'd':
-				param.degree = atoi(argv[i]);
-				break;
-			case 'g':
-				param.gamma = atof(argv[i]);
-				break;
-			case 'r':
-				param.coef0 = atof(argv[i]);
-				break;
-			case 'n':
-				param.nu = atof(argv[i]);
-				break;
-			case 'm':
-				param.cache_size = atof(argv[i]);
-				break;
-			case 'c':
-				param.C = atof(argv[i]);
-				break;
-			case 'e':
-				param.eps = atof(argv[i]);
-				break;
-			case 'p':
-				param.p = atof(argv[i]);
-				break;
-			case 'h':
-				param.shrinking = atoi(argv[i]);
-				break;
-			case 'b':
-				param.probability = atoi(argv[i]);
-				break;
-			case 'q':
-				quiet_mode=true;
-				i--;
-				break;
-			case 'v':
-				cross_validation = 1;
-				nr_fold = atoi(argv[i]);
-				if(nr_fold < 2)
-				{
-					mexPrintf("n-fold cross validation: n must >= 2\n");
+			switch(argv[i-1][1])
+			{
+				case 's':
+					param.svm_type = atoi(argv[i]);
+					break;
+				case 't':
+					param.kernel_type = atoi(argv[i]);
+					break;
+				case 'd':
+					param.degree = atoi(argv[i]);
+					break;
+				case 'g':
+					param.gamma = atof(argv[i]);
+					break;
+				case 'r':
+					param.coef0 = atof(argv[i]);
+					break;
+				case 'n':
+					param.nu = atof(argv[i]);
+					break;
+				case 'm':
+					param.cache_size = atof(argv[i]);
+					break;
+				case 'c':
+					param.C = atof(argv[i]);
+					break;
+				case 'e':
+					param.eps = atof(argv[i]);
+					break;
+				case 'p':
+					param.p = atof(argv[i]);
+					break;
+				case 'h':
+					param.shrinking = atoi(argv[i]);
+					break;
+				case 'b':
+					param.probability = atoi(argv[i]);
+					break;
+				case 'q':
+					if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
+						fclose(param.messages_file_descriptor);
+					param.messages_file_descriptor = 0;
+					i--;
+					break;
+				case 'v':
+					cross_validation = 1;
+					nr_fold = atoi(argv[i]);
+					if(nr_fold < 2)
+					{
+						if (param.messages_file_descriptor)
+							fprintf(param.messages_file_descriptor, "n-fold cross validation: n must >= 2\n");
+						if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
+							fclose(param.messages_file_descriptor);
+						return 1;
+					}
+					break;
+				case 'w':
+					++param.nr_weight;
+					param.weight_label = (int *)realloc(param.weight_label,sizeof(int)*param.nr_weight);
+					param.weight = (double *)realloc(param.weight,sizeof(double)*param.nr_weight);
+					param.weight_label[param.nr_weight-1] = atoi(&argv[i-1][2]);
+					param.weight[param.nr_weight-1] = atof(argv[i]);
+					break;
+				default:
+					if (param.messages_file_descriptor)
+						fprintf(param.messages_file_descriptor,"Unknown option -%c\n", argv[i-1][1]);
+					if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
+						fclose(param.messages_file_descriptor);
 					return 1;
-				}
-				break;
-			case 'w':
-				++param.nr_weight;
-				param.weight_label = (int *)realloc(param.weight_label,sizeof(int)*param.nr_weight);
-				param.weight = (double *)realloc(param.weight,sizeof(double)*param.nr_weight);
-				param.weight_label[param.nr_weight-1] = atoi(&argv[i-1][2]);
-				param.weight[param.nr_weight-1] = atof(argv[i]);
-				break;
-			default:
-				mexPrintf("Unknown option -%c\n", argv[i-1][1]);
-				return 1;
+			}
 		}
 	}
-	}
-	srand(rnd_seed);
 
-	svm_set_print_string_function(quiet_mode ? print_null : print_string_matlab);
-
+	if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
+		fclose(param.messages_file_descriptor);
 	return 0;
 }
 
 // read in a problem (in svmlight format)
 int read_problem_dense(const mxArray *label_vec, const mxArray *instance_mat)
 {
-	int i, j, k;
-	int elements, max_index, sc, label_vector_row_num;
+	// using size_t due to the output type of matlab functions
+	size_t i, j, k, l;
+	size_t elements, max_index, sc, label_vector_row_num;
 	double *samples, *labels;
 
 	prob.x = NULL;
@@ -274,30 +276,31 @@ int read_problem_dense(const mxArray *label_vec, const mxArray *instance_mat)
 
 	labels = mxGetPr(label_vec);
 	samples = mxGetPr(instance_mat);
-	sc = (int)mxGetN(instance_mat);
+	sc = mxGetN(instance_mat);
 
 	elements = 0;
-	// the number of instance
-	prob.l = (int)mxGetM(instance_mat);
-	label_vector_row_num = (int)mxGetM(label_vec);
+	// number of instances
+	l = mxGetM(instance_mat);
+	label_vector_row_num = mxGetM(label_vec);
+	prob.l = (int)l;
 
-	if(label_vector_row_num!=prob.l)
+	if(label_vector_row_num!=l)
 	{
 		mexPrintf("Length of label vector does not match # of instances.\n");
 		return -1;
 	}
 
 #ifdef _DENSE_REP
-		elements = prob.l * (sc + 1);
+		elements = l * (sc + 1);
 #else
 	if(param.kernel_type == PRECOMPUTED)
-		elements = prob.l * (sc + 1);
+		elements = l * (sc + 1);
 	else
 	{
-		for(i = 0; i < prob.l; i++)
+		for(i = 0; i < l; i++)
 		{
 			for(k = 0; k < sc; k++)
-				if(samples[k * prob.l + i] != 0)
+				if(samples[k * l + i] != 0)
 					elements++;
 			// count the '-1' element
 			elements++;
@@ -305,19 +308,19 @@ int read_problem_dense(const mxArray *label_vec, const mxArray *instance_mat)
 	}
 #endif
 
-	prob.y = Malloc(double,prob.l);
+	prob.y = Malloc(double,l);
 #ifdef _DENSE_REP
-	prob.x = Malloc(struct svm_node, prob.l);
+	prob.x = Malloc(struct svm_node, l);
 	x_space = Malloc(double, elements);
 	memset(x_space, 0, elements*sizeof(*x_space));
 #else
-	prob.x = Malloc(struct svm_node *,prob.l);
+	prob.x = Malloc(struct svm_node *,l);
 	x_space = Malloc(struct svm_node, elements);
 #endif
 
 	max_index = sc;
 	j = 0;
-	for(i = 0; i < prob.l; i++)
+	for(i = 0; i < l; i++)
 	{
 #ifdef _DENSE_REP
 		prob.x[i].dim = sc;
@@ -329,18 +332,18 @@ int read_problem_dense(const mxArray *label_vec, const mxArray *instance_mat)
 
 		for(k = 0; k < sc; k++)
 		{
-			if(param.kernel_type == PRECOMPUTED || samples[k * prob.l + i] != 0)
+			if(param.kernel_type == PRECOMPUTED || samples[k * l + i] != 0)
 			{
 #ifdef _DENSE_REP
-				x_space[j] = samples[k * prob.l + i];
+				x_space[j] = samples[k * l + i];
 #else
-				x_space[j].index = k + 1;
-				x_space[j].value = samples[k * prob.l + i];
+				x_space[j].index = (int)k + 1;
+				x_space[j].value = samples[k * l + i];
 				j++;
 #endif
 			}
 #ifdef _DENSE_REP
-				j++;
+			j++;
 #endif
 		}
 #ifdef _DENSE_REP
@@ -349,18 +352,17 @@ int read_problem_dense(const mxArray *label_vec, const mxArray *instance_mat)
 		x_space[j++].index = -1;
 #endif
 	}
-	assert(j==elements);
 
 	if(param.gamma == 0 && max_index > 0)
-		param.gamma = 1.0/max_index;
+		param.gamma = (double)(1.0/max_index);
 
 	if(param.kernel_type == PRECOMPUTED)
-		for(i=0;i<prob.l;i++)
+		for(i=0;i<l;i++)
 		{
 #ifdef _DENSE_REP
-			if((int)prob.x[i].values[0] <= 0 || (int)prob.x[i].values[0] > max_index)
+			if((int)prob.x[i].values[0] <= 0 || (int)prob.x[i].values[0] > (int)max_index)
 #else
-			if((int)prob.x[i][0].value <= 0 || (int)prob.x[i][0].value > max_index)
+			if((int)prob.x[i][0].value <= 0 || (int)prob.x[i][0].value > (int)max_index)
 #endif
 			{
 				mexPrintf("Wrong input format: sample_serial_number out of range\n");
@@ -377,9 +379,10 @@ int read_problem_sparse(const mxArray *label_vec, const mxArray *instance_mat)
 	mexPrintf("libSVM with _DENSE_REP define unsupports this sparse matrices.\n");
 	return -1;
 #else
-	int i, j, k, low, high;
-	mwIndex *ir, *jc;
-	int elements, max_index, num_samples, label_vector_row_num;
+	mwIndex *ir, *jc, low, high, k;
+	// using size_t due to the output type of matlab functions
+	size_t i, j, l, elements, max_index, label_vector_row_num;
+	mwSize num_samples;
 	double *samples, *labels;
 	mxArray *instance_mat_col; // transposed instance sparse matrix
 
@@ -406,31 +409,32 @@ int read_problem_sparse(const mxArray *label_vec, const mxArray *instance_mat)
 	ir = mxGetIr(instance_mat_col);
 	jc = mxGetJc(instance_mat_col);
 
-	num_samples = (int)mxGetNzmax(instance_mat_col);
+	num_samples = mxGetNzmax(instance_mat_col);
 
-	// the number of instance
-	prob.l = (int)mxGetN(instance_mat_col);
-	label_vector_row_num = (int)mxGetM(label_vec);
+	// number of instances
+	l = mxGetN(instance_mat_col);
+	label_vector_row_num = mxGetM(label_vec);
+	prob.l = (int) l;
 
-	if(label_vector_row_num!=prob.l)
+	if(label_vector_row_num!=l)
 	{
 		mexPrintf("Length of label vector does not match # of instances.\n");
 		return -1;
 	}
 
-	elements = num_samples + prob.l;
-	max_index = (int)mxGetM(instance_mat_col);
+	elements = num_samples + l;
+	max_index = mxGetM(instance_mat_col);
 
-	prob.y = Malloc(double,prob.l);
-	prob.x = Malloc(struct svm_node *,prob.l);
+	prob.y = Malloc(double,l);
+	prob.x = Malloc(struct svm_node *,l);
 	x_space = Malloc(struct svm_node, elements);
 
 	j = 0;
-	for(i=0;i<prob.l;i++)
+	for(i=0;i<l;i++)
 	{
 		prob.x[i] = &x_space[j];
 		prob.y[i] = labels[i];
-		low = (int)jc[i], high = (int)jc[i+1];
+		low = jc[i], high = jc[i+1];
 		for(k=low;k<high;k++)
 		{
 			x_space[j].index = (int)ir[k] + 1;
@@ -441,15 +445,17 @@ int read_problem_sparse(const mxArray *label_vec, const mxArray *instance_mat)
 	}
 
 	if(param.gamma == 0 && max_index > 0)
-		param.gamma = 1.0/max_index;
+		param.gamma = (double)(1.0/max_index);
 
 	return 0;
 #endif
 }
 
-static void fake_answer(mxArray *plhs[])
+static void fake_answer(int nlhs, mxArray *plhs[])
 {
-	plhs[0] = mxCreateDoubleMatrix(0, 0, mxREAL);
+	int i;
+	for(i=0;i<nlhs;i++)
+		plhs[i] = mxCreateDoubleMatrix(0, 0, mxREAL);
 }
 
 // Interface function of matlab
@@ -463,14 +469,29 @@ void mexFunction( int nlhs, mxArray *plhs[],
 	// (for cross validation and probability estimation)
 	// srand(1); // @ see -rnd option
 
+	if(nlhs > 1)
+	{
+		exit_with_help();
+		fake_answer(nlhs, plhs);
+		return;
+	}
+
 	// Transform the input Matrix to libsvm format
 	if(nrhs > 1 && nrhs < 4)
 	{
 		int err;
 
-		if(!mxIsDouble(prhs[0]) || !mxIsDouble(prhs[1])) {
+		if(!mxIsDouble(prhs[0]) || !mxIsDouble(prhs[1]))
+		{
 			mexPrintf("Error: label vector and instance matrix must be double\n");
-			fake_answer(plhs);
+			fake_answer(nlhs, plhs);
+			return;
+		}
+
+		if(mxIsSparse(prhs[0]))
+		{
+			mexPrintf("Error: label vector should not be in sparse format\n");
+			fake_answer(nlhs, plhs);
 			return;
 		}
 
@@ -478,7 +499,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 		{
 			exit_with_help();
 			svm_destroy_param(&param);
-			fake_answer(plhs);
+			fake_answer(nlhs, plhs);
 			return;
 		}
 
@@ -494,7 +515,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 				{
 					mexPrintf("Error: cannot generate a full training instance matrix\n");
 					svm_destroy_param(&param);
-					fake_answer(plhs);
+					fake_answer(nlhs, plhs);
 					return;
 				}
 				err = read_problem_dense(prhs[0], lhs[0]);
@@ -518,7 +539,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 			free(prob.y);
 			free(prob.x);
 			free(x_space);
-			fake_answer(plhs);
+			fake_answer(nlhs, plhs);
 			return;
 		}
 
@@ -547,7 +568,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 	else
 	{
 		exit_with_help();
-		fake_answer(plhs);
+		fake_answer(nlhs, plhs);
 		return;
 	}
 }

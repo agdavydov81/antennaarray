@@ -2,6 +2,7 @@ define(`swap',`do {$1 _=$2; $2=$3; $3=_;} while(false)')
 define(`Qfloat',`float')
 define(`SIZE_OF_QFLOAT',4)
 define(`TAU',1e-12)
+changecom(`//',`')
 package libsvm;
 import java.io.*;
 import java.util.*;
@@ -639,7 +640,7 @@ class Solver {
 				active_size = l;
 				svm.info("*");
 			}
-			svm.info("\nWARNING: reaching max number of iterations");
+			System.err.print("\nWARNING: reaching max number of iterations\n");
 		}
 
 		// calculate rho
@@ -760,7 +761,7 @@ class Solver {
 			}
 		}
 
-		if(Gmax+Gmax2 < eps)
+		if(Gmax+Gmax2 < eps || Gmin_idx == -1)
 			return 1;
 
 		working_set[0] = Gmax_idx;
@@ -1006,7 +1007,7 @@ final class Solver_NU extends Solver
 			}
 		}
 
-		if(Math.max(Gmaxp+Gmaxp2,Gmaxn+Gmaxn2) < eps)
+		if(Math.max(Gmaxp+Gmaxp2,Gmaxn+Gmaxn2) < eps || Gmin_idx == -1)
 			return 1;
 	
 		if(y[Gmin_idx] == +1)
@@ -1292,7 +1293,7 @@ public class svm {
 	//
 	// construct and solve various formulations
 	//
-	public static final int LIBSVM_VERSION=312; 
+	public static final int LIBSVM_VERSION=321; 
 	public static final Random rand = new Random();
 
 	private static svm_print_interface svm_print_stdout = new svm_print_interface()
@@ -1891,6 +1892,24 @@ public class svm {
 			}
 		}
 
+		//
+		// Labels are ordered by their first occurrence in the training set. 
+		// However, for two-class sets with -1/+1 labels and -1 appears first, 
+		// we swap labels to ensure that internally the binary SVM has positive data corresponding to the +1 instances.
+		//
+		if (nr_class == 2 && label[0] == -1 && label[1] == +1)
+		{
+			swap(int,label[0],label[1]);
+			swap(int,count[0],count[1]);
+			for(i=0;i<l;i++)
+			{
+				if(data_label[i] == 0)
+					data_label[i] = 1;
+				else
+					data_label[i] = 0;
+			}
+		}
+
 		int[] start = new int[nr_class];
 		start[0] = 0;
 		for(i=1;i<nr_class;i++)
@@ -1948,12 +1967,14 @@ public class svm {
 			model.l = nSV;
 			model.SV = new svm_node[nSV][];
 			model.sv_coef[0] = new double[nSV];
+			model.sv_indices = new int[nSV];
 			int j = 0;
 			for(i=0;i<prob.l;i++)
 				if(Math.abs(f.alpha[i]) > 0)
 				{
 					model.SV[j] = prob.x[i];
 					model.sv_coef[0][j] = f.alpha[i];
+					model.sv_indices[j] = i+1;
 					++j;
 				}
 		}
@@ -2101,9 +2122,14 @@ public class svm {
 
 			model.l = nnz;
 			model.SV = new svm_node[nnz][];
+			model.sv_indices = new int[nnz];
 			p = 0;
 			for(i=0;i<l;i++)
-				if(nonzero[i]) model.SV[p++] = x[i];
+				if(nonzero[i])
+				{
+					model.SV[p] = x[i];
+					model.sv_indices[p++] = perm[i] + 1;
+				}
 
 			int[] nz_start = new int[nr_class];
 			nz_start[0] = 0;
@@ -2268,6 +2294,18 @@ public class svm {
 		if (model.label != null)
 			for(int i=0;i<model.nr_class;i++)
 				label[i] = model.label[i];
+	}
+
+	public static void svm_get_sv_indices(svm_model model, int[] indices)
+	{
+		if (model.sv_indices != null)
+			for(int i=0;i<model.l;i++)
+				indices[i] = model.sv_indices[i];
+	}
+
+	public static int svm_get_nr_sv(svm_model model)
+	{
+		return model.l;
 	}
 
 	public static double svm_get_svr_probability(svm_model model)
@@ -2507,6 +2545,119 @@ public class svm {
 		return Integer.parseInt(s);
 	}
 
+	private static boolean read_model_header(BufferedReader fp, svm_model model)
+	{
+		svm_parameter param = new svm_parameter();
+		model.param = param;
+		try
+		{
+			while(true)
+			{
+				String cmd = fp.readLine();
+				String arg = cmd.substring(cmd.indexOf(' ')+1);
+
+				if(cmd.startsWith("svm_type"))
+				{
+					int i;
+					for(i=0;i<svm_type_table.length;i++)
+					{
+						if(arg.indexOf(svm_type_table[i])!=-1)
+						{
+							param.svm_type=i;
+							break;
+						}
+					}
+					if(i == svm_type_table.length)
+					{
+						System.err.print("unknown svm type.\n");
+						return false;
+					}
+				}
+				else if(cmd.startsWith("kernel_type"))
+				{
+					int i;
+					for(i=0;i<kernel_type_table.length;i++)
+					{
+						if(arg.indexOf(kernel_type_table[i])!=-1)
+						{
+							param.kernel_type=i;
+							break;
+						}
+					}
+					if(i == kernel_type_table.length)
+					{
+						System.err.print("unknown kernel function.\n");
+						return false;
+					}
+				}
+				else if(cmd.startsWith("degree"))
+					param.degree = atoi(arg);
+				else if(cmd.startsWith("gamma"))
+					param.gamma = atof(arg);
+				else if(cmd.startsWith("coef0"))
+					param.coef0 = atof(arg);
+				else if(cmd.startsWith("nr_class"))
+					model.nr_class = atoi(arg);
+				else if(cmd.startsWith("total_sv"))
+					model.l = atoi(arg);
+				else if(cmd.startsWith("rho"))
+				{
+					int n = model.nr_class * (model.nr_class-1)/2;
+					model.rho = new double[n];
+					StringTokenizer st = new StringTokenizer(arg);
+					for(int i=0;i<n;i++)
+						model.rho[i] = atof(st.nextToken());
+				}
+				else if(cmd.startsWith("label"))
+				{
+					int n = model.nr_class;
+					model.label = new int[n];
+					StringTokenizer st = new StringTokenizer(arg);
+					for(int i=0;i<n;i++)
+						model.label[i] = atoi(st.nextToken());					
+				}
+				else if(cmd.startsWith("probA"))
+				{
+					int n = model.nr_class*(model.nr_class-1)/2;
+					model.probA = new double[n];
+					StringTokenizer st = new StringTokenizer(arg);
+					for(int i=0;i<n;i++)
+						model.probA[i] = atof(st.nextToken());					
+				}
+				else if(cmd.startsWith("probB"))
+				{
+					int n = model.nr_class*(model.nr_class-1)/2;
+					model.probB = new double[n];
+					StringTokenizer st = new StringTokenizer(arg);
+					for(int i=0;i<n;i++)
+						model.probB[i] = atof(st.nextToken());					
+				}
+				else if(cmd.startsWith("nr_sv"))
+				{
+					int n = model.nr_class;
+					model.nSV = new int[n];
+					StringTokenizer st = new StringTokenizer(arg);
+					for(int i=0;i<n;i++)
+						model.nSV[i] = atoi(st.nextToken());
+				}
+				else if(cmd.startsWith("SV"))
+				{
+					break;
+				}
+				else
+				{
+					System.err.print("unknown text in model file: ["+cmd+"]\n");
+					return false;
+				}
+			}
+		}
+		catch(Exception e)
+		{
+			return false;
+		}
+		return true;
+	}
+
 	public static svm_model svm_load_model(String model_file_name) throws IOException
 	{
 		return svm_load_model(new BufferedReader(new FileReader(model_file_name)));
@@ -2517,112 +2668,16 @@ public class svm {
 		// read parameters
 
 		svm_model model = new svm_model();
-		svm_parameter param = new svm_parameter();
-		model.param = param;
 		model.rho = null;
 		model.probA = null;
 		model.probB = null;
 		model.label = null;
 		model.nSV = null;
 
-		while(true)
+		if (read_model_header(fp, model) == false)
 		{
-			String cmd = fp.readLine();
-			String arg = cmd.substring(cmd.indexOf(' ')+1);
-
-			if(cmd.startsWith("svm_type"))
-			{
-				int i;
-				for(i=0;i<svm_type_table.length;i++)
-				{
-					if(arg.indexOf(svm_type_table[i])!=-1)
-					{
-						param.svm_type=i;
-						break;
-					}
-				}
-				if(i == svm_type_table.length)
-				{
-					System.err.print("unknown svm type.\n");
-					return null;
-				}
-			}
-			else if(cmd.startsWith("kernel_type"))
-			{
-				int i;
-				for(i=0;i<kernel_type_table.length;i++)
-				{
-					if(arg.indexOf(kernel_type_table[i])!=-1)
-					{
-						param.kernel_type=i;
-						break;
-					}
-				}
-				if(i == kernel_type_table.length)
-				{
-					System.err.print("unknown kernel function.\n");
-					return null;
-				}
-			}
-			else if(cmd.startsWith("degree"))
-				param.degree = atoi(arg);
-			else if(cmd.startsWith("gamma"))
-				param.gamma = atof(arg);
-			else if(cmd.startsWith("coef0"))
-				param.coef0 = atof(arg);
-			else if(cmd.startsWith("nr_class"))
-				model.nr_class = atoi(arg);
-			else if(cmd.startsWith("total_sv"))
-				model.l = atoi(arg);
-			else if(cmd.startsWith("rho"))
-			{
-				int n = model.nr_class * (model.nr_class-1)/2;
-				model.rho = new double[n];
-				StringTokenizer st = new StringTokenizer(arg);
-				for(int i=0;i<n;i++)
-					model.rho[i] = atof(st.nextToken());
-			}
-			else if(cmd.startsWith("label"))
-			{
-				int n = model.nr_class;
-				model.label = new int[n];
-				StringTokenizer st = new StringTokenizer(arg);
-				for(int i=0;i<n;i++)
-					model.label[i] = atoi(st.nextToken());					
-			}
-			else if(cmd.startsWith("probA"))
-			{
-				int n = model.nr_class*(model.nr_class-1)/2;
-				model.probA = new double[n];
-				StringTokenizer st = new StringTokenizer(arg);
-				for(int i=0;i<n;i++)
-					model.probA[i] = atof(st.nextToken());					
-			}
-			else if(cmd.startsWith("probB"))
-			{
-				int n = model.nr_class*(model.nr_class-1)/2;
-				model.probB = new double[n];
-				StringTokenizer st = new StringTokenizer(arg);
-				for(int i=0;i<n;i++)
-					model.probB[i] = atof(st.nextToken());					
-			}
-			else if(cmd.startsWith("nr_sv"))
-			{
-				int n = model.nr_class;
-				model.nSV = new int[n];
-				StringTokenizer st = new StringTokenizer(arg);
-				for(int i=0;i<n;i++)
-					model.nSV[i] = atoi(st.nextToken());
-			}
-			else if(cmd.startsWith("SV"))
-			{
-				break;
-			}
-			else
-			{
-				System.err.print("unknown text in model file: ["+cmd+"]\n");
-				return null;
-			}
+			System.err.print("ERROR: failed to read model\n");
+			return null;
 		}
 
 		// read sv_coef and SV
