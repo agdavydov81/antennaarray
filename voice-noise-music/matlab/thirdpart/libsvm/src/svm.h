@@ -85,7 +85,7 @@ struct svm_parameter
 	double p;	/* for EPSILON_SVR */
 	int shrinking;	/* use the shrinking heuristics */
 	int probability; /* do probability estimates */
-	size_t rnd_seed; /* random number generator seed: 0 - rdtsc */
+	int rnd_seed; /* random number generator seed: 0 - rdtsc */
 	int max_iter; /* stopping train maximum iterations number */
 	FILE *messages_file_descriptor; /* show library messages and warnings (via fprintf) */
 };
