@@ -16,7 +16,7 @@ function info = slsauto_text_statistics(filename, vowels, syllable_cdf_threshold
 		save(cache_name, 'filename');
 	end
 	if nargin < 2 || isempty(vowels)
-		vowels = 'àîóûèýÿþå¸';
+		vowels = 'àîóûèýÿþå¸³';
 	end
 	if nargin < 3 || isempty(syllable_cdf_threshold)
 		syllable_cdf_threshold = 0.97;
@@ -25,9 +25,10 @@ function info = slsauto_text_statistics(filename, vowels, syllable_cdf_threshold
 		display_figures = true;
 	end
 
-
-	txt = fileread(filename);
-	txt = strsplit(txt,'\r\n');
+	fh = fopen(filename,'r','n','UTF-8');
+	txt = textscan(fh,'%s','delimiter','\n','whitespace','');
+	txt = txt{1}';
+	fclose(fh);
 	
 	paragraph = find(~cellfun(@isempty, regexp(txt, '^[ ]{3,}[^ ]', 'match','once')));
 	txt_par = arrayfun(@(b,e) cell2mat(strcat(txt(b:e),{' '})), paragraph(1:end-1), paragraph(2:end)-1, 'UniformOutput',false);
