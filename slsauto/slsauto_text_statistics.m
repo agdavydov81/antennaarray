@@ -32,6 +32,9 @@ function info = slsauto_text_statistics(filename, vowels, syllable_cdf_threshold
 	
 	paragraph = find(~cellfun(@isempty, regexp(txt, '^[ ]{3,}[^ ]', 'match','once')));
 	txt_par = arrayfun(@(b,e) cell2mat(strcat(txt(b:e),{' '})), paragraph(1:end-1), paragraph(2:end)-1, 'UniformOutput',false);
+	if isempty(txt_par)
+		txt_par = txt(cellfun(@(x) ~isempty(x), txt));
+	end
 
 
 	stat = cell(size(txt_par));
@@ -136,7 +139,7 @@ function stat = process_paragraph(txt_par, vowels)
 	stat.syllable_borders = cell(size(sentances));
 	ski = false(size(sentances));
 	for si = 1:numel(sentances)
-		words = regexp(lower(sentances{si}), '[a-zà-ÿ]+', 'match');
+		words = regexp(lower(sentances{si}), '[a-zà-ÿ'']+', 'match');
 
 		% Remove monosyllable words
 		words( cellfun(@(w) sum(any(repmat(w,numel(vowels),1) == repmat(vowels(:),1,numel(w)), 1)), words) < 2 ) = [];
@@ -160,7 +163,7 @@ function stat = process_paragraph(txt_par, vowels)
 		ii = diff(syllable_bordres) > 2 & ~wdi;
 		syllable_bordres(ii) = syllable_bordres(ii) + 1;
 		ti = min(syllable_bordres+1,numel(words));
-		ii = words(ti) == 'ü' | words(ti) == 'ú';
+		ii = words(ti) == 'ü' | words(ti) == 'ú' | words(ti) == '''';
 		syllable_bordres(ii) = syllable_bordres(ii) + 1;
 
 		syllable_bordres(stat.word_borders{si}) = word_borders;
