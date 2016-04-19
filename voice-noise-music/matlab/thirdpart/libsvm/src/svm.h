@@ -1,8 +1,6 @@
 #ifndef _LIBSVM_H
 #define _LIBSVM_H
 
-#include <stdio.h>
-
 #define LIBSVM_VERSION 321
 
 #ifdef __cplusplus
@@ -64,7 +62,7 @@ struct svm_parameter
 		, probability(0)
 		, rnd_seed(0)
 		, max_iter(0)
-		, messages_file_descriptor(NULL)
+		, printf_output(0)
 	{}
 #endif
 
@@ -87,7 +85,7 @@ struct svm_parameter
 	int probability; /* do probability estimates */
 	int rnd_seed; /* random number generator seed: 0 - rdtsc */
 	int max_iter; /* stopping train maximum iterations number */
-	FILE *messages_file_descriptor; /* show library messages and warnings (via fprintf) */
+	int printf_output; /* show library messages and warnings (via printf) */
 };
 
 //

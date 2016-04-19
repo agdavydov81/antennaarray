@@ -6,7 +6,7 @@ classdef lib_svm
 	%   ACM Transactions on Intelligent Systems and Technology, 2:27:1--27:27, 2011.
 	%   Software available at http://www.csie.ntu.edu.tw/~cjlin/libsvm.
 	%
-	%   See also LIB_SVM/TRAIN LIB_SVM/FIND_COST_GAMMA LIB_SVM/RATE_PREDICTION LIB_SVM/CLASSIFY
+	%   See also lib_svm/train lib_svm/find_cost_gamma lib_svm/rate_prediction lib_svm/classify
 
 	properties
 		data_scale;
@@ -21,21 +21,21 @@ classdef lib_svm
 
 	methods(Static)
 		function obj=train(data, data_classes, libsvm_opt_arg)
-			%TRAIN Performs LIBSVMTRAIN call and model selection procedure
-			%   OBJ = LIB_SVM.TRAIN(DATA, DATA_CLASSES) builds a classifier object OBJ. 
-			%   OBJ = LIB_SVM.TRAIN(DATA, DATA_CLASSES, LIBSVM_OPT_ARG) builds a
-			%   classifier object OBJ. DATA is a numeric matrix of predictor data. Rows
-			%   of DATA correspond to observations; columns correspond to features.
-			%   DATA_CLASSES is a column vector that contains the known class labels
-			%   for DATA. DATA_CLASSES is a grouping variable, i.e., it can be a
+			%train Performs libsvmtrain call and model selection procedure
+			%   obj = LIB_SVM.TRAIN(data, data_classes) builds a classifier object obj. 
+			%   obj = LIB_SVM.TRAIN(data, data_classes, libsvm_opt_arg) builds a
+			%   classifier object obj. data is a numeric matrix of predictor data. Rows
+			%   of data correspond to observations; columns correspond to features.
+			%   data_classes is a column vector that contains the known class labels
+			%   for data. data_classes is a grouping variable, i.e., it can be a
 			%   categorical, numeric, or logical vector; a cell vector of strings; or a
 			%   character matrix with each row representing a class label (see help for
-			%   groupingvariable). Each element of DATA_CLASSES specifies the group the
-			%   corresponding row of DATA belongs to. DATA and DATA_CLASSES must have
-			%   the same number of rows. LIBSVM_OPT_ARG must be a string containing
+			%   groupingvariable). Each element of data_classes specifies the group the
+			%   corresponding row of data belongs to. data and data_classes must have
+			%   the same number of rows. libsvm_opt_arg must be a string containing
 			%   following options combination.
 			%
-			%   LIBSVM_OPT_ARG:
+			%   libsvm_opt_arg:
 			%   -s svm_type : set type of SVM (default 0)
 			%       0 -- C-SVC
 			%       1 -- nu-SVC
@@ -64,8 +64,9 @@ classdef lib_svm
 			%         and calculates cross validation accuracy/mean squared error on them.
 			%   -q : quiet mode (no outputs)
 			%   -rnd n : random generator seed (time by default)
+			%   -max_iter n : stopping train maximum iterations number
 			%
-			%   See also LIB_SVM/FIND_COST_GAMMA LIB_SVM/RATE_PREDICTION LIB_SVM/CLASSIFY
+			%   See also lib_svm/find_cost_gamma lib_svm/rate_prediction lib_svm/classify
 			obj=lib_svm;
 
 			[cl_ind, ~, obj.classes]=grp2idx(data_classes);
@@ -83,27 +84,27 @@ classdef lib_svm
 		end
 		
 		function [cost, gamma, predict]=find_cost_gamma(data, data_classes, varargin)
-			%FIND_COST_GAMMA Performs LIBSVMTRAIN call for best COST and GAMMA parrallel estimating
-			%   [COSTs, GAMMAs, PREDICTSs]=FIND_COST_GAMMA(DATA, DATA_CLASSES, ...).
-			%   For descreeption of OBJ, DATA and DATA_CLASSES variables see LIB_SVM/TRAIN
+			%find_cost_gamma Performs libsvmtrain call for best cost and gamma parallel estimating
+			%   [cost, gamma, predict] = find_cost_gamma(data, data_classes, ...).
+			%   For description of obj, data and data_classes variables see lib_svm/train
 			%   function description.
 			%   Next optional arguments are supported:
-			%   FIND_COST_GAMMA(..., 'autoscale',AUTOSCALE_FLAG) - if AUTOSCALE_FLAG is set, than
-			%     before training the data is automaticaly scaled to zeros mean and unary variance.
-			%   FIND_COST_GAMMA(..., 'fold',FOLD_NUMBER) - use FOLD_NUMBER-fold
-			%     cross-validation to estimate best COST and GAMMA parameters. By
+			%   find_cost_gamma(..., 'autoscale',autoscale_flag) - if autoscale_flag is set, than
+			%     before training the data is automatically scaled to zeros mean and unary variance.
+			%   find_cost_gamma(..., 'fold',fold_number) - use fold_number-fold
+			%     cross-validation to estimate best cost and gamma parameters. By
 			%     default 10-fold cross-validation performed.
-			%   FIND_COST_GAMMA(..., 'cost', COST_TEST) - set the list of COST parameters to
-			%     be checked to find best COST-GAMMA combination. By default
-			%     COST_TEST=pow2(-5:2:15).
-			%   FIND_COST_GAMMA(..., 'gamma', GAMMA_TEST) - set the list of GAMMA parameters
-			%     to be checked to find best COST-GAMMA combination. By default to
-			%     GAMMA_TEST=pow2(-15:2:3).
-			%   FIND_COST_GAMMA(..., 'opt_arg', LIBSVM_OPT_ARG) - set the optional libsvm
+			%   find_cost_gamma(..., 'cost', cost_test) - set the list of cost parameters to
+			%     be checked to find best cost-gamma combination. By default
+			%     cost_test=pow2(-5:2:15).
+			%   find_cost_gamma(..., 'gamma', gamma_test) - set the list of gamma parameters
+			%     to be checked to find best cost-gamma combination. By default to
+			%     gamma_test=pow2(-15:2:3).
+			%   find_cost_gamma(..., 'opt_arg', libsvm_opt_arg) - set the optional libsvm
 			%     argurments passed directly to libsvmtrain function.
 			%
 			%
-			%   See also LIB_SVM/TRAIN LIB_SVM/RATE_PREDICTION LIB_SVM/CLASSIFY
+			%   see also lib_svm/train lib_svm/rate_prediction lib_svm/classify
 
 			[cl_ind, ~, obj_classes]=grp2idx(data_classes);
 
@@ -163,29 +164,29 @@ classdef lib_svm
 		end
 		
 		function [accuracy, average_recall, asymm_est_cur, conf_mat, order, conf_mat_norm]=rate_prediction(g,ghat,varargin)
-			%RATE_PREDICTION estimate classification rate.
-			%   [ACCURACY, AVERAGE_RECALL, ASYMM_EST, CONF_MAT, ORDER, CONF_MAT_NORM] =
-			%                            RATE_PREDICTION(G,GHAT)
-			%                            RATE_PREDICTION(G,GHAT,'ORDER',ORDER)
+			%rate_prediction estimate classification rate.
+			%   [accuracy, average_recall, asymm_est, conf_mat, order, conf_mat_norm] =
+			%                            rate_prediction(G,GHAT)
+			%                            rate_prediction(G,GHAT,'order',order)
 			%   Input variables:
 			%     G - reference classifications values;
 			%     GHAT - predicted classifications values;
-			%     ORDER - vector containing group labels and whose values can be
+			%     order - vector containing group labels and whose values can be
 			%         compared to those in G or GHAT using the equality operator.
 			%   Output variables:
-			%     ACCURACY - part of correct classification results (trace of
+			%     accuracy - part of correct classification results (trace of
 			%         the confusion matrix divided by G elements number);
-			%     AVERAGE_RECALL - average recall (mean of the normalized confusion
+			%     average_recall - average recall (mean of the normalized confusion
 			%         matrix diagonal elements);
-			%     ASYMM_EST - normalized confusion matrix asymmetry estimation in range -1..1.
+			%     asymm_est - normalized confusion matrix asymmetry estimation in range -1..1.
 			%         Where 1 means all elements concentrated in upper triangular part
 			%         of the normalized confusion matrix, and -1 means all elements
 			%         concentrated in lower triangular part of the normalized confusion matrix.
-			%     CONF_MAT -  confusion matrix;
-			%     ORDER - elements order in the confusion matrix;
-			%     CONF_MAT_NORM - per line normalized confusion matrix;
+			%     conf_mat -  confusion matrix;
+			%     order - elements order in the confusion matrix;
+			%     conf_mat_norm - per line normalized confusion matrix;
 			%
-			%   See also LIB_SVM/TRAIN LIB_SVM/FIND_COST_GAMMA LIB_SVM/CLASSIFY CONFUSIONMAT
+			%   See also lib_svm/train lib_svm/find_cost_gamma lib_svm/classify confusionmat
 			
 			if isa(ghat,'cell') && strcmp(class(ghat{1}),class(g))
 				conf_mat=cell(size(ghat));
@@ -230,18 +231,18 @@ classdef lib_svm
 
 	methods
 		function cl_res=classify(obj, sample)
-			%CLASSIFY Classify data using LIBSVMPREDICT
-			%   CL_RES=LIB_SVM.CLASSIFY(SAMPLE) classifies each row in SAMPLE using the
-			%   support vector machine classifier created using LIB_SVM.TRAIN, and
+			%classify Classify data using libsvmpredict
+			%   CL_RES=lib_svm.classify(SAMPLE) classifies each row in SAMPLE using the
+			%   support vector machine classifier created using lib_svm.train, and
 			%   returns the predicted class level CL_RES. SAMPLE must have the same
 			%   number of columns as the data used to train the classifier in
-			%   LIB_SVM.TRAIN. CL_RES indicates the group to which each row of SAMPLE is assigned.
+			%   lib_svm.train. CL_RES indicates the group to which each row of SAMPLE is assigned.
 			%
-			%   See also LIB_SVM/TRAIN LIB_SVM/TRAIN_BEST
+			%   See also lib_svm/train lib_svm/TRAIN_BEST
 
 			sample = ( sample+repmat(obj.data_scale.shift,size(sample,1),1) ) .* repmat(obj.data_scale.factor,size(sample,1),1);
 
-			label_vector = zeros(size(sample, 1), 1); % just a stub for LIBSVMPREDICT
+			label_vector = zeros(size(sample, 1), 1); % just a stub for libsvmpredict
 			[cl_res_wrk accuracy decision_val] = libsvmpredict(label_vector, sample, obj.model); %#ok<NASGU,ASGLU>
 
 			cl_res=obj.classes(cl_res_wrk);

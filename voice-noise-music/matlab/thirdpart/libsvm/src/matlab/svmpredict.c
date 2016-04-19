@@ -71,15 +71,15 @@ void predict(int nlhs, mxArray *plhs[], const mxArray *prhs[], struct svm_model 
 
 	if(label_vector_row_num!=testing_instance_number)
 	{
-		if (model->param.messages_file_descriptor)
-			fprintf((FILE *)model->param.messages_file_descriptor,"Length of label vector does not match # of instances.\n");
+		if (model->param.printf_output)
+			printf("Length of label vector does not match # of instances.\n");
 		fake_answer(nlhs, plhs);
 		return;
 	}
 	if(label_vector_col_num!=1)
 	{
-		if (model->param.messages_file_descriptor)
-			fprintf((FILE *)model->param.messages_file_descriptor,"label (1st argument) should be a vector (# of column is 1).\n");
+		if (model->param.printf_output)
+			printf("label (1st argument) should be a vector (# of column is 1).\n");
 		fake_answer(nlhs, plhs);
 		return;
 	}
@@ -97,8 +97,8 @@ void predict(int nlhs, mxArray *plhs[], const mxArray *prhs[], struct svm_model 
 			rhs[0] = mxDuplicateArray(prhs[1]);
 			if(mexCallMATLAB(1, lhs, 1, rhs, "full"))
 			{
-				if (model->param.messages_file_descriptor)
-					fprintf((FILE *)model->param.messages_file_descriptor,"Error: cannot full testing instance matrix\n");
+				if (model->param.printf_output)
+					printf("Error: cannot full testing instance matrix\n");
 				fake_answer(nlhs, plhs);
 				return;
 			}
@@ -111,8 +111,8 @@ void predict(int nlhs, mxArray *plhs[], const mxArray *prhs[], struct svm_model 
 			pprhs[0] = mxDuplicateArray(prhs[1]);
 			if(mexCallMATLAB(1, pplhs, 1, pprhs, "transpose"))
 			{
-				if (model->param.messages_file_descriptor)
-					fprintf((FILE *)model->param.messages_file_descriptor,"Error: cannot transpose testing instance matrix\n");
+				if (model->param.printf_output)
+					printf("Error: cannot transpose testing instance matrix\n");
 				fake_answer(nlhs, plhs);
 				return;
 			}
@@ -122,8 +122,8 @@ void predict(int nlhs, mxArray *plhs[], const mxArray *prhs[], struct svm_model 
 	if(predict_probability)
 	{
 		if(svm_type==NU_SVR || svm_type==EPSILON_SVR)
-			if (model->param.messages_file_descriptor)
-				fprintf((FILE *)model->param.messages_file_descriptor,"Prob. model for test data: target value = predicted value + z,\nz: Laplace distribution e^(-|z|/sigma)/(2sigma),sigma=%g\n",svm_get_svr_probability(model));
+			if (model->param.printf_output)
+				printf("Prob. model for test data: target value = predicted value + z,\nz: Laplace distribution e^(-|z|/sigma)/(2sigma),sigma=%g\n",svm_get_svr_probability(model));
 		else
 			prob_estimates = (double *) malloc(nr_class*sizeof(double));
 	}
@@ -221,17 +221,17 @@ void predict(int nlhs, mxArray *plhs[], const mxArray *prhs[], struct svm_model 
 	}
 	if(svm_type==NU_SVR || svm_type==EPSILON_SVR)
 	{
-		if (model->param.messages_file_descriptor)
+		if (model->param.printf_output)
 		{
-			fprintf((FILE *)model->param.messages_file_descriptor,"Mean squared error = %g (regression)\n",error/total);
-			fprintf((FILE *)model->param.messages_file_descriptor,"Squared correlation coefficient = %g (regression)\n",
+			printf("Mean squared error = %g (regression)\n",error/total);
+			printf("Squared correlation coefficient = %g (regression)\n",
 				((total*sumpt-sump*sumt)*(total*sumpt-sump*sumt))/
 				((total*sumpp-sump*sump)*(total*sumtt-sumt*sumt)));
 		}
 	}
 	else
-		if (model->param.messages_file_descriptor)
-			fprintf((FILE *)model->param.messages_file_descriptor,"Accuracy = %g%% (%d/%d) (classification)\n",
+		if (model->param.printf_output)
+			printf("Accuracy = %g%% (%d/%d) (classification)\n",
 				(double)correct/total*100,correct,total);
 
 	// return accuracy, mean squared error, squared correlation coefficient
@@ -257,10 +257,10 @@ void predict(int nlhs, mxArray *plhs[], const mxArray *prhs[], struct svm_model 
 	}
 }
 
-void exit_with_help(FILE *messages_file_descriptor)
+void exit_with_help(int printf_output)
 {
-	if (messages_file_descriptor)
-	fprintf((FILE *)messages_file_descriptor,
+	if (printf_output)
+	printf(
 		"Usage: [predicted_label, accuracy, decision_values/prob_estimates] = svmpredict(testing_label_vector, testing_instance_matrix, model, 'libsvm_options')\n"
 		"       [predicted_label] = svmpredict(testing_label_vector, testing_instance_matrix, model, 'libsvm_options')\n"
 		"Parameters:\n"
@@ -280,19 +280,19 @@ void mexFunction( int nlhs, mxArray *plhs[],
 {
 	int prob_estimate_flag = 0;
 	struct svm_model *model;
-	FILE *messages_file_descriptor = stdout;
+	int printf_output = 1;
 
 
 	if(nlhs == 2 || nlhs > 3 || nrhs > 4 || nrhs < 3)
 	{
-		exit_with_help(messages_file_descriptor);
+		exit_with_help(printf_output);
 		fake_answer(nlhs, plhs);
 		return;
 	}
 
 	if(!mxIsDouble(prhs[0]) || !mxIsDouble(prhs[1])) {
-		if (messages_file_descriptor)
-			fprintf(messages_file_descriptor,"Error: label vector and instance matrix must be double\n");
+		if (printf_output)
+			printf("Error: label vector and instance matrix must be double\n");
 		fake_answer(nlhs, plhs);
 		return;
 	}
@@ -318,7 +318,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 				if(argv[i][0] != '-') break;
 				if((++i>=argc) && argv[i-1][1] != 'q')
 				{
-					exit_with_help(messages_file_descriptor);
+					exit_with_help(printf_output);
 					fake_answer(nlhs, plhs);
 					return;
 				}
@@ -329,12 +329,12 @@ void mexFunction( int nlhs, mxArray *plhs[],
 						break;
 					case 'q':
 						i--;
-						messages_file_descriptor = NULL;
+						printf_output = 0;
 						break;
 					default:
-						if (messages_file_descriptor)
-							fprintf(messages_file_descriptor,"Unknown option: -%c\n", argv[i-1][1]);
-						exit_with_help(messages_file_descriptor);
+						if (printf_output)
+							printf("Unknown option: -%c\n", argv[i-1][1]);
+						exit_with_help(printf_output);
 						fake_answer(nlhs, plhs);
 						return;
 				}
@@ -348,9 +348,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 			fake_answer(nlhs, plhs);
 			return;
 		}
-		if (model->param.messages_file_descriptor && model->param.messages_file_descriptor!=stdout)
-			fclose(model->param.messages_file_descriptor);
-		model->param.messages_file_descriptor = messages_file_descriptor;
+		model->param.printf_output = printf_output;
 
 		if(prob_estimate_flag)
 		{
@@ -365,8 +363,8 @@ void mexFunction( int nlhs, mxArray *plhs[],
 		else
 		{
 			if(svm_check_probability_model(model)!=0)
-				if(messages_file_descriptor)
-					fprintf((FILE *)messages_file_descriptor,"Model supports probability estimates, but disabled in predicton.\n");
+				if(printf_output)
+					printf("Model supports probability estimates, but disabled in predicton.\n");
 		}
 
 		predict(nlhs, plhs, prhs, model, prob_estimate_flag);

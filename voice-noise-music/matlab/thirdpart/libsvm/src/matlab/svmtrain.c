@@ -32,8 +32,8 @@ int nr_fold;
 
 void exit_with_help()
 {
-	if (param.messages_file_descriptor)
-	fprintf((FILE *)param.messages_file_descriptor,
+	if (param.printf_output)
+	printf(
 	"Usage: model or cross-validation_prediction_matrix = svmtrain(training_label_vector, training_instance_matrix, 'libsvm_options');\n"
 	"libsvm_options:\n"
 	"-s svm_type : set type of SVM (default 0)\n"
@@ -63,7 +63,6 @@ void exit_with_help()
 	"-q : quiet mode (no outputs)\n"
 	"-rnd n : random generator seed (time by default)\n"
 	"-max_iter n : stopping train maximum iterations number\n"
-	"-messages_file_descriptor id : show library messages and warnings (via fprintf): 0 - disable; 1 - stdout; 2 - stderr; ... \n"
 	);
 }
 
@@ -91,10 +90,10 @@ double do_cross_validation(double *target)
 			sumyy += y*y;
 			sumvy += v*y;
 		}
-		if(param.messages_file_descriptor)
+		if(param.printf_output)
 		{
-			fprintf((FILE *)param.messages_file_descriptor,"Cross Validation Mean squared error = %g\n",total_error/prob.l);
-			fprintf((FILE *)param.messages_file_descriptor,"Cross Validation Squared correlation coefficient = %g\n",
+			printf("Cross Validation Mean squared error = %g\n",total_error/prob.l);
+			printf("Cross Validation Squared correlation coefficient = %g\n",
 			((prob.l*sumvy-sumv*sumy)*(prob.l*sumvy-sumv*sumy))/
 			((prob.l*sumvv-sumv*sumv)*(prob.l*sumyy-sumy*sumy))
 			);
@@ -106,8 +105,8 @@ double do_cross_validation(double *target)
 		for(i=0;i<prob.l;i++)
 			if(target[i] == prob.y[i])
 				++total_correct;
-		if(param.messages_file_descriptor)
-			fprintf((FILE *)param.messages_file_descriptor,"Cross Validation Accuracy = %g%%\n",100.0*total_correct/prob.l);
+		if(param.printf_output)
+			printf("Cross Validation Accuracy = %g%%\n",100.0*total_correct/prob.l);
 		retval = 100.0*total_correct/prob.l;
 	}
 //	free(target);
@@ -142,8 +141,6 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 	if(nrhs <= 1)
 		return 1;
 		
-	param.messages_file_descriptor = stdout;
-
 	if(nrhs > 2)
 	{
 		// put options in argv[]
@@ -160,8 +157,6 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 		++i;
 		if(i>=argc && argv[i-1][1] != 'q')	// since option -q has no parameter
 		{
-			if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
-				fclose(param.messages_file_descriptor);
 			return 1;
 		}
 		if(!strcmp(&argv[i-1][1],"rnd"))
@@ -171,16 +166,6 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 		else if(!strcmp(&argv[i-1][1],"max_iter"))
 		{
 			param.max_iter=atol(argv[i]);
-		}
-		else if(!strcmp(&argv[i-1][1],"messages_file_descriptor"))
-		{
-			if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
-				fclose(param.messages_file_descriptor);
-			int id = atol(argv[i]);
-			if (id)
-				param.messages_file_descriptor = fdopen(id, "at");
-			else
-				param.messages_file_descriptor = NULL;
 		}
 		else
 		{
@@ -223,9 +208,7 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 					param.probability = atoi(argv[i]);
 					break;
 				case 'q':
-					if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
-						fclose(param.messages_file_descriptor);
-					param.messages_file_descriptor = 0;
+					param.printf_output = 0;
 					i--;
 					break;
 				case 'v':
@@ -233,10 +216,8 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 					nr_fold = atoi(argv[i]);
 					if(nr_fold < 2)
 					{
-						if (param.messages_file_descriptor)
-							fprintf(param.messages_file_descriptor, "n-fold cross validation: n must >= 2\n");
-						if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
-							fclose(param.messages_file_descriptor);
+						if (param.printf_output)
+							printf("n-fold cross validation: n must >= 2\n");
 						return 1;
 					}
 					break;
@@ -248,17 +229,13 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 					param.weight[param.nr_weight-1] = atof(argv[i]);
 					break;
 				default:
-					if (param.messages_file_descriptor)
-						fprintf(param.messages_file_descriptor,"Unknown option -%c\n", argv[i-1][1]);
-					if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
-						fclose(param.messages_file_descriptor);
+					if (param.printf_output)
+						printf("Unknown option -%c\n", argv[i-1][1]);
 					return 1;
 			}
 		}
 	}
 
-	if (param.messages_file_descriptor && param.messages_file_descriptor!=stdout)
-		fclose(param.messages_file_descriptor);
 	return 0;
 }
 
@@ -464,6 +441,8 @@ void mexFunction( int nlhs, mxArray *plhs[],
 		int nrhs, const mxArray *prhs[] )
 {
 	const char *error_msg;
+
+	param.printf_output = 1;
 
 	// fix random seed to have same results for each run
 	// (for cross validation and probability estimation)
