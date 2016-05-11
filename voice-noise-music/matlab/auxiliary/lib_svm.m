@@ -72,7 +72,7 @@ classdef lib_svm
 			[cl_ind, ~, obj.classes] = grp2idx(data_classes);
 
 			obj.data_scale.shift = -mean(data);
-			obj.data_scale.factor = 1./std(data);
+			obj.data_scale.factor = 1./(3*std(data));
 
 			data = ( data+repmat(obj.data_scale.shift,size(data,1),1) ) .* repmat(obj.data_scale.factor,size(data,1),1);
 			
@@ -149,7 +149,7 @@ classdef lib_svm
 
 			if autoscale
 				shift = -mean(data);
-				factor = 1./std(data);
+				factor = 1./(3*std(data));
 
 				data = ( data+repmat(shift,size(data,1),1) ) .* repmat(factor,size(data,1),1);
 			end
