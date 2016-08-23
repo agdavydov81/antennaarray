@@ -106,6 +106,9 @@ classdef lib_svm
 			%     classes weights for base size balancing. True by default.
 			%   FIND_COST_GAMMA(..., 'is_svr', IS_SVR) - Flag for Support
 			%     Vector Regression testing.
+			%   FIND_COST_GAMMA(..., 'autosave_path', AUTOSAVE_PATH) -
+			%     Automatically save intermediate calculation results to this location.
+			%     Equals '' by default. For prevent autosave pass char(0).
 			%
 			%
 			%   See also LIB_SVM/TRAIN LIB_SVM/RATE_PREDICTION LIB_SVM/CLASSIFY
@@ -117,6 +120,7 @@ classdef lib_svm
 			autoscale = true;
 			autoweight = true;
 			is_svr = nan;
+			autosave_path = '';
 			for i = 1:2:length(varargin)
 				if isa(varargin{i},'char')
 					switch lower(varargin{i})
@@ -134,6 +138,8 @@ classdef lib_svm
 							autoweight = varargin{i+1};
 						case 'is_svr'
 							is_svr = varargin{i+1};
+						case 'autosave_path'
+							autosave_path = varargin{i+1};
 					end
 				end
 			end
@@ -170,10 +176,24 @@ classdef lib_svm
 
 			predict = cell(size(cost));
 			command = cell(size(cost));
-			parfor i = 1:size(cost,1)
+
+			is_autosave = ~isequal(autosave_path, char(0));
+			if is_autosave
+				stack = dbstack;
+				autosave_prefix = fullfile(autosave_path, sprintf('%s.autosave_%d',stack(1).name,randi(intmax)));
+				autosave_list = cell(size(cost,1),1);
+			end
+
+			for i = 1:size(cost,1) % For OpenMP implementation there is no reason in local pool
 				cmd = ['-c ' num2str(cost(i)) ' -g ' num2str(gamma(i)) ' ' opt_arg];
 				command{i} = cmd;
-				predict{i} = libsvmtrain(cl_ind, data, ['-v ' num2str(fold) ' ' cmd]);
+				libcmd = ['-v ' num2str(fold) ' ' cmd];
+				predict{i} = libsvmtrain(cl_ind, data, libcmd);
+				if is_autosave
+					pred = predict{i};
+					autosave_list{i} = sprintf('%s.step_%d.mat',autosave_prefix,i);
+					save(autosave_list{i}, 'i', 'cl_ind', 'data', 'libcmd', 'pred');
+				end
 			end
 
 			if ~is_svr
@@ -186,6 +206,16 @@ classdef lib_svm
 			gamma = gamma(back_ind);
 			predict = predict(back_ind);
 			command = command(back_ind);
+
+			% Cleanup intermediate steps
+			if is_autosave
+				for i = 1:numel(autosave_list)
+					try
+						delete(autosave_list{i});
+					catch
+					end
+				end
+			end
 		end
 		
 		function [accuracy, average_recall, asymm_est_cur, conf_mat, order, conf_mat_norm] = rate_prediction(g, ghat, varargin)
