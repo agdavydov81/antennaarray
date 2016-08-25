@@ -9,6 +9,7 @@
 #include <locale.h>
 #include <limits>
 #include <vector>
+#include <ctime>
 
 #include "xorshiftrand.h"
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
@@ -24,6 +25,9 @@ XorShift128Plus PRNG;
 #endif
 
 #include "svm.h"
+svm_model *svm_train_in(const svm_problem *prob, const svm_parameter *param, struct svm_train_stat *stat_ret);
+void svm_cross_validation_in(const struct svm_problem *prob, const struct svm_parameter *param, struct svm_train_stat *stat_ret, int nr_fold, double *target);
+
 int libsvm_version = LIBSVM_VERSION;
 typedef float Qfloat;
 typedef signed char schar;
@@ -461,9 +465,9 @@ public:
 		double r;	// for Solver_NU
 	};
 
-	void Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
+	svm_train_stat Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 		   double *alpha_, double Cp, double Cn, double eps,
-		   SolutionInfo* si, int shrinking, int max_iter);
+		   SolutionInfo* si, int shrinking, int max_iter, int timeout_sec);
 protected:
 	int active_size;
 	schar *y;
@@ -560,9 +564,9 @@ void Solver::reconstruct_gradient()
 	}
 }
 
-void Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
+svm_train_stat Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 		   double *alpha_, double Cp, double Cn, double eps,
-		   SolutionInfo* si, int shrinking, int max_iter)
+		   SolutionInfo* si, int shrinking, int max_iter, int timeout_sec)
 {
 	this->l = l;
 	this->Q = &Q;
@@ -620,9 +624,20 @@ void Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 	if(max_iter==0)
 		max_iter = max(10000000, l>INT_MAX/100 ? INT_MAX : 100*l);
 	int counter = min(l,1000)+1;
+
+	std::clock_t time_start = std::clock();
+	std::clock_t time_timeout = time_start;
+	if (timeout_sec > 0)
+		time_timeout = time_start + timeout_sec * CLOCKS_PER_SEC;
 	
 	while(iter < max_iter)
 	{
+		if (timeout_sec > 0) {
+			std::clock_t cur_time = std::clock();
+			if (cur_time > time_timeout)
+				break;
+		}
+
 		// show progress and do shrinking
 
 		if(--counter == 0)
@@ -790,6 +805,8 @@ void Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 		}
 	}
 
+	svm_train_stat ret(iter, (std::clock() - time_start)/ CLOCKS_PER_SEC, 1);
+
 	if(iter >= max_iter)
 	{
 		if(active_size < l)
@@ -845,6 +862,8 @@ void Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 	delete[] active_set;
 	delete[] G;
 	delete[] G_bar;
+
+	return ret;
 }
 
 // return 1 if already optimal, return 0 otherwise
@@ -1076,12 +1095,12 @@ class Solver_NU: public Solver
 {
 public:
 	Solver_NU(const svm_parameter *param) : Solver(param) {}
-	void Solve(int l, const QMatrix& Q, const double *p, const schar *y,
+	svm_train_stat Solve(int l, const QMatrix& Q, const double *p, const schar *y,
 		   double *alpha, double Cp, double Cn, double eps,
-		   SolutionInfo* si, int shrinking, int max_iter)
+		   SolutionInfo* si, int shrinking, int max_iter, int timeout_sec)
 	{
 		this->si = si;
-		Solver::Solve(l,Q,p,y,alpha,Cp,Cn,eps,si,shrinking,max_iter);
+		return Solver::Solve(l,Q,p,y,alpha,Cp,Cn,eps,si,shrinking,max_iter,timeout_sec);
 	}
 private:
 	SolutionInfo *si;
@@ -1507,7 +1526,7 @@ private:
 // construct and solve various formulations
 //
 static void solve_c_svc(
-	const svm_problem *prob, const svm_parameter* param,
+	const svm_problem *prob, const svm_parameter* param, svm_train_stat *stat_ret,
 	double *alpha, Solver::SolutionInfo* si, double Cp, double Cn)
 {
 	int l = prob->l;
@@ -1524,8 +1543,8 @@ static void solve_c_svc(
 	}
 
 	Solver s(param);
-	s.Solve(l, SVC_Q(*prob,*param,y), minus_ones, y,
-		alpha, Cp, Cn, param->eps, si, param->shrinking, param->max_iter);
+	*stat_ret += s.Solve(l, SVC_Q(*prob,*param,y), minus_ones, y,
+		alpha, Cp, Cn, param->eps, si, param->shrinking, param->max_iter, param->timeout_sec);
 
 	double sum_alpha=0;
 	for(i=0;i<l;i++)
@@ -1543,7 +1562,7 @@ static void solve_c_svc(
 }
 
 static void solve_nu_svc(
-	const svm_problem *prob, const svm_parameter *param,
+	const svm_problem *prob, const svm_parameter *param, svm_train_stat *stat_ret,
 	double *alpha, Solver::SolutionInfo* si)
 {
 	int i;
@@ -1579,8 +1598,8 @@ static void solve_nu_svc(
 		zeros[i] = 0;
 
 	Solver_NU s(param);
-	s.Solve(l, SVC_Q(*prob,*param,y), zeros, y,
-		alpha, 1.0, 1.0, param->eps, si,  param->shrinking, param->max_iter);
+	*stat_ret += s.Solve(l, SVC_Q(*prob,*param,y), zeros, y,
+		alpha, 1.0, 1.0, param->eps, si,  param->shrinking, param->max_iter, param->timeout_sec);
 	double r = si->r;
 
 	if (param->printf_output)
@@ -1599,7 +1618,7 @@ static void solve_nu_svc(
 }
 
 static void solve_one_class(
-	const svm_problem *prob, const svm_parameter *param,
+	const svm_problem *prob, const svm_parameter *param, svm_train_stat *stat_ret,
 	double *alpha, Solver::SolutionInfo* si)
 {
 	int l = prob->l;
@@ -1623,15 +1642,15 @@ static void solve_one_class(
 	}
 
 	Solver s(param);
-	s.Solve(l, ONE_CLASS_Q(*prob,*param), zeros, ones,
-		alpha, 1.0, 1.0, param->eps, si, param->shrinking, param->max_iter);
+	*stat_ret += s.Solve(l, ONE_CLASS_Q(*prob,*param), zeros, ones,
+		alpha, 1.0, 1.0, param->eps, si, param->shrinking, param->max_iter, param->timeout_sec);
 
 	delete[] zeros;
 	delete[] ones;
 }
 
 static void solve_epsilon_svr(
-	const svm_problem *prob, const svm_parameter *param,
+	const svm_problem *prob, const svm_parameter *param, svm_train_stat *stat_ret,
 	double *alpha, Solver::SolutionInfo* si)
 {
 	int l = prob->l;
@@ -1652,8 +1671,8 @@ static void solve_epsilon_svr(
 	}
 
 	Solver s(param);
-	s.Solve(2*l, SVR_Q(*prob,*param), linear_term, y,
-		alpha2, param->C, param->C, param->eps, si, param->shrinking, param->max_iter);
+	*stat_ret += s.Solve(2*l, SVR_Q(*prob,*param), linear_term, y,
+		alpha2, param->C, param->C, param->eps, si, param->shrinking, param->max_iter, param->timeout_sec);
 
 	double sum_alpha = 0;
 	for(i=0;i<l;i++)
@@ -1670,7 +1689,7 @@ static void solve_epsilon_svr(
 }
 
 static void solve_nu_svr(
-	const svm_problem *prob, const svm_parameter *param,
+	const svm_problem *prob, const svm_parameter *param, svm_train_stat *stat_ret,
 	double *alpha, Solver::SolutionInfo* si)
 {
 	int l = prob->l;
@@ -1694,8 +1713,8 @@ static void solve_nu_svr(
 	}
 
 	Solver_NU s(param);
-	s.Solve(2*l, SVR_Q(*prob,*param), linear_term, y,
-		alpha2, C, C, param->eps, si, param->shrinking, param->max_iter);
+	*stat_ret += s.Solve(2*l, SVR_Q(*prob,*param), linear_term, y,
+		alpha2, C, C, param->eps, si, param->shrinking, param->max_iter, param->timeout_sec);
 
 	if (param->printf_output)
 		printf("epsilon = %f\n",-si->r);
@@ -1718,7 +1737,7 @@ struct decision_function
 };
 
 static decision_function svm_train_one(
-	const svm_problem *prob, const svm_parameter *param,
+	const svm_problem *prob, const svm_parameter *param, svm_train_stat *stat_ret,
 	double Cp, double Cn)
 {
 	double *alpha = Malloc(double,prob->l);
@@ -1726,19 +1745,19 @@ static decision_function svm_train_one(
 	switch(param->svm_type)
 	{
 		case C_SVC:
-			solve_c_svc(prob,param,alpha,&si,Cp,Cn);
+			solve_c_svc(prob,param,stat_ret,alpha,&si,Cp,Cn);
 			break;
 		case NU_SVC:
-			solve_nu_svc(prob,param,alpha,&si);
+			solve_nu_svc(prob,param,stat_ret,alpha,&si);
 			break;
 		case ONE_CLASS:
-			solve_one_class(prob,param,alpha,&si);
+			solve_one_class(prob,param,stat_ret,alpha,&si);
 			break;
 		case EPSILON_SVR:
-			solve_epsilon_svr(prob,param,alpha,&si);
+			solve_epsilon_svr(prob,param,stat_ret,alpha,&si);
 			break;
 		case NU_SVR:
-			solve_nu_svr(prob,param,alpha,&si);
+			solve_nu_svr(prob,param,stat_ret,alpha,&si);
 			break;
 	}
 
@@ -1969,7 +1988,7 @@ static void multiclass_probability(int k, double **r, double *p, FILE * printf_o
 
 // Cross-validation decision values for probability estimates
 static void svm_binary_svc_probability(
-	const svm_problem *prob, const svm_parameter *param,
+	const svm_problem *prob, const svm_parameter *param, svm_train_stat *stat_ret,
 	double Cp, double Cn, double& probA, double& probB)
 {
 	int i;
@@ -2040,7 +2059,7 @@ static void svm_binary_svc_probability(
 			subparam.weight_label[1]=-1;
 			subparam.weight[0]=Cp;
 			subparam.weight[1]=Cn;
-			struct svm_model *submodel = svm_train(&subprob,&subparam);
+			struct svm_model *submodel = svm_train_in(&subprob,&subparam,stat_ret);
 			for(j=begin;j<end;j++)
 			{
 #ifdef _DENSE_REP
@@ -2064,7 +2083,7 @@ static void svm_binary_svc_probability(
 
 // Return parameter of a Laplace distribution 
 static double svm_svr_probability(
-	const svm_problem *prob, const svm_parameter *param)
+	const svm_problem *prob, const svm_parameter *param, svm_train_stat *stat_ret)
 {
 	int i;
 	int nr_fold = 5;
@@ -2073,7 +2092,7 @@ static double svm_svr_probability(
 
 	svm_parameter newparam = *param;
 	newparam.probability = 0;
-	svm_cross_validation(prob,&newparam,nr_fold,ymv);
+	svm_cross_validation_in(prob,&newparam, stat_ret,nr_fold,ymv);
 	for(i=0;i<prob->l;i++)
 	{
 		ymv[i]=prob->y[i]-ymv[i];
@@ -2176,7 +2195,12 @@ static void svm_group_classes(const svm_problem *prob, int *nr_class_ret, int **
 //
 // Interface functions
 //
-svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
+svm_model *svm_train(const svm_problem *prob, const svm_parameter *param, struct svm_train_stat *stat_ret) {
+	*stat_ret = svm_train_stat();
+	return svm_train_in(prob, param, stat_ret);
+}
+
+svm_model *svm_train_in(const svm_problem *prob, const svm_parameter *param, struct svm_train_stat *stat_ret)
 {
 	svm_model *model = Malloc(svm_model,1);
 	model->param = *param;
@@ -2201,10 +2225,10 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 		    param->svm_type == NU_SVR))
 		{
 			model->probA = Malloc(double,1);
-			model->probA[0] = svm_svr_probability(prob,param);
+			model->probA[0] = svm_svr_probability(prob,param,stat_ret);
 		}
 
-		decision_function f = svm_train_one(prob,param,0,0);
+		decision_function f = svm_train_one(prob,param,stat_ret,0,0);
 		model->rho = Malloc(double,1);
 		model->rho[0] = f.rho;
 
@@ -2316,9 +2340,9 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 				}
 
 				if(param->probability)
-					svm_binary_svc_probability(&sub_prob,param,weighted_C[i],weighted_C[j],probA[p],probB[p]);
+					svm_binary_svc_probability(&sub_prob,param,stat_ret,weighted_C[i],weighted_C[j],probA[p],probB[p]);
 
-				f[p] = svm_train_one(&sub_prob,param,weighted_C[i],weighted_C[j]);
+				f[p] = svm_train_one(&sub_prob,param,stat_ret,weighted_C[i],weighted_C[j]);
 				for(k=0;k<ci;k++)
 					if(!nonzero[si+k] && fabs(f[p].alpha[k]) > 0)
 						nonzero[si+k] = true;
@@ -2445,7 +2469,12 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 }
 
 // Stratified cross validation
-void svm_cross_validation(const svm_problem *prob, const svm_parameter *param, int nr_fold, double *target)
+void svm_cross_validation(const svm_problem *prob, const svm_parameter *param, svm_train_stat *stat_ret, int nr_fold, double *target) {
+	*stat_ret = svm_train_stat();
+	svm_cross_validation_in(prob, param, stat_ret, nr_fold, target);
+}
+
+void svm_cross_validation_in(const svm_problem *prob, const svm_parameter *param, svm_train_stat *stat_ret, int nr_fold, double *target)
 {
 	int i;
 	int *fold_start;
@@ -2550,7 +2579,7 @@ void svm_cross_validation(const svm_problem *prob, const svm_parameter *param, i
 			subprob.y[k] = prob->y[perm[j]];
 			++k;
 		}
-		struct svm_model *submodel = svm_train(&subprob,param);
+		struct svm_model *submodel = svm_train_in(&subprob,param,stat_ret);
 		if(param->probability && 
 		   (param->svm_type == C_SVC || param->svm_type == NU_SVC))
 		{

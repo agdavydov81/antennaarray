@@ -12,6 +12,7 @@ classdef lib_svm
 		data_scale;
 		classes;
 		model;
+		train_stat;
 	end
 
 	methods(Access = 'protected')
@@ -65,6 +66,7 @@ classdef lib_svm
 			%   -q : quiet mode (no outputs)
 			%   -rnd n : random generator seed (time by default)
 			%   -max_iter n : stopping train maximum iterations number
+			%   -timeout sec: stopping train timeout in seconds
 			%
 			%   See also LIB_SVM/FIND_COST_GAMMA LIB_SVM/RATE_PREDICTION LIB_SVM/CLASSIFY
 			obj = lib_svm;
@@ -80,12 +82,12 @@ classdef lib_svm
 				libsvm_opt_arg = '';
 			end
 
-			obj.model = libsvmtrain(cl_ind, data, libsvm_opt_arg); %	train classifier
+			[obj.model, obj.train_stat] = libsvmtrain(cl_ind, data, libsvm_opt_arg); %	train classifier
 		end
 		
-		function [cost, gamma, predict, command] = find_cost_gamma(data, data_classes, varargin)
+		function [cost, gamma, predict, command, train_stat] = find_cost_gamma(data, data_classes, varargin)
 			%FIND_COST_GAMMA Performs LIBSVMTRAIN call for best COST and GAMMA parallel estimating
-			%   [COSTs, GAMMAs, PREDICTSs, COMMANDs] = FIND_COST_GAMMA(DATA, DATA_CLASSES, ...).
+			%   [COSTs, GAMMAs, PREDICTSs, COMMANDs, TRAIN_STATs] = FIND_COST_GAMMA(DATA, DATA_CLASSES, ...).
 			%   For description of OBJ, DATA and DATA_CLASSES variables see LIB_SVM/TRAIN
 			%   function description.
 			%   Next optional arguments are supported:
@@ -176,6 +178,7 @@ classdef lib_svm
 
 			predict = cell(size(cost));
 			command = cell(size(cost));
+			train_stat = cell(size(cost));
 
 			is_autosave = ~isequal(autosave_path, char(0));
 			if is_autosave
@@ -188,11 +191,12 @@ classdef lib_svm
 				cmd = ['-c ' num2str(cost(i)) ' -g ' num2str(gamma(i)) ' ' opt_arg];
 				command{i} = cmd;
 				libcmd = ['-v ' num2str(fold) ' ' cmd];
-				predict{i} = libsvmtrain(cl_ind, data, libcmd);
+				[predict{i}, train_stat{i}] = libsvmtrain(cl_ind, data, libcmd);
 				if is_autosave
 					pred = predict{i};
+					train_time_stat = train_stat{i};
 					autosave_list{i} = sprintf('%s.step_%d.mat',autosave_prefix,i);
-					save(autosave_list{i}, 'i', 'cl_ind', 'data', 'libcmd', 'pred');
+					save(autosave_list{i}, 'i', 'cl_ind', 'data', 'libcmd', 'pred', 'train_time_stat');
 				end
 			end
 
@@ -206,6 +210,7 @@ classdef lib_svm
 			gamma = gamma(back_ind);
 			predict = predict(back_ind);
 			command = command(back_ind);
+			train_stat = cell2mat(train_stat(back_ind));
 
 			% Cleanup intermediate steps
 			if is_autosave

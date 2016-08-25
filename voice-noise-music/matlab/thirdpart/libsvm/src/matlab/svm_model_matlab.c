@@ -413,3 +413,28 @@ struct svm_model *matlab_matrix_to_model(const mxArray *matlab_struct, const cha
 
 	return model;
 }
+
+void fill_field(mxArray *return_stat, const char *field_name, double field_value)
+{
+	mxArray *arr;
+	double *ptr;
+	arr = mxCreateDoubleMatrix(1, 1, mxREAL);
+	ptr = mxGetPr(arr);
+	ptr[0] = field_value;
+
+	mxAddField(return_stat, field_name);
+	mxSetField(return_stat, 0, field_name, arr);
+}
+
+mxArray *svm_train_stat_2_matlab(struct svm_train_stat *train_stat)
+{
+	/* Create a struct matrix contains NUM_OF_RETURN_FIELD fields */
+	mxArray *return_stat = mxCreateStructMatrix(1, 1, 0, NULL);
+
+	/* Fill struct */
+	fill_field(return_stat, "IterationsNumber", train_stat->iter_num);
+	fill_field(return_stat, "TrainTimeSeconds", train_stat->train_time_sec);
+	fill_field(return_stat, "ModelsNumber", train_stat->models_num);
+
+	return return_stat;
+}

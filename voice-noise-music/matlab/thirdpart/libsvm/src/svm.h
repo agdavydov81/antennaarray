@@ -62,6 +62,7 @@ struct svm_parameter
 		, probability(0)
 		, rnd_seed(0)
 		, max_iter(0)
+		, timeout_sec(0)
 		, printf_output(0)
 	{}
 #endif
@@ -85,7 +86,47 @@ struct svm_parameter
 	int probability; /* do probability estimates */
 	int rnd_seed; /* random number generator seed: 0 - rdtsc */
 	int max_iter; /* stopping train maximum iterations number */
+	int timeout_sec; /* one model train timeout in seconds (0 - no limit) */
 	int printf_output; /* show library messages and warnings (via printf) */
+};
+
+struct svm_train_stat
+{
+#ifdef __cplusplus
+	svm_train_stat()
+		: iter_num(0)
+		, train_time_sec(0)
+		, models_num(0)
+	{}
+	svm_train_stat(int iter_num_, int train_time_sec_, int models_num_)
+		: iter_num(iter_num_)
+		, train_time_sec(train_time_sec_)
+		, models_num(models_num_)
+	{}
+
+	svm_train_stat & operator += (svm_train_stat const &rhs) {
+		int64_t iter_num64 = iter_num + rhs.iter_num;
+		iter_num = (int)iter_num64;
+		if (iter_num < iter_num64)
+			iter_num = INT_MAX;
+
+		int64_t train_time_sec64 = train_time_sec + rhs.train_time_sec;
+		train_time_sec = (int)train_time_sec64;
+		if (train_time_sec < train_time_sec64)
+			train_time_sec = INT_MAX;
+
+		int64_t models_num64 = models_num + rhs.models_num;
+		models_num = (int)models_num64;
+		if (models_num < models_num64)
+			models_num = INT_MAX;
+
+		return *this;
+	}
+#endif
+
+	int		iter_num;
+	int		train_time_sec;
+	int		models_num;
 };
 
 //
@@ -103,7 +144,7 @@ struct svm_model
 #endif
 	double **sv_coef;	/* coefficients for SVs in decision functions (sv_coef[k-1][l]) */
 	double *rho;		/* constants in decision functions (rho[k*(k-1)/2]) */
-	double *probA;		/* pariwise probability information */
+	double *probA;		/* pairwise probability information */
 	double *probB;
 	int *sv_indices;        /* sv_indices[0,...,nSV-1] are values in [1,...,num_traning_data] to indicate SVs in the training set */
 
@@ -117,8 +158,8 @@ struct svm_model
 				/* 0 if svm_model is created by svm_train */
 };
 
-struct svm_model *svm_train(const struct svm_problem *prob, const struct svm_parameter *param);
-void svm_cross_validation(const struct svm_problem *prob, const struct svm_parameter *param, int nr_fold, double *target);
+struct svm_model *svm_train(const struct svm_problem *prob, const struct svm_parameter *param, struct svm_train_stat *stat_ret);
+void svm_cross_validation(const struct svm_problem *prob, const struct svm_parameter *param, struct svm_train_stat *stat_ret, int nr_fold, double *target);
 
 int svm_save_model(const char *model_file_name, const struct svm_model *model);
 struct svm_model *svm_load_model(const char *model_file_name);

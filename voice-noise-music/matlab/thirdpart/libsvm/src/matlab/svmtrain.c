@@ -34,7 +34,7 @@ void exit_with_help()
 {
 	if (param.printf_output)
 	printf(
-	"Usage: model or cross-validation_prediction_matrix = svmtrain(training_label_vector, training_instance_matrix, 'libsvm_options');\n"
+	"Usage: [model or cross-validation_prediction_matrix, train time statistics] = libsvmtrain(training_label_vector, training_instance_matrix, 'libsvm_options');\n"
 	"libsvm_options:\n"
 	"-s svm_type : set type of SVM (default 0)\n"
 	"	0 -- C-SVC		(multi-class classification)\n"
@@ -63,10 +63,11 @@ void exit_with_help()
 	"-q : quiet mode (no outputs)\n"
 	"-rnd n : random generator seed (time by default)\n"
 	"-max_iter n : stopping train maximum iterations number\n"
+	"-timeout sec: stopping train timeout in seconds\n "
 	);
 }
 
-double do_cross_validation(double *target)
+double do_cross_validation(double *target, struct svm_train_stat *stat_ret)
 {
 	int i;
 	int total_correct = 0;
@@ -75,7 +76,9 @@ double do_cross_validation(double *target)
 //	double *target = Malloc(double,prob.l);
 	double retval = 0.0;
 
-	svm_cross_validation(&prob,&param,nr_fold,target);
+	svm_cross_validation(&prob,&param,stat_ret,nr_fold,target);
+
+
 	if(param.svm_type == EPSILON_SVR ||
 	   param.svm_type == NU_SVR)
 	{
@@ -136,6 +139,8 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 	param.nr_weight = 0;
 	param.weight_label = NULL;
 	param.weight = NULL;
+	param.max_iter = 0;
+	param.timeout_sec = 0;
 	cross_validation = 0;
 	
 	if(nrhs <= 1)
@@ -166,6 +171,10 @@ int parse_command_line(int nrhs, const mxArray *prhs[], char *model_file_name)
 		else if(!strcmp(&argv[i-1][1],"max_iter"))
 		{
 			param.max_iter=atol(argv[i]);
+		}
+		else if(!strcmp(&argv[i-1][1],"timeout"))
+		{
+			param.timeout_sec=atol(argv[i]);
 		}
 		else
 		{
@@ -448,7 +457,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 	// (for cross validation and probability estimation)
 	// srand(1); // @ see -rnd option
 
-	if(nlhs > 1)
+	if(nlhs > 2)
 	{
 		exit_with_help();
 		fake_answer(nlhs, plhs);
@@ -525,15 +534,21 @@ void mexFunction( int nlhs, mxArray *plhs[],
 		if(cross_validation)
 		{
 			double *ptr;
+			struct svm_train_stat stat_ret;
 			plhs[0] = mxCreateDoubleMatrix(prob.l /*1*/, 1, mxREAL);
 			ptr = mxGetPr(plhs[0]);
-			/*ptr[0] = */do_cross_validation(ptr);
+			/*ptr[0] = */do_cross_validation(ptr, &stat_ret);
+			if (nlhs>1)
+				plhs[1] = svm_train_stat_2_matlab(&stat_ret);
 		}
 		else
 		{
 			int nr_feat = (int)mxGetN(prhs[1]);
 			const char *error_msg;
-			model = svm_train(&prob, &param);
+			struct svm_train_stat stat_ret;
+			model = svm_train(&prob, &param, &stat_ret);
+			if (nlhs>1)
+				plhs[1] = svm_train_stat_2_matlab(&stat_ret);
 			error_msg = model_to_matlab_structure(plhs, nr_feat, model);
 			if(error_msg)
 				mexPrintf("Error: can't convert libsvm model to matrix structure: %s\n", error_msg);
