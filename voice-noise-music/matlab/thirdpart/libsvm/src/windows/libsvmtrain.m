@@ -1,6 +1,6 @@
 function [model] = libsvmtrain(training_label_vector, training_instance_matrix, libsvm_options)
 %LIBSVMTRAIN performs libsvm model building or cross-validation estimation.
-%   Usage: model or cross-validation_prediction_matrix = libsvmtrain(training_label_vector, training_instance_matrix, 'libsvm_options');
+%   Usage: [model or cross-validation_prediction_matrix, train time statistics] = libsvmtrain(training_label_vector, training_instance_matrix, 'libsvm_options');
 %   libsvm_options:
 %   -s svm_type : set type of SVM (default 0)
 %   	0 -- C-SVC		(multi-class classification)
@@ -29,3 +29,4 @@ function [model] = libsvmtrain(training_label_vector, training_instance_matrix, 
 %   -q : quiet mode (no outputs)
 %   -rnd n : random generator seed (time by default)
 %   -max_iter n : stopping train maximum iterations number
+%   -timeout sec: stopping train timeout in seconds
