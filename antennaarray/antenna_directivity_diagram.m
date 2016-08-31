@@ -30,7 +30,7 @@ function [x,y,z, antenna_center, main_lobe_ind, side_lobe_part, c_angle, c_lvl]=
 %   See also ANTENNA_DIAGRAM
 
 %	Author: Andrei Davydov
-%   E-mail: andrew.aka.manik@gmail.com
+%   E-mail: agdavydov81@gmail.com
 %	Copyright 2009-2010 For Fun Inc.
 %	Version: 1.0.1.3
 

@@ -6,7 +6,7 @@ function antenna_diagram()
 %   See also ANTENNA_DIRECTIVITY_DIAGRAM
 
 %	Author: Andrei Davydov
-%   E-mail: andrew.aka.manik@gmail.com
+%   E-mail: agdavydov81@gmail.com
 %	Copyright 2009-2010 For Fun Inc.
 %	Version: 1.0.1.5
 

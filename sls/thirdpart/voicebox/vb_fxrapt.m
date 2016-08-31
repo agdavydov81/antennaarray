@@ -40,7 +40,7 @@ function [fx,tt]=vb_fxrapt(s,fs,mode,f0_rg)
 %      Copyright (C) Mike Brookes 2006
 %      Version: $Id: vb_fxrapt.m,v 1.3 2007/05/04 07:01:38 dmb Exp $
 %
-% Small bug fixes by Andrei Davydov (andrew.aka.manik@gmail.com).
+% Small bug fixes by Andrei Davydov (agdavydov81@gmail.com).
 % * 31.01.2010 Source signal boundaries violation. See line 250-258 and variables with mnk_ prefix.
 %
 %   VOICEBOX is a MATLAB toolbox for speech processing.
