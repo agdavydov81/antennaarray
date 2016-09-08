@@ -5,7 +5,7 @@ function list = video_info(root)
 
 	ffprobe_path = 'c:\Program Files (x86)\ffmpeg\bin\ffprobe.exe';
 	list = num2cell(list);
-	for ii = 1:numel(list) % parfor
+	parfor ii = 1:numel(list) % parfor
 		obj = list{ii};
 
 		dos_str = ['"' ffprobe_path '" "' obj.name '"'];
@@ -17,6 +17,7 @@ function list = video_info(root)
 		result = textscan(result,'%s','Delimiter','\n');
 		result = result{1};
 
+		obj.ffprobe = result;
 		tokn = regexp(result,'^Duration\: (\d+\:\d+\:\d+\.\d+).*bitrate\: (\d+) kb/s', 'tokens');
 		tokn = vertcat(tokn{:});
 		if numel(tokn)~=1
