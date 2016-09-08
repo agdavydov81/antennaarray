@@ -1,8 +1,8 @@
-function collage_generator(root_, image_sz_, image_sz_is_relative_, border_sz_, border_sz_is_relative_, rotate_max_, collage_size_, background_color_, edging_color_)
+function collage_generator(root_, image_sz_, image_sz_percentile_, border_sz_, border_sz_is_relative_, rotate_max_, collage_size_, background_color_, edging_color_)
 	if nargin < 9
 		if nargin < 1;	root = '';						else root = root_;									end
-		if nargin < 2;	image_sz = 140;					else image_sz = image_sz_;							end
-		if nargin < 3;	image_sz_is_relative = true;	else image_sz_is_relative = image_sz_is_relative_;	end
+		if nargin < 2;	image_sz = [];					else image_sz = image_sz_;							end
+		if nargin < 3;	image_sz_percentile = 5;		else image_sz_percentile = image_sz_percentile_;	end
 		if nargin < 4;	border_sz = 0.8;				else border_sz = border_sz_;						end
 		if nargin < 5;	border_sz_is_relative = true;	else border_sz_is_relative = border_sz_is_relative_;end
 		if nargin < 6;	rotate_max = 30;				else rotate_max = rotate_max_;						end
@@ -31,19 +31,21 @@ function collage_generator(root_, image_sz_, image_sz_is_relative_, border_sz_, 
 			end
 		end
 
-		prompt = {	sprintf('One photo size (symbol ''%%'' means percent \nfrom clusters centroids distance minimum):');
-					sprintf('Photo border size (symbol ''%%'' means percent \nfrom clusters centroids distance minimum):');
+		prompt = {	sprintf('One photo size (symbol ''%%'' means percentile \nfrom clusters centroids distance distribution):');
+					sprintf('Photo border size (symbol ''%%'' means percent \nfrom image size):');
 					'Rotation maximum (+-degree):';
 					'Collage width (pixels):';
 					'Collage height (pixels):';
 					'Background color (R G B):'
 					'Photos edging color (R G B):'};
-		answer = arrayfun(@num2str, [image_sz border_sz rotate_max collage_size(:)'], 'UniformOutput',false);
+		if isempty(image_sz)
+			answer = {[num2str(image_sz_percentile) '%']};
+		else
+			answer = {num2str(image_sz)};
+		end
+		answer = [answer arrayfun(@num2str, [border_sz rotate_max collage_size(:)'], 'UniformOutput',false)];
 		answer{end+1} = num2str(round(background_color(:)'));
 		answer{end+1} = num2str(round(edging_color(:)'));
-		if image_sz_is_relative
-			answer{1}(end+1) = '%';
-		end
 		if border_sz_is_relative
 			answer{2}(end+1) = '%';
 		end
@@ -54,6 +56,10 @@ function collage_generator(root_, image_sz_, image_sz_is_relative_, border_sz_, 
 		end
 		
 		[image_sz, image_sz_is_relative] = parse_relative(answer{1});
+		if image_sz_is_relative
+			image_sz_percentile = image_sz;
+			image_sz = [];
+		end
 		[border_sz, border_sz_is_relative] = parse_relative(answer{2});
 		
 		rotate_max = str2double(answer{3});
@@ -84,17 +90,34 @@ function collage_generator(root_, image_sz_, image_sz_is_relative_, border_sz_, 
 	photos = dir(fullfile(root, '*.jpg'));
 	photos([photos.isdir]) = [];
 	photos( cellfun(@(x) x(1)=='_', {photos.name}) ) = [];
+	if numel(photos) < 1
+		error('There are no photos for collage.');
+	end
 	
 	[mask_xy(:,1), mask_xy(:,2)] = ind2sub(size(mask_img), find(mask_img));
 	clusters_num = numel(photos);
 	decimator = max(1, round(size(mask_xy,1)/(clusters_num*200)));
 	mask_xy = mask_xy(1:decimator:end,:);
 	[~, points] = kmeans(mask_xy, clusters_num);
-	if image_sz_is_relative
-		image_sz = min(pdist(points)) * image_sz / 100;
+	if isempty(image_sz)
+		if (numel(photos) < 2)
+			row_sz = zeros(size(mask_img,1),1);
+			for ri = 1:size(mask_img,1)
+				d = diff([false mask_img(ri,:) false]);
+				row_sz(ri) = median(find(d==-1) - find(d==1));
+			end
+			col_sz = zeros(1,size(mask_img,2));
+			for ci = 1:size(mask_img,2)
+				d = diff([false; mask_img(:,ci); false]);
+				col_sz(ci) = median(find(d==-1) - find(d==1));
+			end
+			image_sz = min(median(row_sz), median(col_sz));
+		else
+			image_sz = prctile(pdist(points),image_sz_percentile);
+		end
 	end
 	if border_sz_is_relative
-		border_sz = round( min(pdist(points)) * border_sz / 100);
+		border_sz = round( image_sz * border_sz / 100);
 	end
 	
 	edging_color = reshape(uint8(edging_color),[1 1 3]);
