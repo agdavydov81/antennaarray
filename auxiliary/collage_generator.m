@@ -7,12 +7,12 @@ function collage_generator(root_, image_sz_, image_sz_percentile_, border_sz_, b
 		if nargin < 5;	border_sz_is_relative = true;	else border_sz_is_relative = border_sz_is_relative_;end
 		if nargin < 6;	rotate_max = 30;				else rotate_max = rotate_max_;						end
 		if nargin < 7
-			collage_size = [7937 11225];
+			collage_size = [9933 14043];
 		else
 			collage_size = collage_size_;
 		end
-		if nargin < 8;	background_color = [192 192 192]; else background_color = background_color_;	end
-		if nargin < 9;	edging_color = [255 255 255];	else edging_color = edging_color_;	end
+		if nargin < 8;	background_color = [192 192 192]; else background_color = background_color_;		end
+		if nargin < 9;	edging_color = [255 255 255];	else edging_color = edging_color_;					end
 
 		cache_name = [mfilename '_cache.mat'];
 		if exist(cache_name, 'file')
@@ -125,7 +125,11 @@ function collage_generator(root_, image_sz_, image_sz_percentile_, border_sz_, b
 	photos = photos(randperm(numel(photos)));
 	
 	hw = waitbar(0, 'Process images', 'Name','Process images');
-
+	
+	tmpdir = tempname();
+	mkdir(tmpdir);
+	imwrite(back_img, fullfile(tmpdir,'0.png'));
+	
 	for ri = 1:numel(photos)
 		cur_imag = imread(fullfile(root, photos(ri).name));
 		cur_imag = imresize(cur_imag, image_sz/max(size(cur_imag)));
@@ -187,9 +191,17 @@ function collage_generator(root_, image_sz_, image_sz_percentile_, border_sz_, b
 
 		cur_ind_x = cur_pos(1)-1+(1:size(cur_imag,1));
 		cur_ind_y = cur_pos(2)-1+(1:size(cur_imag,2));
+		
 		cur_back  = back_img(cur_ind_x, cur_ind_y, :);
 %		cur_back(cur_mask) = cur_imag(cur_mask);
 		cur_back  = uint8( double(cur_back).*(1-cur_mask) + double(cur_imag).*cur_mask );
+		
+		layer_imag = zeros(size(back_img),'uint8');
+		layer_mask = zeros(size(layer_imag,1),size(layer_imag,2));
+		layer_imag(cur_ind_x, cur_ind_y, :) = cur_imag;
+		layer_mask(cur_ind_x, cur_ind_y) = cur_mask(:,:,1);
+		imwrite(layer_imag, fullfile(tmpdir,sprintf('%d.png',ri)), 'Alpha',layer_mask);
+
 		back_img(cur_ind_x, cur_ind_y, :) = cur_back;
 
 		waitbar_str = sprintf('Process images: %d/%d',ri,size(points,1));
@@ -200,6 +212,20 @@ function collage_generator(root_, image_sz_, image_sz_percentile_, border_sz_, b
 	close(hw);
 
 	imwrite(back_img, fullfile(root, '_collage.jpg'), 'jpg', 'Quality',95);
+
+	names = cell2mat(arrayfun(@(x) sprintf(' %d.png',x), 1:numel(photos), 'UniformOutput',false));
+	fh = fopen(fullfile(tmpdir,'dopsd.bat'),'w');
+	fprintf(fh, '%s\n', tmpdir(1:2));
+	fprintf(fh, 'cd "%s"\n', tmpdir);
+	fprintf(fh, 'convert -background none -flatten 0.png %s _blend.png\n', names);
+	fprintf(fh, 'convert _blend.png %s -compress RLE "%s"\n', names, fullfile(root, '_collage.psd'));
+	fclose(fh);
+	[di,do] = dos(fullfile(tmpdir,'dopsd.bat'));
+
+	try
+		rmdir(tmpdir, 's');
+	catch
+	end
 end
 
 function [size, is_relative] = parse_relative(str)
