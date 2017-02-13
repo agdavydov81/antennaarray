@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include "../linear.h"
+#include "linear.h"
 
 #include "mex.h"
 
@@ -145,7 +145,7 @@ const char *matlab_matrix_to_model(struct model *model_, const mxArray *matlab_s
 
 	// bias
 	ptr = mxGetPr(rhs[id]);
-	model_->bias = (int)ptr[0];
+	model_->bias = ptr[0];
 	id++;
 
 	if(model_->bias>=0)

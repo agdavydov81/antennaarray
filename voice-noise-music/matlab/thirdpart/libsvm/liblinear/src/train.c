@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include "linear.h"
+#include <omp.h>
 #define Malloc(type,n) (type *)malloc((n)*sizeof(type))
 #define INF HUGE_VAL
 
@@ -16,26 +17,28 @@ void exit_with_help()
 	"Usage: train [options] training_set_file [model_file]\n"
 	"options:\n"
 	"-s type : set type of solver (default 1)\n"
+	"  for multi-class classification\n"
 	"	 0 -- L2-regularized logistic regression (primal)\n"
-	"	 1 -- L2-regularized L2-loss support vector classification (dual)\n"	
+	"	 1 -- L2-regularized L2-loss support vector classification (dual)\n"
 	"	 2 -- L2-regularized L2-loss support vector classification (primal)\n"
 	"	 3 -- L2-regularized L1-loss support vector classification (dual)\n"
-	"	 4 -- multi-class support vector classification by Crammer and Singer\n"
+	"	 4 -- support vector classification by Crammer and Singer\n"
 	"	 5 -- L1-regularized L2-loss support vector classification\n"
 	"	 6 -- L1-regularized logistic regression\n"
 	"	 7 -- L2-regularized logistic regression (dual)\n"
-	"	11 -- L2-regularized L2-loss epsilon support vector regression (primal)\n"
-	"	12 -- L2-regularized L2-loss epsilon support vector regression (dual)\n"
-	"	13 -- L2-regularized L1-loss epsilon support vector regression (dual)\n"
+	"  for regression\n"
+	"	11 -- L2-regularized L2-loss support vector regression (primal)\n"
+	"	12 -- L2-regularized L2-loss support vector regression (dual)\n"
+	"	13 -- L2-regularized L1-loss support vector regression (dual)\n"
 	"-c cost : set the parameter C (default 1)\n"
-	"-p epsilon : set the epsilon in loss function of epsilon-SVR (default 0.1)\n"
+	"-p epsilon : set the epsilon in loss function of SVR (default 0.1)\n"
 	"-e epsilon : set tolerance of termination criterion\n"
-	"	-s 0 and 2\n" 
-	"		|f'(w)|_2 <= eps*min(pos,neg)/l*|f'(w0)|_2,\n" 
-	"		where f is the primal function and pos/neg are # of\n" 
+	"	-s 0 and 2\n"
+	"		|f'(w)|_2 <= eps*min(pos,neg)/l*|f'(w0)|_2,\n"
+	"		where f is the primal function and pos/neg are # of\n"
 	"		positive/negative data (default 0.01)\n"
 	"	-s 11\n"
-	"		|f'(w)|_2 <= eps*|f'(w0)|_2 (default 0.001)\n" 
+	"		|f'(w)|_2 <= eps*|f'(w0)|_2 (default 0.001)\n"
 	"	-s 1, 3, 4, and 7\n"
 	"		Dual maximal violation <= eps; similar to libsvm (default 0.1)\n"
 	"	-s 5 and 6\n"
@@ -47,6 +50,8 @@ void exit_with_help()
 	"-B bias : if bias >= 0, instance x becomes [x; bias]; if < 0, no bias term added (default -1)\n"
 	"-wi weight: weights adjust the parameter C of different classes (see README for details)\n"
 	"-v n: n-fold cross validation mode\n"
+	"-C : find parameter C (only for -s 0 and 2)\n"
+	"-n nr_thread : parallel version with [nr_thread] threads (default 1; only for -s 0, 1, 2, 3, 11)\n"
 	"-q : quiet mode (no outputs)\n"
 	);
 	exit(1);
@@ -64,7 +69,7 @@ static int max_line_len;
 static char* readline(FILE *input)
 {
 	int len;
-	
+
 	if(fgets(line,max_line_len,input) == NULL)
 		return NULL;
 
@@ -82,12 +87,17 @@ static char* readline(FILE *input)
 void parse_command_line(int argc, char **argv, char *input_file_name, char *model_file_name);
 void read_problem(const char *filename);
 void do_cross_validation();
+void do_find_parameter_C();
 
 struct feature_node *x_space;
 struct parameter param;
 struct problem prob;
 struct model* model_;
 int flag_cross_validation;
+int flag_find_C;
+int flag_omp;
+int flag_C_specified;
+int flag_solver_specified;
 int nr_fold;
 double bias;
 
@@ -107,7 +117,11 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	if(flag_cross_validation)
+	if (flag_find_C)
+	{
+		do_find_parameter_C();
+	}
+	else if(flag_cross_validation)
 	{
 		do_cross_validation();
 	}
@@ -130,6 +144,19 @@ int main(int argc, char **argv)
 	return 0;
 }
 
+void do_find_parameter_C()
+{
+	double start_C, best_C, best_rate;
+	double max_C = 1024;
+	if (flag_C_specified)
+		start_C = param.C;
+	else
+		start_C = -1.0;
+	printf("Doing parameter search with %d-fold cross validation.\n", nr_fold);
+	find_parameter_C(&prob, &param, nr_fold, start_C, max_C, &best_C, &best_rate);
+	printf("Best C = %g  CV accuracy = %g%%\n", best_C, 100.0*best_rate);
+}
+
 void do_cross_validation()
 {
 	int i;
@@ -139,26 +166,26 @@ void do_cross_validation()
 	double *target = Malloc(double, prob.l);
 
 	cross_validation(&prob,&param,nr_fold,target);
-	if(param.solver_type == L2R_L2LOSS_SVR || 
-	   param.solver_type == L2R_L1LOSS_SVR_DUAL || 
+	if(param.solver_type == L2R_L2LOSS_SVR ||
+	   param.solver_type == L2R_L1LOSS_SVR_DUAL ||
 	   param.solver_type == L2R_L2LOSS_SVR_DUAL)
 	{
 		for(i=0;i<prob.l;i++)
-                {
-                        double y = prob.y[i];
-                        double v = target[i];
-                        total_error += (v-y)*(v-y);
-                        sumv += v;
-                        sumy += y;
-                        sumvv += v*v;
-                        sumyy += y*y;
-                        sumvy += v*y;
-                }
-                printf("Cross Validation Mean squared error = %g\n",total_error/prob.l);
-                printf("Cross Validation Squared correlation coefficient = %g\n",
-                        ((prob.l*sumvy-sumv*sumy)*(prob.l*sumvy-sumv*sumy))/
-                        ((prob.l*sumvv-sumv*sumv)*(prob.l*sumyy-sumy*sumy))
-                        );
+		{
+			double y = prob.y[i];
+			double v = target[i];
+			total_error += (v-y)*(v-y);
+			sumv += v;
+			sumy += y;
+			sumvv += v*v;
+			sumyy += y*y;
+			sumvy += v*y;
+		}
+		printf("Cross Validation Mean squared error = %g\n",total_error/prob.l);
+		printf("Cross Validation Squared correlation coefficient = %g\n",
+				((prob.l*sumvy-sumv*sumy)*(prob.l*sumvy-sumv*sumy))/
+				((prob.l*sumvv-sumv*sumv)*(prob.l*sumyy-sumy*sumy))
+			  );
 	}
 	else
 	{
@@ -181,10 +208,16 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 	param.C = 1;
 	param.eps = INF; // see setting below
 	param.p = 0.1;
+	param.nr_thread = 1;
 	param.nr_weight = 0;
 	param.weight_label = NULL;
 	param.weight = NULL;
+	param.init_sol = NULL;
 	flag_cross_validation = 0;
+	flag_C_specified = 0;
+	flag_solver_specified = 0;
+	flag_find_C = 0;
+	flag_omp = 0;
 	bias = -1;
 
 	// parse options
@@ -197,10 +230,12 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 		{
 			case 's':
 				param.solver_type = atoi(argv[i]);
+				flag_solver_specified = 1;
 				break;
 
 			case 'c':
 				param.C = atof(argv[i]);
+				flag_C_specified = 1;
 				break;
 
 			case 'p':
@@ -213,6 +248,11 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 
 			case 'B':
 				bias = atof(argv[i]);
+				break;
+
+			case 'n':
+				flag_omp = 1;
+				param.nr_thread = atoi(argv[i]);
 				break;
 
 			case 'w':
@@ -235,6 +275,11 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 
 			case 'q':
 				print_func = &print_null;
+				i--;
+				break;
+
+			case 'C':
+				flag_find_C = 1;
 				i--;
 				break;
 
@@ -265,24 +310,79 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 		sprintf(model_file_name,"%s.model",p);
 	}
 
+	// default solver for parameter selection is L2R_L2LOSS_SVC
+	if(flag_find_C)
+	{
+		if(!flag_cross_validation)
+			nr_fold = 5;
+		if(!flag_solver_specified)
+		{
+			fprintf(stderr, "Solver not specified. Using -s 2\n");
+			param.solver_type = L2R_L2LOSS_SVC;
+		}
+		else if(param.solver_type != L2R_LR && param.solver_type != L2R_L2LOSS_SVC)
+		{
+			fprintf(stderr, "Warm-start parameter search only available for -s 0 and -s 2\n");
+			exit_with_help();
+		}
+	}
+
+	//default solver for parallel execution is L2R_L2LOSS_SVC
+	if(flag_omp)
+	{
+		if(!flag_solver_specified)
+		{
+			fprintf(stderr, "Solver not specified. Using -s 2\n");
+			param.solver_type = L2R_L2LOSS_SVC;
+		}
+		else if(param.solver_type != L2R_LR &&
+			param.solver_type != L2R_L2LOSS_SVC &&
+			param.solver_type != L2R_L2LOSS_SVR &&
+			param.solver_type != L2R_L1LOSS_SVC_DUAL &&
+			param.solver_type != L2R_L2LOSS_SVC_DUAL)
+		{
+			fprintf(stderr, "Parallel LIBLINEAR is only available for -s 0, 1, 2, 3, 11 now\n");
+			exit_with_help();
+		}
+#ifndef CV_OMP
+		printf("Total threads used: %d\n", param.nr_thread);
+#endif
+	}
+#ifdef CV_OMP
+	if(flag_cross_validation)
+	{
+		int cvthreads = nr_fold;
+		int maxthreads = omp_get_num_procs();
+		if(flag_omp)
+		{
+			omp_set_nested(1);
+			maxthreads = omp_get_num_procs()/param.nr_thread;
+		}
+		if(cvthreads > maxthreads)
+			cvthreads = maxthreads;
+		omp_set_num_threads(cvthreads);
+		printf("Total threads used: %d\n", cvthreads*param.nr_thread);
+	}
+#endif
+
 	if(param.eps == INF)
 	{
 		switch(param.solver_type)
 		{
-			case L2R_LR: 
+			case L2R_LR:
 			case L2R_L2LOSS_SVC:
 				param.eps = 0.01;
 				break;
 			case L2R_L2LOSS_SVR:
 				param.eps = 0.001;
 				break;
-			case L2R_L2LOSS_SVC_DUAL: 
-			case L2R_L1LOSS_SVC_DUAL: 
-			case MCSVM_CS: 
-			case L2R_LR_DUAL: 
+			case L2R_L2LOSS_SVC_DUAL:
+			case L2R_L1LOSS_SVC_DUAL:
+			case MCSVM_CS:
+			case L2R_LR_DUAL:
 				param.eps = 0.1;
 				break;
-			case L1R_L2LOSS_SVC: 
+			case L1R_L2LOSS_SVC:
 			case L1R_LR:
 				param.eps = 0.01;
 				break;
@@ -298,7 +398,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 void read_problem(const char *filename)
 {
 	int max_index, inst_max_index, i;
-	long int elements, j;
+	size_t elements, j;
 	FILE *fp = fopen(filename,"r");
 	char *endptr;
 	char *idx, *val, *label;
@@ -387,7 +487,7 @@ void read_problem(const char *filename)
 	{
 		prob.n=max_index+1;
 		for(i=1;i<prob.l;i++)
-			(prob.x[i]-2)->index = prob.n; 
+			(prob.x[i]-2)->index = prob.n;
 		x_space[j-2].index = prob.n;
 	}
 	else

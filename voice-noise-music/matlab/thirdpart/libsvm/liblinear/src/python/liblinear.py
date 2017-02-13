@@ -2,29 +2,41 @@
 
 from ctypes import *
 from ctypes.util import find_library
+from os import path
 import sys
-import os
 
-# For unix the prefix 'lib' is not considered.
-if find_library('linear'):
-	liblinear = CDLL(find_library('linear'))
-elif find_library('liblinear'):
-	liblinear = CDLL(find_library('liblinear'))
-else:
+__all__ = ['liblinear', 'feature_node', 'gen_feature_nodearray', 'problem',
+           'parameter', 'model', 'toPyModel', 'L2R_LR', 'L2R_L2LOSS_SVC_DUAL',
+           'L2R_L2LOSS_SVC', 'L2R_L1LOSS_SVC_DUAL', 'MCSVM_CS', 
+           'L1R_L2LOSS_SVC', 'L1R_LR', 'L2R_LR_DUAL', 'L2R_L2LOSS_SVR', 
+           'L2R_L2LOSS_SVR_DUAL', 'L2R_L1LOSS_SVR_DUAL', 'print_null']
+
+try:
+	dirname = path.dirname(path.abspath(__file__))
 	if sys.platform == 'win32':
-		liblinear = CDLL(os.path.join(os.path.dirname(__file__),\
-				'../windows/liblinear.dll'))
+		liblinear = CDLL(path.join(dirname, r'..\windows\liblinear.dll'))
 	else:
-		liblinear = CDLL(os.path.join(os.path.dirname(__file__),\
-				'../liblinear.so.1'))
+		liblinear = CDLL(path.join(dirname, '../liblinear.so.3'))
+except:
+# For unix the prefix 'lib' is not considered.
+	if find_library('linear'):
+		liblinear = CDLL(find_library('linear'))
+	elif find_library('liblinear'):
+		liblinear = CDLL(find_library('liblinear'))
+	else:
+		raise Exception('LIBLINEAR library not found.')
 
-# Construct constants
-SOLVER_TYPE = ['L2R_LR', 'L2R_L2LOSS_SVC_DUAL', 'L2R_L2LOSS_SVC', 'L2R_L1LOSS_SVC_DUAL',\
-		'MCSVM_CS', 'L1R_L2LOSS_SVC', 'L1R_LR', 'L2R_LR_DUAL', \
-		None, None, None, \
-		'L2R_L2LOSS_SVR', 'L2R_L2LOSS_SVR_DUAL', 'L2R_L1LOSS_SVR_DUAL']
-for i, s in enumerate(SOLVER_TYPE): 
-	if s is not None: exec("%s = %d" % (s , i))
+L2R_LR = 0
+L2R_L2LOSS_SVC_DUAL = 1 
+L2R_L2LOSS_SVC = 2 
+L2R_L1LOSS_SVC_DUAL = 3
+MCSVM_CS = 4 
+L1R_L2LOSS_SVC = 5 
+L1R_LR = 6 
+L2R_LR_DUAL = 7  
+L2R_L2LOSS_SVR = 11
+L2R_L2LOSS_SVR_DUAL = 12
+L2R_L1LOSS_SVR_DUAL = 13
 
 PRINT_STRING_FUN = CFUNCTYPE(None, c_char_p)
 def print_null(s): 
@@ -41,6 +53,9 @@ class feature_node(Structure):
 	_names = ["index", "value"]
 	_types = [c_int, c_double]
 	_fields_ = genFields(_names, _types)
+
+	def __str__(self):
+		return '%d:%g' % (self.index, self.value)
 
 def gen_feature_nodearray(xi, feature_max=None, issparse=True):
 	if isinstance(xi, dict):
@@ -112,8 +127,8 @@ class problem(Structure):
 
 
 class parameter(Structure):
-	_names = ["solver_type", "eps", "C", "nr_weight", "weight_label", "weight", "p"]
-	_types = [c_int, c_double, c_double, c_int, POINTER(c_int), POINTER(c_double), c_double]
+	_names = ["solver_type", "eps", "C", "nr_thread", "nr_weight", "weight_label", "weight", "p", "init_sol"]
+	_types = [c_int, c_double, c_double, c_int, c_int, POINTER(c_int), POINTER(c_double), c_double, POINTER(c_double)]
 	_fields_ = genFields(_names, _types)
 
 	def __init__(self, options = None):
@@ -121,27 +136,42 @@ class parameter(Structure):
 			options = ''
 		self.parse_options(options)
 
-	def show(self):
-		attrs = parameter._names + self.__dict__.keys()
+	def __str__(self):
+		s = ''
+		attrs = parameter._names + list(self.__dict__.keys())
 		values = map(lambda attr: getattr(self, attr), attrs) 
 		for attr, val in zip(attrs, values):
-			print(' %s: %s' % (attr, val))
+			s += (' %s: %s\n' % (attr, val))
+		s = s.strip()
+
+		return s
 
 	def set_to_default_values(self):
 		self.solver_type = L2R_L2LOSS_SVC_DUAL
 		self.eps = float('inf')
 		self.C = 1
 		self.p = 0.1
+		self.nr_thread = 1
 		self.nr_weight = 0
-		self.weight_label = (c_int * 0)()
-		self.weight = (c_double * 0)()
+		self.weight_label = None
+		self.weight = None
+		self.init_sol = None
 		self.bias = -1
-		self.cross_validation = False
+		self.flag_cross_validation = False
+		self.flag_C_specified = False
+		self.flag_solver_specified = False
+		self.flag_find_C = False
+		self.flag_omp = False
 		self.nr_fold = 0
-		self.print_func = None
+		self.print_func = cast(None, PRINT_STRING_FUN)
 
 	def parse_options(self, options):
-		argv = options.split()
+		if isinstance(options, list):
+			argv = options
+		elif isinstance(options, str):
+			argv = options.split()
+		else:
+			raise TypeError("arg 1 should be a list or a str.")
 		self.set_to_default_values()
 		self.print_func = cast(None, PRINT_STRING_FUN)
 		weight_label = []
@@ -152,9 +182,11 @@ class parameter(Structure):
 			if argv[i] == "-s":
 				i = i + 1
 				self.solver_type = int(argv[i])
+				self.flag_solver_specified = True
 			elif argv[i] == "-c":
 				i = i + 1
 				self.C = float(argv[i])
+				self.flag_C_specified = True
 			elif argv[i] == "-p":
 				i = i + 1
 				self.p = float(argv[i])
@@ -166,18 +198,24 @@ class parameter(Structure):
 				self.bias = float(argv[i])
 			elif argv[i] == "-v":
 				i = i + 1
-				self.cross_validation = 1
+				self.flag_cross_validation = 1
 				self.nr_fold = int(argv[i])
 				if self.nr_fold < 2 :
 					raise ValueError("n-fold cross validation: n must >= 2")
+			elif argv[i] == "-n":
+				i = i + 1
+				self.flag_omp = True
+				self.nr_thread = int(argv[i])
 			elif argv[i].startswith("-w"):
 				i = i + 1
 				self.nr_weight += 1
-				nr_weight = self.nr_weight
 				weight_label += [int(argv[i-1][2:])]
 				weight += [float(argv[i])]
 			elif argv[i] == "-q":
 				self.print_func = PRINT_STRING_FUN(print_null)
+			elif argv[i] == "-C":
+				self.flag_find_C = True
+
 			else :
 				raise ValueError("Wrong options")
 			i += 1
@@ -189,6 +227,22 @@ class parameter(Structure):
 			self.weight[i] = weight[i]
 			self.weight_label[i] = weight_label[i]
 
+		# default solver for parameter selection is L2R_L2LOSS_SVC
+		if self.flag_find_C:
+			if not self.flag_cross_validation:
+				self.nr_fold = 5
+			if not self.flag_solver_specified:
+				self.solver_type = L2R_L2LOSS_SVC
+				self.flag_solver_specified = True
+			elif self.solver_type not in [L2R_LR, L2R_L2LOSS_SVC]:
+				raise ValueError("Warm-start parameter search only available for -s 0 and -s 2")
+		if self.flag_omp:
+			if not self.flag_solver_specified:
+				self.solver_type = L2R_L2LOSS_SVC
+				self.flag_solver_specified = True
+			elif self.solver_type not in [L2R_LR, L2R_L2LOSS_SVC, L2R_L2LOSS_SVR, L2R_L2LOSS_SVC_DUAL, L2R_L1LOSS_SVC_DUAL]:
+				raise ValueError("Parallel LIBLINEAR is only available for -s 0, 1, 2, 3, 11 now")
+	
 		if self.eps == float('inf'):
 			if self.solver_type in [L2R_LR, L2R_L2LOSS_SVC]:
 				self.eps = 0.01
@@ -226,8 +280,22 @@ class model(Structure):
 		liblinear.get_labels(self, labels)
 		return labels[:nr_class]
 
+	def get_decfun_coef(self, feat_idx, label_idx=0):
+		return liblinear.get_decfun_coef(self, feat_idx, label_idx)
+
+	def get_decfun_bias(self, label_idx=0):
+		return liblinear.get_decfun_bias(self, label_idx)
+
+	def get_decfun(self, label_idx=0):
+		w = [liblinear.get_decfun_coef(self, feat_idx, label_idx) for feat_idx in range(1, self.nr_feature+1)]
+		b = liblinear.get_decfun_bias(self, label_idx)
+		return (w, b)
+
 	def is_probability_model(self):
 		return (liblinear.check_probability_model(self) == 1)
+
+	def is_regression_model(self):
+		return (liblinear.check_regression_model(self) == 1)
 
 def toPyModel(model_ptr):
 	"""
@@ -242,6 +310,7 @@ def toPyModel(model_ptr):
 	return m
 
 fillprototype(liblinear.train, POINTER(model), [POINTER(problem), POINTER(parameter)])
+fillprototype(liblinear.find_parameter_C, None, [POINTER(problem), POINTER(parameter), c_int, c_double, c_double, POINTER(c_double), POINTER(c_double)])
 fillprototype(liblinear.cross_validation, None, [POINTER(problem), POINTER(parameter), c_int, POINTER(c_double)])
 
 fillprototype(liblinear.predict_values, c_double, [POINTER(model), POINTER(feature_node), POINTER(c_double)])
@@ -254,12 +323,13 @@ fillprototype(liblinear.load_model, POINTER(model), [c_char_p])
 fillprototype(liblinear.get_nr_feature, c_int, [POINTER(model)])
 fillprototype(liblinear.get_nr_class, c_int, [POINTER(model)])
 fillprototype(liblinear.get_labels, None, [POINTER(model), POINTER(c_int)])
+fillprototype(liblinear.get_decfun_coef, c_double, [POINTER(model), c_int, c_int])
+fillprototype(liblinear.get_decfun_bias, c_double, [POINTER(model), c_int])
 
 fillprototype(liblinear.free_model_content, None, [POINTER(model)])
 fillprototype(liblinear.free_and_destroy_model, None, [POINTER(POINTER(model))])
 fillprototype(liblinear.destroy_param, None, [POINTER(parameter)])
 fillprototype(liblinear.check_parameter, c_char_p, [POINTER(problem), POINTER(parameter)])
 fillprototype(liblinear.check_probability_model, c_int, [POINTER(model)])
+fillprototype(liblinear.check_regression_model, c_int, [POINTER(model)])
 fillprototype(liblinear.set_print_string_function, None, [CFUNCTYPE(None, c_char_p)])
-
-
