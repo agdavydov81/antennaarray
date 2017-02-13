@@ -14,11 +14,20 @@ try
 	else
 		mex CFLAGS="\$CFLAGS -std=c99" -largeArrayDims liblinearsvmread.c
 		mex CFLAGS="\$CFLAGS -std=c99" -largeArrayDims liblinearsvmwrite.c
-		mex CFLAGS="\$CFLAGS -std=c99 -fopenmp" CXXFLAGS="\$CXXFLAGS -fopenmp" -I.. -largeArrayDims -lgomp liblineartrain.c linear_model_matlab.c ../linear.cpp ../tron.cpp ../blas/daxpy.c ../blas/ddot.c ../blas/dnrm2.c ../blas/dscal.c
-		mex CFLAGS="\$CFLAGS -std=c99" CXXFLAGS="\$CXXFLAGS -fopenmp" -I.. -largeArrayDims -lgomp liblinearpredict.c linear_model_matlab.c ../linear.cpp ../tron.cpp ../blas/daxpy.c ../blas/ddot.c ../blas/dnrm2.c ../blas/dscal.c
+		comp_conf = mex.getCompilerConfigurations('c++');
+		if strcmpi(comp_conf.Manufacturer,'Microsoft')
+			meX CFLAGS="\$CFLAGS -std=c99" COMPFLAGS="/openmp $COMPFLAGS" -I.. -largeArrayDims liblineartrain.c linear_model_matlab.c ../linear.cpp ../tron.cpp ../blas/daxpy.c ../blas/ddot.c ../blas/dnrm2.c ../blas/dscal.c
+			meX CFLAGS="\$CFLAGS -std=c99" COMPFLAGS="/openmp $COMPFLAGS" -I.. -largeArrayDims liblinearpredict.c linear_model_matlab.c ../linear.cpp ../tron.cpp ../blas/daxpy.c ../blas/ddot.c ../blas/dnrm2.c ../blas/dscal.c
+		else
+			meX CFLAGS="\$CFLAGS -std=c99 -fopenmp" CXXFLAGS="\$CXXFLAGS -fopenmp" -I.. -largeArrayDims -lgomp liblineartrain.c linear_model_matlab.c ../linear.cpp ../tron.cpp ../blas/daxpy.c ../blas/ddot.c ../blas/dnrm2.c ../blas/dscal.c
+			meX CFLAGS="\$CFLAGS -std=c99" CXXFLAGS="\$CXXFLAGS -fopenmp" -I.. -largeArrayDims -lgomp liblinearpredict.c linear_model_matlab.c ../linear.cpp ../tron.cpp ../blas/daxpy.c ../blas/ddot.c ../blas/dnrm2.c ../blas/dscal.c
+		end
 	end
 catch err
 	fprintf('Error: %s failed (line %d)\n', err.stack(1).file, err.stack(1).line);
 	disp(err.message);
 	fprintf('=> Please check README for detailed instructions.\n');
 end
+
+function meX(varargin)
+	mex(varargin{:});
