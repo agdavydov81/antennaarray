@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include "svm.h"
+#include <math.h>
 
 #include "mex.h"
 #include "svm_model_matlab.h"
@@ -67,14 +68,24 @@ void exit_with_help()
 	);
 }
 
-double do_cross_validation(double *target, struct svm_train_stat *stat_ret)
+struct cross_validation_result
+{
+	double svc_accuracy;
+	double svr_mse;
+	double svr_scc;
+};
+
+struct cross_validation_result do_cross_validation(double *target, struct svm_train_stat *stat_ret)
 {
 	int i;
 	int total_correct = 0;
 	double total_error = 0;
 	double sumv = 0, sumy = 0, sumvv = 0, sumyy = 0, sumvy = 0;
 //	double *target = Malloc(double,prob.l);
-	double retval = 0.0;
+	struct cross_validation_result retval;
+	retval.svc_accuracy = sqrt(-1);
+	retval.svr_mse = sqrt(-1);;
+	retval.svr_scc = sqrt(-1);
 
 	svm_cross_validation(&prob,&param,stat_ret,nr_fold,target);
 
@@ -93,24 +104,27 @@ double do_cross_validation(double *target, struct svm_train_stat *stat_ret)
 			sumyy += y*y;
 			sumvy += v*y;
 		}
+
+		retval.svr_mse = total_error/prob.l;
+		retval.svr_scc = ((prob.l*sumvy-sumv*sumy)*(prob.l*sumvy-sumv*sumy))/
+						 ((prob.l*sumvv-sumv*sumv)*(prob.l*sumyy-sumy*sumy));
+
 		if(param.printf_output)
 		{
-			printf("Cross Validation Mean squared error = %g\n",total_error/prob.l);
-			printf("Cross Validation Squared correlation coefficient = %g\n",
-			((prob.l*sumvy-sumv*sumy)*(prob.l*sumvy-sumv*sumy))/
-			((prob.l*sumvv-sumv*sumv)*(prob.l*sumyy-sumy*sumy))
-			);
+			printf("Cross Validation Mean squared error = %g\n",retval.svr_mse);
+			printf("Cross Validation Squared correlation coefficient = %g\n",retval.svr_scc);
 		}
-		retval = total_error/prob.l;
 	}
 	else
 	{
 		for(i=0;i<prob.l;i++)
 			if(target[i] == prob.y[i])
 				++total_correct;
+
+		retval.svc_accuracy = 100.0*total_correct/prob.l;
+
 		if(param.printf_output)
-			printf("Cross Validation Accuracy = %g%%\n",100.0*total_correct/prob.l);
-		retval = 100.0*total_correct/prob.l;
+			printf("Cross Validation Accuracy = %g%%\n",retval.svc_accuracy);
 	}
 //	free(target);
 	return retval;
@@ -535,11 +549,17 @@ void mexFunction( int nlhs, mxArray *plhs[],
 		{
 			double *ptr;
 			struct svm_train_stat stat_ret;
+			struct cross_validation_result ret_cv;
 			plhs[0] = mxCreateDoubleMatrix(prob.l /*1*/, 1, mxREAL);
 			ptr = mxGetPr(plhs[0]);
-			/*ptr[0] = */do_cross_validation(ptr, &stat_ret);
-			if (nlhs>1)
+			ret_cv = do_cross_validation(ptr, &stat_ret);
+			if (nlhs>1) {
 				plhs[1] = svm_train_stat_2_matlab(&stat_ret);
+
+				fill_field(plhs[1], "CvSvcAccuracy", ret_cv.svc_accuracy);
+				fill_field(plhs[1], "CvSvrMse", ret_cv.svr_mse);
+				fill_field(plhs[1], "CvSvrScc", ret_cv.svr_scc);
+			}
 		}
 		else
 		{
