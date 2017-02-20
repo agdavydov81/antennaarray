@@ -54,7 +54,8 @@ static inline double powi(double base, int times)
 	}
 	return ret;
 }
-#define INF (std::numeric_limits<double>::infinity())
+
+#define INF (std::numeric_limits<double>::max())
 #define TAU 1e-12
 #define Malloc(type,n) (type *)malloc((n)*sizeof(type))
 
@@ -2916,7 +2917,7 @@ int svm_save_model(const char *model_file_name, const svm_model *model)
 //char *line = NULL;
 //int max_line_len;
 
-static char* readline(FILE *input, std::vector<char> line)
+static char* readline(FILE *input, std::vector<char> &line)
 {
 	int len;
 
