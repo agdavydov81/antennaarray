@@ -22,7 +22,7 @@ function varargout = ir_setup_thresholds(varargin)
 
 % Edit the above text to modify the response to help ir_setup_thresholds
 
-% Last Modified by GUIDE v2.5 29-May-2015 03:23:07
+% Last Modified by GUIDE v2.5 15-Jun-2017 13:48:59
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -107,6 +107,7 @@ set(handles.report_graph_time,			'String', num2str(cfg.thresholds.report_graph_t
 set(handles.debug_messages,				'Value',  cfg.debug_messages);
 set(handles.debug_msgbox,				'Value',  cfg.debug_msgbox);
 set(handles.debug_saveframes,			'Value',  cfg.debug_saveframes);
+set(handles.debug_ignore_emi,			'Value',  cfg.debug_ignore_emi);
 handles.password_string = cfg.password;
 
 
@@ -138,6 +139,7 @@ if handles.press_ok
 	cfg.debug_messages =						get(handles.debug_messages,'Value');
 	cfg.debug_msgbox =							get(handles.debug_msgbox,'Value');
 	cfg.debug_saveframes =						get(handles.debug_saveframes,'Value');
+	cfg.debug_ignore_emi =						get(handles.debug_ignore_emi,'Value');
 	cfg.password =								handles.password_string;
 end
 
@@ -245,5 +247,3 @@ function reset_btn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 handles = set_controls(handles, struct_merge(handles.config_default));
 guidata(hObject, handles);
-
-

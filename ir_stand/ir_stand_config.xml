@@ -101,5 +101,6 @@
    <debug_messages>0</debug_messages>
    <debug_msgbox>0</debug_msgbox>
    <debug_saveframes>0</debug_saveframes>
+   <debug_ignore_emi>1</debug_ignore_emi>
    <password/>
 </ir_stand>
