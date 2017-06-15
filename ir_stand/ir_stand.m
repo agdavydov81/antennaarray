@@ -567,7 +567,7 @@ catch
 end
 
 % Find video recorder
-video_devices = imaqhwinfo('winvideo');
+video_devices = imaqhwinfo('fleximaq');
 cur_cam = find(strcmp(handles.config.video_device.name, {video_devices.DeviceInfo.DeviceName}),1);
 if isempty(cur_cam)
 	msgbox_my(handles, ['Не обнаружено видео устройство "' handles.config.video_device.name '".'], 'Ошибка видео', 'error', 'modal');
@@ -575,7 +575,7 @@ if isempty(cur_cam)
 end
 
 % Start video recorder
-handles.video.vidobj = videoinput('winvideo',video_devices.DeviceIDs{cur_cam}, handles.config.video_device.mode);
+handles.video.vidobj = videoinput('fleximaq',video_devices.DeviceIDs{cur_cam}, handles.config.video_device.mode);
 set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
 try
@@ -776,11 +776,11 @@ try
 	state_emi_ud.tic_id = tic();
 	state_emi_ud.comment = handles.config.emi_generator.program_comment{handles.config.emi_generator.continue_index};
 
-	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
+	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::2391::7937::MY56200318::0::INSTR', 'Tag', '');
 	% Create the VISA-USB object if it does not exist
 	% otherwise use the object that was found.
 	if isempty(obj1)
-		obj1 = visa('AGILENT', 'USB0::0x0957::0x1F01::my51350313::0::INSTR');
+		obj1 = visa('AGILENT', 'USB0::2391::7937::MY56200318::0::INSTR');
 	else
 		fclose(obj1);
 		obj1 = obj1(1);
@@ -824,11 +824,11 @@ try
 	end
 
 	%% USB Connection (VISA)
-	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x0957::0x1F01::my51350313::0::INSTR', 'Tag', '');
+	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::2391::7937::MY56200318::0::INSTR', 'Tag', '');
 	% Create the VISA-USB object if it does not exist
 	% otherwise use the object that was found.
 	if isempty(obj1)
-		obj1 = visa('AGILENT', 'USB0::0x0957::0x1F01::my51350313::0::INSTR');
+		obj1 = visa('AGILENT', 'USB0::2391::7937::MY56200318::0::INSTR');
 	else
 		fclose(obj1);
 		obj1 = obj1(1);
