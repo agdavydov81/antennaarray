@@ -789,11 +789,11 @@ try
 	state_emi_ud.tic_id = tic();
 	state_emi_ud.comment = handles.config.emi_generator.program_comment{handles.config.emi_generator.continue_index};
 
-	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::2391::7937::MY56200318::0::INSTR', 'Tag', '');
+	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', handles.config.emi_generator.visa_name, 'Tag', '');
 	% Create the VISA-USB object if it does not exist
 	% otherwise use the object that was found.
 	if isempty(obj1)
-		obj1 = visa('AGILENT', 'USB0::2391::7937::MY56200318::0::INSTR');
+		obj1 = visa('AGILENT', handles.config.emi_generator.visa_name);
 	else
 		fclose(obj1);
 		obj1 = obj1(1);
@@ -841,11 +841,11 @@ try
 	end
 
 	%% USB Connection (VISA)
-	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::2391::7937::MY56200318::0::INSTR', 'Tag', '');
+	obj1 = instrfind('Type', 'visa-usb', 'RsrcName', handles.config.emi_generator.visa_name, 'Tag', '');
 	% Create the VISA-USB object if it does not exist
 	% otherwise use the object that was found.
 	if isempty(obj1)
-		obj1 = visa('AGILENT', 'USB0::2391::7937::MY56200318::0::INSTR');
+		obj1 = visa('AGILENT', handles.config.emi_generator.visa_name);
 	else
 		fclose(obj1);
 		obj1 = obj1(1);

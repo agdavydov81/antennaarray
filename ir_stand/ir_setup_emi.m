@@ -74,7 +74,7 @@ end
 tbl_cf = get(handles.emi_program_tbl,'ColumnFormat');
 handles.config0.emi_generator = struct(	'program_list',nan(1,sum(strcmp('numeric',tbl_cf))), 'program_comment',{{''}}, ...
 										'startpoint_type',1, 'continue_index',1, 'continue_counter',1, ...
-										'start_index',1, 'start_counter',1, 'restart_list',1);
+										'start_index',1, 'start_counter',1, 'restart_list',1, 'visa_name','USB0::2391::7937::MY56200318::0::INSTR');
 handles.config = cfg;
 handles.config_default = cfg_def;
 
@@ -108,6 +108,7 @@ set(handles.start_counter_ed,'String', num2str(cfg.emi_generator.start_counter))
 uipanel3_SelectionChangeFcn([], [], handles);
 set(handles.restart_list_1, 'Value', ~cfg.emi_generator.restart_list);
 set(handles.restart_list_2, 'Value', cfg.emi_generator.restart_list);
+set(handles.visa_name, 'String', cfg.emi_generator.visa_name);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -129,6 +130,7 @@ if handles.press_ok
 	cfg.emi_generator.start_index = str2double(get(handles.start_index_ed,'String'));
 	cfg.emi_generator.start_counter = str2double(get(handles.start_counter_ed,'String'));
 	cfg.emi_generator.restart_list = get(handles.restart_list_2, 'Value');
+	cfg.emi_generator.visa_name = get(handles.visa_name, 'String');
 end
 
 varargout{1} = cfg;
