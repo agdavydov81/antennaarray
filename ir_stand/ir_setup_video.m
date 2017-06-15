@@ -87,13 +87,19 @@ end
 handles.video.devices.DeviceInfo = [];
 handles.video.devices.DeviceIDs = {};
 for ai = 1:numel(adaptors.InstalledAdaptors)
-	devices = imaqhwinfo(adaptors.InstalledAdaptors{ai});
-	for di = 1:numel(devices.DeviceInfo)
-		devices.DeviceInfo(di).Adaptor = adaptors.InstalledAdaptors{ai};
-		devices.DeviceInfo(di).DeviceName = strcat(adaptors.InstalledAdaptors{ai}, '#', devices.DeviceInfo(di).DeviceName);
+	devices_in = imaqhwinfo(adaptors.InstalledAdaptors{ai});
+	devices = struct('DeviceInfo',{{}}, 'DeviceIDs',{{}});
+	for di = 1:numel(devices_in.DeviceInfo)
+		devices.DeviceInfo{di} = struct('Adaptor', adaptors.InstalledAdaptors{ai}, ...
+										'DeviceName', strcat(adaptors.InstalledAdaptors{ai}, '#', devices_in.DeviceInfo(di).DeviceName), ...
+										'SupportedFormats', {devices_in.DeviceInfo(di).SupportedFormats}, ...
+										'DefaultFormat', devices_in.DeviceInfo(di).DefaultFormat);
+		devices.DeviceIDs{di} = devices_in.DeviceIDs{di};
 	end
-	handles.video.devices.DeviceInfo = [handles.video.devices.DeviceInfo devices.DeviceInfo(:)'];
-	handles.video.devices.DeviceIDs = [handles.video.devices.DeviceIDs devices.DeviceIDs(:)'];
+	if ~isempty(devices.DeviceInfo)
+		handles.video.devices.DeviceInfo = [handles.video.devices.DeviceInfo cell2mat(devices.DeviceInfo)];
+		handles.video.devices.DeviceIDs = [handles.video.devices.DeviceIDs devices.DeviceIDs];
+	end
 end
 if isempty(handles.video.devices.DeviceInfo)
 	msgbox('Ќе могу найти устройств дл€ получени€ изображени€.', get(handles.figure1,'Name'), 'error', 'modal');
@@ -117,7 +123,7 @@ set(handles.video_camera, 'Value',handles.video.cur_device);
 %% List modes
 video_modes = handles.video.devices.DeviceInfo(handles.video.cur_device).SupportedFormats;
 set(handles.video_mode, 'String',video_modes);
-handles.video.mode =		handles.video.devices.DeviceInfo(handles.video.cur_device).DefaultFormat;
+handles.video.mode = handles.video.devices.DeviceInfo(handles.video.cur_device).DefaultFormat;
 if not(isempty(cfg.video_device.mode))
 	cur_mode = find(strcmp(cfg.video_device.mode, video_modes),1);
 	if isempty(cur_mode)
@@ -236,8 +242,8 @@ if 0.8*scr_sz(3)<X || 0.8*scr_sz(4)<Y
 	X = round(X/max_div);
 	Y = round(Y/max_div);
 end
-if X<480
-	mul_k = 480/X;
+if X<512
+	mul_k = 512/X;
 	X = round(X*mul_k);
 	Y = round(Y*mul_k);
 end
@@ -247,11 +253,11 @@ set(handles.figure1, 'Units','pixels', 'Position',[(scr_sz(3)-(X+40))/2 (scr_sz(
 set(handles.video_image,		'Units','pixels',	'Position',[10  10 X Y]); %
 set(handles.palette_axes,		'Units','pixels',	'Position',[20+X 10 10 Y]);
 
-set(handles.video_camera,		'Units','pixels',	'Position',[10  Y+110 200 22]);
-set(handles.video_camera_text,	'Units','pixels',	'Position',[215 Y+113 60 16]);
+set(handles.video_camera,		'Units','pixels',	'Position',[10  Y+110 250 22]);
+set(handles.video_camera_text,	'Units','pixels',	'Position',[265 Y+113 60 16]);
 
-set(handles.video_mode,			'Units','pixels',	'Position',[10  Y+80 200 22]);
-set(handles.video_mode_text,	'Units','pixels',	'Position',[215 Y+83 60 16]);
+set(handles.video_mode,			'Units','pixels',	'Position',[10  Y+80 250 22]);
+set(handles.video_mode_text,	'Units','pixels',	'Position',[265 Y+83 60 16]);
 
 set(handles.t_range,			'Units','pixels',	'Position',[10 Y+50 80 22]);
 set(handles.t_range_text,		'Units','pixels',	'Position',[95 Y+53 200 16]);
