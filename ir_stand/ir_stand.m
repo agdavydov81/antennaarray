@@ -379,8 +379,13 @@ if isstruct(config)
 	is_disp = isfield(config,'debug_messages') && config.debug_messages;
 	is_msgbox = isfield(config,'debug_msgbox') && config.debug_msgbox;
 else
-	is_disp = config;
-	is_msgbox = config;
+	if numel(config) > 1
+		is_disp = config(1);
+		is_msgbox = config(2);
+	else
+		is_disp = config;
+		is_msgbox = config;
+	end
 end
 if ~is_disp && ~is_msgbox
 	return
@@ -811,9 +816,13 @@ try
 	%%
 	fclose(obj1);
 catch ME
-	% Всегда отображать такую важную ошибку.
-	disp_exception(handles, true, ME, 'Ошибка генератора ЭМВ');
-	work_abort_btn_Callback(handles.work_abort_btn, [], handles);
+	if isfield(handles.config,'debug_ignore_emi') && handles.config.debug_ignore_emi
+		disp_exception(handles, [true false], ME, 'Ошибка генератора ЭМВ');
+		state_emi_ud = [];
+	else
+		disp_exception(handles, true, ME, 'Ошибка генератора ЭМВ');
+		work_abort_btn_Callback(handles.work_abort_btn, [], handles);
+	end
 end
 
 
@@ -847,7 +856,11 @@ try
 
 	fclose(obj1);
 catch ME
-	disp_exception(handles, handles.config, ME, 'Ошибка остановки генератора ЭМВ');
+	if isfield(handles.config,'debug_ignore_emi') && handles.config.debug_ignore_emi
+		disp_exception(handles, [true false], ME, 'Ошибка остановки генератора ЭМВ');
+	else
+		disp_exception(handles, handles.config, ME, 'Ошибка остановки генератора ЭМВ');
+	end
 end
 
 
