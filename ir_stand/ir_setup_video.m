@@ -22,7 +22,7 @@ function varargout = ir_setup_video(varargin)
 
 % Edit the above text to modify the response to help ir_setup_video
 
-% Last Modified by GUIDE v2.5 11-Nov-2013 19:12:01
+% Last Modified by GUIDE v2.5 15-Jun-2017 14:52:47
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -78,10 +78,29 @@ imagesc(linspace(0,1,1024)', 'Parent',handles.palette_axes);
 set(handles.palette_axes, 'XTick',[], 'YTick',[]);
 axis(handles.palette_axes, 'xy');
 
-handles.video.devices = imaqhwinfo('fleximaq');
-if isempty(handles.video.devices.DeviceInfo)
+%% List Adaptors and Devices
+adaptors = imaqhwinfo();
+if isempty(adaptors.InstalledAdaptors)
+	msgbox('Не могу найти адаптеров для получения изображения.', get(handles.figure1,'Name'), 'error', 'modal');
 	return
 end
+handles.video.devices.DeviceInfo = [];
+handles.video.devices.DeviceIDs = {};
+for ai = 1:numel(adaptors.InstalledAdaptors)
+	devices = imaqhwinfo(adaptors.InstalledAdaptors{ai});
+	for di = 1:numel(devices.DeviceInfo)
+		devices.DeviceInfo(di).Adaptor = adaptors.InstalledAdaptors{ai};
+		devices.DeviceInfo(di).DeviceName = strcat(adaptors.InstalledAdaptors{ai}, '#', devices.DeviceInfo(di).DeviceName);
+	end
+	handles.video.devices.DeviceInfo = [handles.video.devices.DeviceInfo; devices.DeviceInfo];
+	handles.video.devices.DeviceIDs = [handles.video.devices.DeviceIDs; devices.DeviceIDs];
+end
+if isempty(handles.video.devices.DeviceInfo)
+	msgbox('Не могу найти устройств для получения изображения.', get(handles.figure1,'Name'), 'error', 'modal');
+	return
+end
+
+%% Select last adaptor-device combination
 set(handles.video_camera, 'String',{handles.video.devices.DeviceInfo.DeviceName});
 handles.video.cur_device = 1;
 if not(isempty(cfg.video_device.name))
@@ -95,6 +114,7 @@ if not(isempty(cfg.video_device.name))
 end
 set(handles.video_camera, 'Value',handles.video.cur_device);
 
+%% List modes
 video_modes = handles.video.devices.DeviceInfo(handles.video.cur_device).SupportedFormats;
 set(handles.video_mode, 'String',video_modes);
 handles.video.mode =		handles.video.devices.DeviceInfo(handles.video.cur_device).DefaultFormat;
@@ -108,8 +128,8 @@ if not(isempty(cfg.video_device.mode))
 end
 set(handles.video_mode, 'Value',find(strcmp(handles.video.mode,video_modes),1));
 
-handles.video.cam_info =	imaqhwinfo('fleximaq',handles.video.devices.DeviceIDs{handles.video.cur_device});
-handles.video.vidobj =		videoinput('fleximaq',handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
+handles.video.cam_info =	imaqhwinfo(handles.video.devices.DeviceInfo(handles.video.cur_device).Adaptor, handles.video.devices.DeviceIDs{handles.video.cur_device});
+handles.video.vidobj =		videoinput(handles.video.devices.DeviceInfo(handles.video.cur_device).Adaptor, handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
 set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
 try
@@ -304,14 +324,14 @@ stop(handles.video.vidobj);
 delete(handles.video.vidobj);
 
 handles.video.cur_device=get(hObject,'Value');
-handles.video.cam_info=imaqhwinfo('fleximaq',handles.video.devices.DeviceIDs{handles.video.cur_device});
+handles.video.cam_info = imaqhwinfo(handles.video.devices.DeviceInfo(handles.video.cur_device).Adaptor, handles.video.devices.DeviceIDs{handles.video.cur_device});
 
 video_modes = handles.video.devices.DeviceInfo(handles.video.cur_device).SupportedFormats;
 set(handles.video_mode, 'String',video_modes);
 handles.video.mode = handles.video.devices.DeviceInfo(handles.video.cur_device).DefaultFormat;
 set(handles.video_mode, 'Value',find(strcmp(handles.video.mode,video_modes),1));
 
-handles.video.vidobj = videoinput('fleximaq',handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
+handles.video.vidobj = videoinput(handles.video.devices.DeviceInfo(handles.video.cur_device).Adaptor, handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
 
 set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
@@ -356,7 +376,7 @@ stop(handles.video.vidobj);
 delete(handles.video.vidobj);
 
 handles.video.mode = cur_mode;
-handles.video.vidobj =		videoinput('fleximaq',handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
+handles.video.vidobj = videoinput(handles.video.devices.DeviceInfo(handles.video.cur_device).Adaptor, handles.video.devices.DeviceIDs{handles.video.cur_device}, handles.video.mode);
 
 set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
