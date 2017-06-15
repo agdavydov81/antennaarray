@@ -92,8 +92,8 @@ for ai = 1:numel(adaptors.InstalledAdaptors)
 		devices.DeviceInfo(di).Adaptor = adaptors.InstalledAdaptors{ai};
 		devices.DeviceInfo(di).DeviceName = strcat(adaptors.InstalledAdaptors{ai}, '#', devices.DeviceInfo(di).DeviceName);
 	end
-	handles.video.devices.DeviceInfo = [handles.video.devices.DeviceInfo; devices.DeviceInfo];
-	handles.video.devices.DeviceIDs = [handles.video.devices.DeviceIDs; devices.DeviceIDs];
+	handles.video.devices.DeviceInfo = [handles.video.devices.DeviceInfo devices.DeviceInfo(:)'];
+	handles.video.devices.DeviceIDs = [handles.video.devices.DeviceIDs devices.DeviceIDs(:)'];
 end
 if isempty(handles.video.devices.DeviceInfo)
 	msgbox('Ќе могу найти устройств дл€ получени€ изображени€.', get(handles.figure1,'Name'), 'error', 'modal');
@@ -283,8 +283,12 @@ if isfield(handles,'output')
 
 	cfg = handles.config;
 	if handles.press_ok
-		cfg.video_device.name =		handles.video.cam_info.DeviceName;
-		cfg.video_device.mode =		handles.video.mode;
+		cfg.video_device.name =		get(handles.video_camera, 'String');
+		cfg.video_device.name =		cfg.video_device.name{get(handles.video_camera, 'Value')};
+
+		cfg.video_device.mode =		get(handles.video_mode, 'String');
+		cfg.video_device.mode =		cfg.video_device.mode{get(handles.video_mode, 'Value')};
+
 		cfg.video_device.axis =		axis(handles.video_image);
 
 		cfg.video_device.t_range =	str2num(get(handles.t_range,'String'));

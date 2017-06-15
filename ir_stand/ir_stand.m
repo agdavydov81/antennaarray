@@ -572,15 +572,23 @@ catch
 end
 
 % Find video recorder
-video_devices = imaqhwinfo('fleximaq');
-cur_cam = find(strcmp(handles.config.video_device.name, {video_devices.DeviceInfo.DeviceName}),1);
+split_ind = find(handles.config.video_device.name == '#');
+if numel(split_ind) ~= 1
+	msgbox_my(handles, ['Не могу выделить адаптер для "' handles.config.video_device.name '".'], 'Ошибка видео', 'error', 'modal');
+	return
+end
+adaptor_name = handles.config.video_device.name(1:split_ind-1);
+device_name = handles.config.video_device.name(split_ind+1:end);
+
+video_devices = imaqhwinfo(adaptor_name);
+cur_cam = find(strcmp(device_name, {video_devices.DeviceInfo.DeviceName}),1);
 if isempty(cur_cam)
 	msgbox_my(handles, ['Не обнаружено видео устройство "' handles.config.video_device.name '".'], 'Ошибка видео', 'error', 'modal');
 	return
 end
 
 % Start video recorder
-handles.video.vidobj = videoinput('fleximaq',video_devices.DeviceIDs{cur_cam}, handles.config.video_device.mode);
+handles.video.vidobj = videoinput(adaptor_name,video_devices.DeviceIDs{cur_cam}, handles.config.video_device.mode);
 set(handles.video.vidobj, 'ReturnedColorSpace','rgb');
 triggerconfig(handles.video.vidobj, 'manual');
 try
