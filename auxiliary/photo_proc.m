@@ -78,7 +78,11 @@ function btn_open_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_open (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-	[dlg_name,dlg_path]=uigetfile({'*.jpg','Jpeg files (*.jpg)'},'Выберите файл для обработки');
+	default_name = '';
+	if isfield(handles,'filename')
+		default_name = handles.filename;
+	end
+	[dlg_name,dlg_path]=uigetfile({'*.jpg','Jpeg files (*.jpg)'},'Выберите файл для обработки',default_name);
 	if dlg_name==0
 		return;
 	end
