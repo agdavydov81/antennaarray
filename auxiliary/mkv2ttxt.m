@@ -26,7 +26,7 @@ function mkv2ttxt(target)
 end
 
 function process_directory(root)
-	list = dir(fullfile(root,'*.mkv'));
+	list = [dir(fullfile(root,'*.mkv')); dir(fullfile(root,'*.xml'))];
 	list([list.isdir]) = [];
 	
 	for li = 1:numel(list)
@@ -43,10 +43,15 @@ function process_directory(root)
 end
 
 function process_file(mkv_filename)
-	mkvextract = 'c:\Program Files\MKVToolNix\mkvextract.exe';
+	[mkv_path, mkv_name, mkv_ext] = fileparts(mkv_filename);
+	if strcmpi(mkv_ext,'.mkv')
+		mkvextract = 'c:\Program Files\MKVToolNix\mkvextract.exe';
 
-	tmp_xml = [tempname() '.xml'];
-	[dos_status,dos_cmdout] = dos(['"' mkvextract '" chapters "' mkv_filename '" > "' tmp_xml '"']);
+		tmp_xml = [tempname() '.xml'];
+		[dos_status, dos_cmdout] = dos(['"' mkvextract '" chapters "' mkv_filename '" > "' tmp_xml '"']);
+	else % xml direct processing
+		tmp_xml = mkv_filename;
+	end
 	tmp = dir(tmp_xml);
 	
 	if tmp.bytes > 0
@@ -63,7 +68,7 @@ function process_file(mkv_filename)
 		
 		for ii = 1:numel(chap_xml)
 			time_str = chap_xml(ii).ChapterTimeStart;
-			if all(time_str(end-5:end) == '0')
+			if numel(time_str) == 18 && all(time_str(end-5:end) == '0')
 				time_str(end-5:end) = [];
 			else
 				error('Time spamp parsing error.');
@@ -71,12 +76,13 @@ function process_file(mkv_filename)
 			ttxt.TextSample(ii) = struct('CONTENT',chap_xml(ii).ChapterDisplay.ChapterString, 'ATTRIBUTE',struct('sampleTime',time_str));
 		end
 
-		[mkv_path, mkv_name] = fileparts(mkv_filename);
 		xml_write(fullfile(mkv_path, [mkv_name '_chapters.ttxt']), ttxt, 'TextStream');
 	end
 
 	try
-		delete(tmp_xml);
+		if strcmpi(mkv_ext,'.mkv')
+			delete(tmp_xml);
+		end
 	catch
 	end
 end
