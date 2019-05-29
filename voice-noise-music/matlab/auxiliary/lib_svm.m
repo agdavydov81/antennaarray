@@ -123,6 +123,7 @@ classdef lib_svm
 			autoweight = true;
 			is_svr = nan;
 			autosave_path = '';
+			parforLoop = false;
 			for i = 1:2:length(varargin)
 				if isa(varargin{i},'char')
 					switch lower(varargin{i})
@@ -142,6 +143,8 @@ classdef lib_svm
 							is_svr = varargin{i+1};
 						case 'autosave_path'
 							autosave_path = varargin{i+1};
+						case 'parfor'
+							parforLoop = varargin{i+1};
 					end
 				end
 			end
@@ -153,6 +156,9 @@ classdef lib_svm
 				cl_ind = data_classes;
 			else
 				[cl_ind, ~, obj_classes] = grp2idx(data_classes);
+			end
+			if parforLoop
+				autosave_path = char(0);
 			end
 
 			if autoscale
@@ -187,19 +193,28 @@ classdef lib_svm
 				autosave_list = cell(size(cost,1),1);
 			end
 
-			for i = 1:size(cost,1) % For OpenMP implementation there is no reason in local pool
-				cmd = ['-c ' num2str(cost(i)) ' -g ' num2str(gamma(i)) ' ' opt_arg];
-				command{i} = cmd;
-				libcmd = ['-v ' num2str(fold) ' ' cmd];
-				[predict{i}, train_stat{i}] = libsvmtrain(cl_ind, data, libcmd);
-				if is_autosave
-					pred = predict{i};
-					train_time_stat = train_stat{i};
-					autosave_list{i} = sprintf('%s.step_%d.mat',autosave_prefix,i);
-					save(autosave_list{i}, 'i', 'cl_ind', 'data', 'libcmd', 'pred', 'train_time_stat');
+			if parforLoop
+				parfor i = 1:size(cost,1) % Force parallelization
+					cmd = ['-c ' num2str(cost(i)) ' -g ' num2str(gamma(i)) ' ' opt_arg];
+					command{i} = cmd;
+					libcmd = ['-v ' num2str(fold) ' ' cmd];
+					[predict{i}, train_stat{i}] = libsvmtrain(cl_ind, data, libcmd);
+				end
+			else
+				for i = 1:size(cost,1) % For OpenMP implementation there is no reason in local pool
+					cmd = ['-c ' num2str(cost(i)) ' -g ' num2str(gamma(i)) ' ' opt_arg];
+					command{i} = cmd;
+					libcmd = ['-v ' num2str(fold) ' ' cmd];
+					[predict{i}, train_stat{i}] = libsvmtrain(cl_ind, data, libcmd);
+					if is_autosave
+						pred = predict{i};
+						train_time_stat = train_stat{i};
+						autosave_list{i} = sprintf('%s.step_%d.mat',autosave_prefix,i);
+						save(autosave_list{i}, 'i', 'cl_ind', 'data', 'libcmd', 'pred', 'train_time_stat');
+					end
 				end
 			end
-
+			
 			if ~is_svr
 				predict = cellfun(@(x) obj_classes(x), predict, 'UniformOutput',false);
 			end
