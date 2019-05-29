@@ -250,6 +250,7 @@ classdef lib_svm
 			
 			if isa(ghat,'cell') && strcmp(class(ghat{1}),class(g))
 				conf_mat = cell(size(ghat));
+				conf_mat_norm = cell(size(conf_mat));
 				order = cell(size(ghat));
 
 				accuracy = zeros(size(ghat));
@@ -261,13 +262,13 @@ classdef lib_svm
 
 					cm_sum = sum(conf_mat{ci},2);
 					cm_sum(cm_sum==0) = 1;
-					conf_mat_norm = conf_mat{ci}./repmat(cm_sum,1,length(cm_sum));
+					conf_mat_norm{ci} = conf_mat{ci}./repmat(cm_sum,1,length(cm_sum));
 
 					accuracy(ci) = trace(conf_mat{ci})/size(g,1);
 
-					average_recall(ci) = mean(diag(conf_mat_norm));
+					average_recall(ci) = mean(diag(conf_mat_norm{ci}));
 
-					asymm_est_cur = conf_mat_norm-conf_mat_norm';
+					asymm_est_cur = conf_mat_norm{ci}-conf_mat_norm{ci}';
 					asymm_est(ci) = sum(asymm_est_cur(triu(true(size(asymm_est_cur)),1)))/(size(asymm_est_cur,1)-1);
 				end
 				
