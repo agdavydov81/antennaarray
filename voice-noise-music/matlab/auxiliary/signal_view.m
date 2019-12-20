@@ -38,7 +38,7 @@ function signal_view(cfg)
 		end
 		fs = x_info.SampleRate;
 	else
-		[x,fs]=wavread(cfg.file_name);
+		[x,fs]=audioread(cfg.file_name);
 	end
 	x(:,2:end)=[];
 	
